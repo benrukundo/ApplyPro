@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -23,7 +23,7 @@ interface GeneratedContent {
   coverLetter: string;
 }
 
-export default function SuccessPage() {
+function SuccessPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [paymentVerified, setPaymentVerified] = useState(false);
@@ -66,7 +66,6 @@ export default function SuccessPage() {
       console.error("Error loading from localStorage:", err);
     }
   }, [searchParams, router]);
-
 
   // Handle generate full resume
   const handleGenerate = async () => {
@@ -644,5 +643,19 @@ export default function SuccessPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      }
+    >
+      <SuccessPageContent />
+    </Suspense>
   );
 }
