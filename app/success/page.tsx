@@ -16,6 +16,8 @@ import { jsPDF } from "jspdf";
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx";
 import { saveAs } from "file-saver";
 
+export const dynamic = 'force-dynamic';
+
 const MIN_JOB_DESC_LENGTH = 100;
 
 interface GeneratedContent {
