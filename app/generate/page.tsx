@@ -9,6 +9,8 @@ const mammoth = require("mammoth") as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const pdfParse = require("pdf-parse") as any;
 
+export const dynamic = 'force-dynamic';
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MIN_JOB_DESC_LENGTH = 100;
 
