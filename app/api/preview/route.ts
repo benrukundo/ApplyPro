@@ -163,8 +163,7 @@ Respond in this exact JSON format:
       console.error("Anthropic API Error:", {
         status: error.status,
         message: error.message,
-        type: error.type,
-        headers: error.headers,
+        name: error.name,
       });
 
       if (error.status === 401) {
