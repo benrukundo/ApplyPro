@@ -26,7 +26,6 @@ export default function GeneratePage() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [apiError, setApiError] = useState<string>("");
-  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Extract text from PDF
   const extractPdfText = async (file: File): Promise<string> => {
@@ -151,64 +150,18 @@ export default function GeneratePage() {
     }
   };
 
-  // Handle payment redirect to Gumroad with session token
-  const handlePaymentRedirect = async () => {
-    setIsRedirecting(true);
-    setApiError("");
-
+  // Handle payment redirect to Gumroad
+  const handlePaymentRedirect = () => {
+    // Save resume data to localStorage so it's available on success page
     try {
-      // Generate unique session token
-      const sessionToken = crypto.randomUUID();
-      console.log("Generated session token:", sessionToken);
-
-      // Create session on server
-      const response = await fetch("/api/session/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ token: sessionToken }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create payment session");
-      }
-
-      console.log("Session created on server");
-
-      // Save data to localStorage
-      try {
-        localStorage.setItem("applypro_resume_text", resumeText);
-        localStorage.setItem("applypro_job_description", jobDescription);
-        localStorage.setItem("applypro_session_token", sessionToken);
-      } catch (err) {
-        console.error("Error saving to localStorage:", err);
-      }
-
-      // Redirect to Gumroad with session token
-      // Try URL-encoded custom fields (square brackets encoded)
-      const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true&custom%5Bsession%5D=${sessionToken}`;
-
-      // Alternative options if above doesn't work:
-      // Option 2: Without custom fields (rely on localStorage fallback)
-      // const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true`;
-
-      // Option 3: Direct checkout with simple session param
-      // const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true&session_token=${sessionToken}`;
-
-      console.log("Redirecting to Gumroad with URL:", gumroadUrl);
-      console.log("Session token saved to localStorage:", sessionToken);
-      alert("About to redirect to: " + gumroadUrl);
-      window.location.href = gumroadUrl;
+      localStorage.setItem("applypro_resume_text", resumeText);
+      localStorage.setItem("applypro_job_description", jobDescription);
     } catch (err) {
-      console.error("Error creating payment session:", err);
-      setApiError(
-        err instanceof Error
-          ? err.message
-          : "Failed to initiate payment. Please try again."
-      );
-      setIsRedirecting(false);
+      console.error("Error saving to localStorage:", err);
     }
+
+    // Redirect directly to Gumroad
+    window.location.href = "https://laurabi.gumroad.com/l/ykchtv";
   };
 
   // Get match score color
@@ -567,24 +520,10 @@ export default function GeneratePage() {
                 <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                   <button
                     onClick={handlePaymentRedirect}
-                    disabled={isRedirecting}
-                    className={`flex w-full items-center justify-center gap-3 rounded-full px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all sm:w-auto ${
-                      isRedirecting
-                        ? "cursor-not-allowed bg-blue-400"
-                        : "bg-blue-600 hover:bg-blue-700 hover:shadow-xl"
-                    }`}
+                    className="flex w-full items-center justify-center gap-3 rounded-full bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:w-auto"
                   >
-                    {isRedirecting ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Redirecting to payment...
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="h-5 w-5" />
-                        Get Full Resume - $4.99
-                      </>
-                    )}
+                    <ShoppingCart className="h-5 w-5" />
+                    Get Full Resume - $4.99
                   </button>
                   <button
                     onClick={() => {

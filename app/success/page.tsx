@@ -30,8 +30,7 @@ function SuccessPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [paymentVerified, setPaymentVerified] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(true);
-  const [verificationError, setVerificationError] = useState<string>("");
+  const [alreadyGenerated, setAlreadyGenerated] = useState(false);
 
   const [resumeText, setResumeText] = useState<string>("");
   const [jobDescription, setJobDescription] = useState<string>("");
@@ -44,100 +43,38 @@ function SuccessPageContent() {
   const [isDownloadingDOCX, setIsDownloadingDOCX] = useState(false);
   const [downloadError, setDownloadError] = useState<string>("");
 
-  // Verify payment session and load from localStorage
+  // Simple payment verification
   useEffect(() => {
-    const verifyPaymentSession = async () => {
-      const paymentParam = searchParams.get("payment");
+    const verifiedParam = searchParams.get("verified");
 
-      // Try multiple parameter names for session token (Gumroad may format differently)
-      const sessionParam =
-        searchParams.get("session") ||
-        searchParams.get("custom[session]") ||
-        searchParams.get("session_token") ||
-        null;
+    // Check for verified=true parameter from Gumroad
+    if (verifiedParam !== "true") {
+      router.push("/");
+      return;
+    }
 
-      console.log("Payment param:", paymentParam);
-      console.log("Session param from URL:", sessionParam);
+    // Check if already generated in this browser session
+    const hasGenerated = sessionStorage.getItem("applypro_generated");
+    if (hasGenerated === "true") {
+      setAlreadyGenerated(true);
+    }
 
-      // Check basic payment parameter
-      if (paymentParam !== "true") {
-        router.push("/");
-        return;
+    setPaymentVerified(true);
+
+    // Load resume data from localStorage
+    try {
+      const savedResumeText = localStorage.getItem("applypro_resume_text");
+      const savedJobDesc = localStorage.getItem("applypro_job_description");
+
+      if (savedResumeText) {
+        setResumeText(savedResumeText);
       }
-
-      // Get session token from URL or localStorage (fallback)
-      let sessionToken = sessionParam;
-      if (!sessionToken) {
-        sessionToken = localStorage.getItem("applypro_session_token");
-        console.log("Session token from localStorage:", sessionToken);
+      if (savedJobDesc) {
+        setJobDescription(savedJobDesc);
       }
-
-      if (!sessionToken) {
-        setVerificationError("No valid payment session found. Please complete the payment process.");
-        setIsVerifying(false);
-        return;
-      }
-
-      // Verify session with server
-      try {
-        const response = await fetch("/api/session/verify", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ token: sessionToken }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.valid) {
-          setVerificationError(
-            data.error || "Invalid or expired payment session. Please complete the payment again."
-          );
-          setIsVerifying(false);
-          // Redirect to home after 3 seconds
-          setTimeout(() => {
-            router.push("/");
-          }, 3000);
-          return;
-        }
-
-        // Session is valid
-        setPaymentVerified(true);
-        setIsVerifying(false);
-
-        // Clear session token from localStorage (one-time use)
-        try {
-          localStorage.removeItem("applypro_session_token");
-        } catch (err) {
-          console.error("Error clearing session token:", err);
-        }
-
-        // Load resume data from localStorage
-        try {
-          const savedResumeText = localStorage.getItem("applypro_resume_text");
-          const savedJobDesc = localStorage.getItem("applypro_job_description");
-
-          if (savedResumeText) {
-            setResumeText(savedResumeText);
-          }
-          if (savedJobDesc) {
-            setJobDescription(savedJobDesc);
-          }
-        } catch (err) {
-          console.error("Error loading from localStorage:", err);
-        }
-      } catch (err) {
-        console.error("Error verifying session:", err);
-        setVerificationError("Failed to verify payment session. Please try again.");
-        setIsVerifying(false);
-        setTimeout(() => {
-          router.push("/");
-        }, 3000);
-      }
-    };
-
-    verifyPaymentSession();
+    } catch (err) {
+      console.error("Error loading from localStorage:", err);
+    }
   }, [searchParams, router]);
 
   // Handle generate full resume
@@ -166,6 +103,14 @@ function SuccessPageContent() {
 
       setGeneratedContent(data);
 
+      // Mark as generated in this browser session (prevents re-use)
+      try {
+        sessionStorage.setItem("applypro_generated", "true");
+        setAlreadyGenerated(true);
+      } catch (err) {
+        console.error("Error setting sessionStorage:", err);
+      }
+
       // Save to localStorage for future reference
       try {
         localStorage.setItem("applypro_resume_text", resumeText);
@@ -189,7 +134,8 @@ function SuccessPageContent() {
     !resumeText ||
     !jobDescription ||
     jobDescription.length < MIN_JOB_DESC_LENGTH ||
-    isGenerating;
+    isGenerating ||
+    alreadyGenerated;
 
   // Download handlers
   const handleDownloadPDF = async () => {
@@ -412,35 +358,7 @@ function SuccessPageContent() {
     }
   };
 
-  // Show verification state
-  if (isVerifying) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <p className="text-gray-600 dark:text-gray-400">Verifying payment session...</p>
-      </div>
-    );
-  }
-
-  // Show verification error
-  if (verificationError) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
-        <div className="max-w-md rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950/20">
-          <AlertCircle className="mx-auto h-12 w-12 text-red-600 dark:text-red-400" />
-          <h2 className="mt-4 text-xl font-bold text-red-900 dark:text-red-100">
-            Payment Verification Failed
-          </h2>
-          <p className="mt-2 text-red-700 dark:text-red-300">{verificationError}</p>
-          <p className="mt-4 text-sm text-red-600 dark:text-red-400">
-            Redirecting to homepage...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Payment verified - show main content
+  // Show loading while checking payment
   if (!paymentVerified) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
@@ -597,7 +515,27 @@ function SuccessPageContent() {
               </button>
             </div>
 
-            {isGenerateDisabled && !isGenerating && (
+            {/* Already Generated Message */}
+            {alreadyGenerated && (
+              <div className="mt-6 flex justify-center">
+                <div className="max-w-2xl rounded-lg border border-orange-200 bg-orange-50 p-4 text-center dark:border-orange-800 dark:bg-orange-950/20">
+                  <p className="font-semibold text-orange-900 dark:text-orange-100">
+                    You've already generated your resume.
+                  </p>
+                  <p className="mt-2 text-sm text-orange-700 dark:text-orange-300">
+                    Purchase again for another resume generation.
+                  </p>
+                  <Link
+                    href="/generate"
+                    className="mt-4 inline-block rounded-full bg-orange-600 px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
+                  >
+                    Get Another Resume
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {isGenerateDisabled && !isGenerating && !alreadyGenerated && (
               <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
                 {!resumeText && "Please paste your resume text"}
                 {resumeText &&
