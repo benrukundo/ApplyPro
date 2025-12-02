@@ -44,6 +44,10 @@ function SuccessPageContent() {
   const [isDownloadingDOCX, setIsDownloadingDOCX] = useState(false);
   const [downloadError, setDownloadError] = useState<string>("");
 
+  // Template selection
+  type ResumeTemplate = "modern" | "traditional" | "ats";
+  const [selectedTemplate, setSelectedTemplate] = useState<ResumeTemplate>("modern");
+
   // Load resume data from localStorage on mount
   useEffect(() => {
     try {
@@ -161,84 +165,199 @@ function SuccessPageContent() {
     setDownloadError("");
 
     try {
-      // Create new PDF document
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const maxWidth = pageWidth - 2 * margin;
-      let yPosition = margin;
 
-      // Helper function to add text with word wrap
-      const addText = (
-        text: string,
-        fontSize: number,
-        isBold: boolean = false
-      ) => {
-        doc.setFontSize(fontSize);
-        if (isBold) {
-          doc.setFont("helvetica", "bold");
-        } else {
-          doc.setFont("helvetica", "normal");
-        }
+      if (selectedTemplate === "modern") {
+        // MODERN TEMPLATE - Two columns with blue accents
+        const leftMargin = 15;
+        const leftColWidth = 65;
+        const rightMargin = leftMargin + leftColWidth + 5;
+        const rightColWidth = pageWidth - rightMargin - 15;
+        let leftY = 30;
+        let rightY = 30;
 
-        const lines = doc.splitTextToSize(text, maxWidth);
-        lines.forEach((line: string) => {
-          if (yPosition > pageHeight - margin) {
-            doc.addPage();
-            yPosition = margin;
+        // Header with blue background
+        doc.setFillColor(59, 130, 246);
+        doc.rect(0, 0, pageWidth, 20, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text("ApplyPro - Tailored Resume", pageWidth / 2, 12, { align: "center" });
+
+        // Reset text color
+        doc.setTextColor(0, 0, 0);
+
+        // Helper to add text in left column
+        const addLeftText = (text: string, fontSize: number, isBold: boolean = false) => {
+          doc.setFontSize(fontSize);
+          doc.setFont("helvetica", isBold ? "bold" : "normal");
+          const lines = doc.splitTextToSize(text, leftColWidth);
+          lines.forEach((line: string) => {
+            if (leftY > pageHeight - 20) {
+              doc.addPage();
+              leftY = 20;
+            }
+            doc.text(line, leftMargin, leftY);
+            leftY += fontSize * 0.5;
+          });
+          leftY += 3;
+        };
+
+        // Helper to add text in right column
+        const addRightText = (text: string, fontSize: number, isBold: boolean = false) => {
+          doc.setFontSize(fontSize);
+          doc.setFont("helvetica", isBold ? "bold" : "normal");
+          const lines = doc.splitTextToSize(text, rightColWidth);
+          lines.forEach((line: string) => {
+            if (rightY > pageHeight - 20) {
+              doc.addPage();
+              rightY = 20;
+            }
+            doc.text(line, rightMargin, rightY);
+            rightY += fontSize * 0.5;
+          });
+          rightY += 3;
+        };
+
+        // Parse resume content
+        const resumeSections = generatedContent.tailoredResume.split("\n\n").filter(p => p.trim());
+
+        // Left column: Skills and Education (first 40% of content)
+        const leftContent = resumeSections.slice(0, Math.ceil(resumeSections.length * 0.4));
+        leftContent.forEach(section => {
+          if (section.toUpperCase() === section.trim() && section.split(" ").length <= 3) {
+            // Section header
+            doc.setTextColor(59, 130, 246);
+            addLeftText(section, 12, true);
+            doc.setTextColor(0, 0, 0);
+          } else {
+            addLeftText(section, 10);
           }
-          doc.text(line, margin, yPosition);
-          yPosition += fontSize * 0.5;
         });
-        yPosition += 5; // Add extra spacing after paragraph
-      };
 
-      // Header
-      doc.setFillColor(37, 99, 235); // Blue background
-      doc.rect(0, 0, pageWidth, 25, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
-      doc.setFont("helvetica", "bold");
-      doc.text("ApplyPro - Tailored Resume", pageWidth / 2, 15, {
-        align: "center",
-      });
+        // Right column: Experience (remaining content)
+        const rightContent = resumeSections.slice(Math.ceil(resumeSections.length * 0.4));
+        rightContent.forEach(section => {
+          if (section.toUpperCase() === section.trim() && section.split(" ").length <= 3) {
+            // Section header
+            doc.setTextColor(59, 130, 246);
+            addRightText(section, 12, true);
+            doc.setTextColor(0, 0, 0);
+          } else {
+            addRightText(section, 10);
+          }
+        });
 
-      // Reset text color
-      doc.setTextColor(0, 0, 0);
-      yPosition = 35;
+        // Cover letter on new page
+        doc.addPage();
+        leftY = 20;
+        doc.setTextColor(59, 130, 246);
+        addLeftText("COVER LETTER", 14, true);
+        doc.setTextColor(0, 0, 0);
 
-      // Resume Section
-      addText("RESUME", 16, true);
-      yPosition += 5;
+        generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          addLeftText(paragraph, 10);
+        });
 
-      // Split resume into paragraphs and add them
-      const resumeParagraphs = generatedContent.tailoredResume
-        .split("\n\n")
-        .filter((p) => p.trim());
-      resumeParagraphs.forEach((paragraph) => {
-        addText(paragraph.trim(), 11);
-      });
+      } else if (selectedTemplate === "traditional") {
+        // TRADITIONAL TEMPLATE - Single column, serif font, conservative
+        const margin = 25;
+        const maxWidth = pageWidth - 2 * margin;
+        let yPosition = margin;
 
-      // Add new page for cover letter
-      doc.addPage();
-      yPosition = margin;
+        const addText = (text: string, fontSize: number, isBold: boolean = false) => {
+          doc.setFontSize(fontSize);
+          doc.setFont("times", isBold ? "bold" : "normal");
+          const lines = doc.splitTextToSize(text, maxWidth);
+          lines.forEach((line: string) => {
+            if (yPosition > pageHeight - margin) {
+              doc.addPage();
+              yPosition = margin;
+            }
+            doc.text(line, margin, yPosition);
+            yPosition += fontSize * 0.55;
+          });
+          yPosition += 4;
+        };
 
-      // Cover Letter Section
-      addText("COVER LETTER", 16, true);
-      yPosition += 5;
+        // Simple header - black text only
+        doc.setFont("times", "bold");
+        doc.setFontSize(18);
+        doc.text("Tailored Resume", pageWidth / 2, yPosition, { align: "center" });
+        yPosition += 15;
 
-      // Split cover letter into paragraphs and add them
-      const coverLetterParagraphs = generatedContent.coverLetter
-        .split("\n\n")
-        .filter((p) => p.trim());
-      coverLetterParagraphs.forEach((paragraph) => {
-        addText(paragraph.trim(), 11);
-      });
+        // Resume section
+        doc.setFont("times", "bold");
+        doc.setFontSize(14);
+        doc.text("RESUME", margin, yPosition);
+        yPosition += 8;
 
-      // Generate filename with date
+        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          addText(paragraph, 11);
+        });
+
+        // Cover letter on new page
+        doc.addPage();
+        yPosition = margin;
+        doc.setFont("times", "bold");
+        doc.setFontSize(14);
+        doc.text("COVER LETTER", margin, yPosition);
+        yPosition += 8;
+
+        generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          addText(paragraph, 11);
+        });
+
+      } else {
+        // ATS-OPTIMIZED TEMPLATE - Simple, machine-readable, no graphics
+        const margin = 20;
+        const maxWidth = pageWidth - 2 * margin;
+        let yPosition = margin;
+
+        const addText = (text: string, fontSize: number, isBold: boolean = false) => {
+          doc.setFontSize(fontSize);
+          doc.setFont("helvetica", isBold ? "bold" : "normal");
+          const lines = doc.splitTextToSize(text, maxWidth);
+          lines.forEach((line: string) => {
+            if (yPosition > pageHeight - margin) {
+              doc.addPage();
+              yPosition = margin;
+            }
+            doc.text(line, margin, yPosition);
+            yPosition += fontSize * 0.5;
+          });
+          yPosition += 2;
+        };
+
+        // Simple plain text header
+        addText("TAILORED RESUME", 14, true);
+        yPosition += 3;
+        addText("Generated by ApplyPro", 10, false);
+        yPosition += 8;
+
+        // Resume section with clear headers
+        addText("========== RESUME ==========", 12, true);
+        yPosition += 5;
+
+        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          addText(paragraph, 10);
+        });
+
+        // Cover letter
+        yPosition += 10;
+        addText("========== COVER LETTER ==========", 12, true);
+        yPosition += 5;
+
+        generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          addText(paragraph, 10);
+        });
+      }
+
+      // Generate filename with template and date
       const date = new Date().toISOString().split("T")[0];
-      const filename = `Resume_Tailored_${date}.pdf`;
+      const filename = `Resume_${selectedTemplate}_${date}.pdf`;
 
       // Save the PDF
       doc.save(filename);
@@ -258,96 +377,121 @@ function SuccessPageContent() {
     setDownloadError("");
 
     try {
-      // Helper function to split text into paragraphs
-      const createParagraphs = (text: string, isBold: boolean = false) => {
-        return text
-          .split("\n")
-          .filter((line) => line.trim())
-          .map(
-            (line) =>
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: line.trim(),
-                    bold: isBold,
-                    size: isBold ? 28 : 24, // 14pt for bold headers, 12pt for normal text
-                  }),
-                ],
-                spacing: {
-                  after: 200,
-                },
-              })
-          );
-      };
+      const sections: any[] = [];
 
-      // Create document sections
-      const sections = [];
+      if (selectedTemplate === "modern") {
+        // MODERN TEMPLATE - Blue accents, modern styling
+        const createModernParagraph = (text: string, isHeader: boolean = false, isSection: boolean = false) => {
+          return new Paragraph({
+            children: [
+              new TextRun({
+                text: text.trim(),
+                bold: isHeader || isSection,
+                size: isHeader ? 32 : isSection ? 26 : 22, // 16pt, 13pt, 11pt
+                color: isHeader || isSection ? "3B82F6" : "000000",
+                font: "Arial",
+              }),
+            ],
+            spacing: {
+              after: isHeader ? 400 : isSection ? 300 : 200,
+              before: isSection ? 300 : 100,
+            },
+          });
+        };
 
-      // Header
-      sections.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: "ApplyPro - Tailored Resume",
-              bold: true,
-              size: 32, // 16pt
-              color: "2563EB", // Blue color
-            }),
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: {
-            after: 400,
-          },
-        })
-      );
+        // Header
+        sections.push(createModernParagraph("ApplyPro - Tailored Resume", true));
 
-      // Resume header
-      sections.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: "RESUME",
-              bold: true,
-              size: 32, // 16pt
-            }),
-          ],
-          spacing: {
-            before: 200,
-            after: 300,
-          },
-        })
-      );
+        // Resume section
+        sections.push(createModernParagraph("RESUME", false, true));
+        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          sections.push(createModernParagraph(paragraph));
+        });
 
-      // Resume content
-      sections.push(...createParagraphs(generatedContent.tailoredResume));
+        // Page break
+        sections.push(new Paragraph({ children: [new TextRun({ text: "", break: 1 })], pageBreakBefore: true }));
 
-      // Page break before cover letter
-      sections.push(
-        new Paragraph({
-          children: [new TextRun({ text: "", break: 1 })],
-          pageBreakBefore: true,
-        })
-      );
+        // Cover letter
+        sections.push(createModernParagraph("COVER LETTER", false, true));
+        generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          sections.push(createModernParagraph(paragraph));
+        });
 
-      // Cover letter header
-      sections.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: "COVER LETTER",
-              bold: true,
-              size: 32, // 16pt
-            }),
-          ],
-          spacing: {
-            before: 200,
-            after: 300,
-          },
-        })
-      );
+      } else if (selectedTemplate === "traditional") {
+        // TRADITIONAL TEMPLATE - Serif font, conservative, black only
+        const createTraditionalParagraph = (text: string, isHeader: boolean = false, isSection: boolean = false) => {
+          return new Paragraph({
+            children: [
+              new TextRun({
+                text: text.trim(),
+                bold: isHeader || isSection,
+                size: isHeader ? 36 : isSection ? 28 : 24, // 18pt, 14pt, 12pt
+                color: "000000", // Black only
+                font: "Times New Roman",
+              }),
+            ],
+            alignment: isHeader ? AlignmentType.CENTER : AlignmentType.LEFT,
+            spacing: {
+              after: isHeader ? 600 : isSection ? 400 : 240,
+              before: isSection ? 400 : 120,
+            },
+          });
+        };
 
-      // Cover letter content
-      sections.push(...createParagraphs(generatedContent.coverLetter));
+        // Header
+        sections.push(createTraditionalParagraph("Tailored Resume", true));
+
+        // Resume section
+        sections.push(createTraditionalParagraph("RESUME", false, true));
+        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          sections.push(createTraditionalParagraph(paragraph));
+        });
+
+        // Page break
+        sections.push(new Paragraph({ children: [new TextRun({ text: "", break: 1 })], pageBreakBefore: true }));
+
+        // Cover letter
+        sections.push(createTraditionalParagraph("COVER LETTER", false, true));
+        generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          sections.push(createTraditionalParagraph(paragraph));
+        });
+
+      } else {
+        // ATS-OPTIMIZED TEMPLATE - Simple, plain, machine-readable
+        const createATSParagraph = (text: string, isHeader: boolean = false, isDivider: boolean = false) => {
+          return new Paragraph({
+            children: [
+              new TextRun({
+                text: text.trim(),
+                bold: isHeader || isDivider,
+                size: isHeader ? 28 : 22, // 14pt, 11pt
+                color: "000000",
+                font: "Calibri",
+              }),
+            ],
+            spacing: {
+              after: isHeader ? 200 : isDivider ? 300 : 160,
+              before: isDivider ? 300 : 80,
+            },
+          });
+        };
+
+        // Simple header
+        sections.push(createATSParagraph("TAILORED RESUME", true));
+        sections.push(createATSParagraph("Generated by ApplyPro"));
+
+        // Resume section
+        sections.push(createATSParagraph("========== RESUME ==========", false, true));
+        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          sections.push(createATSParagraph(paragraph));
+        });
+
+        // Cover letter (no page break for ATS - keep it simple)
+        sections.push(createATSParagraph("========== COVER LETTER ==========", false, true));
+        generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          sections.push(createATSParagraph(paragraph));
+        });
+      }
 
       // Create document
       const doc = new Document({
@@ -362,7 +506,7 @@ function SuccessPageContent() {
       // Generate and save the document
       const blob = await Packer.toBlob(doc);
       const date = new Date().toISOString().split("T")[0];
-      const filename = `Resume_Tailored_${date}.docx`;
+      const filename = `Resume_${selectedTemplate}_${date}.docx`;
 
       saveAs(blob, filename);
 
@@ -679,6 +823,105 @@ function SuccessPageContent() {
                       Download your tailored resume and cover letter below
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Template Selector */}
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Choose Resume Template
+                </h3>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {/* Modern Template */}
+                  <button
+                    onClick={() => setSelectedTemplate("modern")}
+                    className={`group relative rounded-xl border-2 p-4 text-left transition-all ${
+                      selectedTemplate === "modern"
+                        ? "border-blue-600 bg-blue-50 dark:bg-blue-950/20"
+                        : "border-gray-200 bg-white hover:border-blue-300 dark:border-gray-700 dark:bg-gray-800"
+                    }`}
+                  >
+                    {selectedTemplate === "modern" && (
+                      <div className="absolute top-3 right-3">
+                        <CheckCircle2 className="h-6 w-6 text-blue-600" />
+                      </div>
+                    )}
+                    <div className="mb-3 h-24 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 p-3 dark:from-blue-900/30 dark:to-indigo-900/30">
+                      <div className="h-2 w-3/4 rounded bg-blue-600 mb-2"></div>
+                      <div className="h-1.5 w-1/2 rounded bg-blue-400 mb-3"></div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="h-1 rounded bg-gray-400"></div>
+                        <div className="h-1 rounded bg-gray-400"></div>
+                      </div>
+                    </div>
+                    <div className="font-semibold text-gray-900 dark:text-white">
+                      Modern
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Two-column, blue accents
+                    </div>
+                  </button>
+
+                  {/* Traditional Template */}
+                  <button
+                    onClick={() => setSelectedTemplate("traditional")}
+                    className={`group relative rounded-xl border-2 p-4 text-left transition-all ${
+                      selectedTemplate === "traditional"
+                        ? "border-gray-600 bg-gray-50 dark:bg-gray-950/20"
+                        : "border-gray-200 bg-white hover:border-gray-400 dark:border-gray-700 dark:bg-gray-800"
+                    }`}
+                  >
+                    {selectedTemplate === "traditional" && (
+                      <div className="absolute top-3 right-3">
+                        <CheckCircle2 className="h-6 w-6 text-gray-600" />
+                      </div>
+                    )}
+                    <div className="mb-3 h-24 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 p-3 dark:from-gray-800 dark:to-gray-700">
+                      <div className="h-2 w-2/3 rounded bg-gray-800 mb-2 dark:bg-gray-300"></div>
+                      <div className="space-y-1.5">
+                        <div className="h-1 w-full rounded bg-gray-600 dark:bg-gray-400"></div>
+                        <div className="h-1 w-full rounded bg-gray-600 dark:bg-gray-400"></div>
+                        <div className="h-1 w-5/6 rounded bg-gray-600 dark:bg-gray-400"></div>
+                      </div>
+                    </div>
+                    <div className="font-semibold text-gray-900 dark:text-white">
+                      Traditional
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Classic single-column
+                    </div>
+                  </button>
+
+                  {/* ATS-Optimized Template */}
+                  <button
+                    onClick={() => setSelectedTemplate("ats")}
+                    className={`group relative rounded-xl border-2 p-4 text-left transition-all ${
+                      selectedTemplate === "ats"
+                        ? "border-green-600 bg-green-50 dark:bg-green-950/20"
+                        : "border-gray-200 bg-white hover:border-green-300 dark:border-gray-700 dark:bg-gray-800"
+                    }`}
+                  >
+                    {selectedTemplate === "ats" && (
+                      <div className="absolute top-3 right-3">
+                        <CheckCircle2 className="h-6 w-6 text-green-600" />
+                      </div>
+                    )}
+                    <div className="mb-3 h-24 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 p-3 dark:from-green-900/30 dark:to-emerald-900/30">
+                      <div className="h-2 w-1/2 rounded bg-gray-800 mb-2 dark:bg-gray-300"></div>
+                      <div className="space-y-1">
+                        <div className="h-1 w-full rounded bg-gray-600 dark:bg-gray-400"></div>
+                        <div className="h-1 w-full rounded bg-gray-600 dark:bg-gray-400"></div>
+                        <div className="h-1 w-full rounded bg-gray-600 dark:bg-gray-400"></div>
+                        <div className="h-1 w-4/5 rounded bg-gray-600 dark:bg-gray-400"></div>
+                      </div>
+                    </div>
+                    <div className="font-semibold text-gray-900 dark:text-white">
+                      ATS-Optimized
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Machine-readable, simple
+                    </div>
+                  </button>
                 </div>
               </div>
 
