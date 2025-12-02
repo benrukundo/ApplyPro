@@ -1,11 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 // Type definitions
 interface PreviewRequest {
   resumeText: string;
@@ -21,6 +16,12 @@ interface PreviewResponse {
 
 export async function POST(request: NextRequest) {
   try {
+    // Debug: Check API key configuration
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    console.log("API Key exists:", !!apiKey);
+    console.log("API Key length:", apiKey?.length || 0);
+    console.log("API Key starts with sk-ant:", apiKey?.startsWith("sk-ant-") || false);
+
     // Parse request body
     const body: PreviewRequest = await request.json();
     const { resumeText, jobDescription } = body;
@@ -55,13 +56,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for API key
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!apiKey) {
       console.error("ANTHROPIC_API_KEY is not configured");
       return NextResponse.json(
-        { error: "API configuration error" },
+        { error: "API configuration error - API key is missing" },
         { status: 500 }
       );
     }
+
+    // Initialize Anthropic client with the API key
+    const anthropic = new Anthropic({
+      apiKey: apiKey,
+    });
 
     // Create cost-effective prompt
     const prompt = `Analyze this resume against this job description. Provide a structured analysis with:
@@ -154,9 +160,16 @@ Respond in this exact JSON format:
 
     // Handle specific Anthropic API errors
     if (error instanceof Anthropic.APIError) {
+      console.error("Anthropic API Error:", {
+        status: error.status,
+        message: error.message,
+        type: error.type,
+        headers: error.headers,
+      });
+
       if (error.status === 401) {
         return NextResponse.json(
-          { error: "Invalid API key configuration" },
+          { error: `Invalid API key configuration: ${error.message}` },
           { status: 500 }
         );
       }
