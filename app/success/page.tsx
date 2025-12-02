@@ -30,7 +30,8 @@ function SuccessPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [paymentVerified, setPaymentVerified] = useState(false);
-  const [alreadyGenerated, setAlreadyGenerated] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [verificationError, setVerificationError] = useState<string>("");
 
   const [resumeText, setResumeText] = useState<string>("");
   const [jobDescription, setJobDescription] = useState<string>("");
@@ -43,38 +44,69 @@ function SuccessPageContent() {
   const [isDownloadingDOCX, setIsDownloadingDOCX] = useState(false);
   const [downloadError, setDownloadError] = useState<string>("");
 
-  // Simple payment verification
+  // Gumroad license key verification
   useEffect(() => {
-    const verifiedParam = searchParams.get("verified");
+    const verifyLicense = async () => {
+      const licenseKey = searchParams.get("key");
 
-    // Check for verified=true parameter from Gumroad
-    if (verifiedParam !== "true") {
-      router.push("/");
-      return;
-    }
-
-    // Check if already generated in this browser session
-    const hasGenerated = sessionStorage.getItem("applypro_generated");
-    if (hasGenerated === "true") {
-      setAlreadyGenerated(true);
-    }
-
-    setPaymentVerified(true);
-
-    // Load resume data from localStorage
-    try {
-      const savedResumeText = localStorage.getItem("applypro_resume_text");
-      const savedJobDesc = localStorage.getItem("applypro_job_description");
-
-      if (savedResumeText) {
-        setResumeText(savedResumeText);
+      // Check for license key in URL
+      if (!licenseKey) {
+        setVerificationError("No license key found. Please purchase from the generate page.");
+        setIsVerifying(false);
+        setTimeout(() => router.push("/"), 3000);
+        return;
       }
-      if (savedJobDesc) {
-        setJobDescription(savedJobDesc);
+
+      console.log("Verifying license key...");
+
+      try {
+        // Verify license with our API (which calls Gumroad)
+        const response = await fetch("/api/verify-license", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ licenseKey }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.valid) {
+          setVerificationError(data.error || "Invalid license key");
+          setIsVerifying(false);
+          setTimeout(() => router.push("/"), 3000);
+          return;
+        }
+
+        console.log("License verified successfully");
+
+        // License is valid
+        setPaymentVerified(true);
+        setIsVerifying(false);
+
+        // Load resume data from localStorage
+        try {
+          const savedResumeText = localStorage.getItem("applypro_resume_text");
+          const savedJobDesc = localStorage.getItem("applypro_job_description");
+
+          if (savedResumeText) {
+            setResumeText(savedResumeText);
+          }
+          if (savedJobDesc) {
+            setJobDescription(savedJobDesc);
+          }
+        } catch (err) {
+          console.error("Error loading from localStorage:", err);
+        }
+      } catch (err) {
+        console.error("Error verifying license:", err);
+        setVerificationError("Failed to verify license. Please try again.");
+        setIsVerifying(false);
+        setTimeout(() => router.push("/"), 3000);
       }
-    } catch (err) {
-      console.error("Error loading from localStorage:", err);
-    }
+    };
+
+    verifyLicense();
   }, [searchParams, router]);
 
   // Handle generate full resume
@@ -103,14 +135,6 @@ function SuccessPageContent() {
 
       setGeneratedContent(data);
 
-      // Mark as generated in this browser session (prevents re-use)
-      try {
-        sessionStorage.setItem("applypro_generated", "true");
-        setAlreadyGenerated(true);
-      } catch (err) {
-        console.error("Error setting sessionStorage:", err);
-      }
-
       // Save to localStorage for future reference
       try {
         localStorage.setItem("applypro_resume_text", resumeText);
@@ -134,8 +158,7 @@ function SuccessPageContent() {
     !resumeText ||
     !jobDescription ||
     jobDescription.length < MIN_JOB_DESC_LENGTH ||
-    isGenerating ||
-    alreadyGenerated;
+    isGenerating;
 
   // Download handlers
   const handleDownloadPDF = async () => {
@@ -358,7 +381,35 @@ function SuccessPageContent() {
     }
   };
 
-  // Show loading while checking payment
+  // Show verification state
+  if (isVerifying) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <p className="text-gray-600 dark:text-gray-400">Verifying your license key...</p>
+      </div>
+    );
+  }
+
+  // Show verification error
+  if (verificationError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+        <div className="max-w-md rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950/20">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-600 dark:text-red-400" />
+          <h2 className="mt-4 text-xl font-bold text-red-900 dark:text-red-100">
+            License Verification Failed
+          </h2>
+          <p className="mt-2 text-red-700 dark:text-red-300">{verificationError}</p>
+          <p className="mt-4 text-sm text-red-600 dark:text-red-400">
+            Redirecting to homepage...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // License verified - show main content
   if (!paymentVerified) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
@@ -515,27 +566,7 @@ function SuccessPageContent() {
               </button>
             </div>
 
-            {/* Already Generated Message */}
-            {alreadyGenerated && (
-              <div className="mt-6 flex justify-center">
-                <div className="max-w-2xl rounded-lg border border-orange-200 bg-orange-50 p-4 text-center dark:border-orange-800 dark:bg-orange-950/20">
-                  <p className="font-semibold text-orange-900 dark:text-orange-100">
-                    You've already generated your resume.
-                  </p>
-                  <p className="mt-2 text-sm text-orange-700 dark:text-orange-300">
-                    Purchase again for another resume generation.
-                  </p>
-                  <Link
-                    href="/generate"
-                    className="mt-4 inline-block rounded-full bg-orange-600 px-6 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-700"
-                  >
-                    Get Another Resume
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            {isGenerateDisabled && !isGenerating && !alreadyGenerated && (
+            {isGenerateDisabled && !isGenerating && (
               <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
                 {!resumeText && "Please paste your resume text"}
                 {resumeText &&
