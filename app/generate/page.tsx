@@ -159,6 +159,7 @@ export default function GeneratePage() {
     try {
       // Generate unique session token
       const sessionToken = crypto.randomUUID();
+      console.log("Generated session token:", sessionToken);
 
       // Create session on server
       const response = await fetch("/api/session/create", {
@@ -173,6 +174,8 @@ export default function GeneratePage() {
         throw new Error("Failed to create payment session");
       }
 
+      console.log("Session created on server");
+
       // Save data to localStorage
       try {
         localStorage.setItem("applypro_resume_text", resumeText);
@@ -184,6 +187,8 @@ export default function GeneratePage() {
 
       // Redirect to Gumroad with session token
       const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true&session=${sessionToken}`;
+      console.log("Redirecting to Gumroad with URL:", gumroadUrl);
+      alert("About to redirect to: " + gumroadUrl);
       window.location.href = gumroadUrl;
     } catch (err) {
       console.error("Error creating payment session:", err);
