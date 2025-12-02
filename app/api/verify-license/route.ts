@@ -25,8 +25,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { licenseKey } = body;
 
+    console.log("=== License Verification Request ===");
+    console.log("License key received:", licenseKey?.substring(0, 8) + "...");
+
     // Validate input
     if (!licenseKey || typeof licenseKey !== "string") {
+      console.error("Invalid license key input");
       return NextResponse.json(
         { valid: false, error: "License key is required" },
         { status: 400 }
@@ -36,6 +40,12 @@ export async function POST(request: NextRequest) {
     // Check environment variables
     const productId = process.env.GUMROAD_PRODUCT_ID;
     const applicationSecret = process.env.GUMROAD_APPLICATION_SECRET;
+
+    console.log("Environment variables check:");
+    console.log("- GUMROAD_PRODUCT_ID exists:", !!productId);
+    console.log("- GUMROAD_PRODUCT_ID value:", productId);
+    console.log("- GUMROAD_APPLICATION_SECRET exists:", !!applicationSecret);
+    console.log("- GUMROAD_APPLICATION_SECRET length:", applicationSecret?.length || 0);
 
     if (!productId || !applicationSecret) {
       console.error("Gumroad credentials not configured");
@@ -47,6 +57,7 @@ export async function POST(request: NextRequest) {
 
     // Check if license has already been used
     if (isLicenseUsed(licenseKey)) {
+      console.log("License already used:", licenseKey.substring(0, 8) + "...");
       return NextResponse.json(
         {
           valid: false,
@@ -61,6 +72,15 @@ export async function POST(request: NextRequest) {
     formData.append("product_id", productId);
     formData.append("license_key", licenseKey);
 
+    console.log("=== Gumroad API Request ===");
+    console.log("URL: https://api.gumroad.com/v2/licenses/verify");
+    console.log("Method: POST");
+    console.log("Content-Type: application/x-www-form-urlencoded");
+    console.log("Request body:");
+    console.log("  product_id:", productId);
+    console.log("  license_key:", licenseKey.substring(0, 8) + "...");
+    console.log("Full body string:", formData.toString());
+
     const gumroadResponse = await fetch(
       "https://api.gumroad.com/v2/licenses/verify",
       {
@@ -72,15 +92,36 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const gumroadData: GumroadVerifyResponse = await gumroadResponse.json();
+    console.log("=== Gumroad API Response ===");
+    console.log("Status code:", gumroadResponse.status);
+    console.log("Status text:", gumroadResponse.statusText);
+    console.log("Headers:", Object.fromEntries(gumroadResponse.headers.entries()));
 
-    console.log("Gumroad verification response:", {
-      success: gumroadData.success,
-      licenseKey: licenseKey.substring(0, 8) + "...",
-    });
+    const responseText = await gumroadResponse.text();
+    console.log("Raw response body:", responseText);
+
+    let gumroadData: GumroadVerifyResponse;
+    try {
+      gumroadData = JSON.parse(responseText);
+      console.log("Parsed response:", JSON.stringify(gumroadData, null, 2));
+    } catch (parseError) {
+      console.error("Failed to parse Gumroad response as JSON:", parseError);
+      console.error("Response text was:", responseText);
+      return NextResponse.json(
+        {
+          valid: false,
+          error: "Invalid response from Gumroad API",
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log("Gumroad success status:", gumroadData.success);
 
     // Check if license is valid
     if (!gumroadData.success) {
+      console.log("License verification failed");
+      console.log("Gumroad error:", gumroadData);
       return NextResponse.json(
         {
           valid: false,
@@ -125,7 +166,11 @@ export async function POST(request: NextRequest) {
       message: "License verified successfully",
     });
   } catch (error) {
-    console.error("Error verifying license:", error);
+    console.error("=== ERROR in License Verification ===");
+    console.error("Error type:", error instanceof Error ? error.constructor.name : typeof error);
+    console.error("Error message:", error instanceof Error ? error.message : String(error));
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
+    console.error("Full error object:", error);
     return NextResponse.json(
       {
         valid: false,
