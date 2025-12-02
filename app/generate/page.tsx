@@ -185,14 +185,19 @@ export default function GeneratePage() {
         console.error("Error saving to localStorage:", err);
       }
 
-      // Redirect to Gumroad with session token using custom fields
-      // Option 1: Custom fields (recommended - Gumroad will pass this through)
-      const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true&custom[session]=${sessionToken}`;
+      // Redirect to Gumroad with session token
+      // Try URL-encoded custom fields (square brackets encoded)
+      const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true&custom%5Bsession%5D=${sessionToken}`;
 
-      // Option 2: Direct checkout API (alternative approach)
-      // const gumroadUrl = `https://laurabi.gumroad.com/checkout/ykchtv?wanted=true&referrer=${encodeURIComponent(window.location.origin)}&session=${sessionToken}`;
+      // Alternative options if above doesn't work:
+      // Option 2: Without custom fields (rely on localStorage fallback)
+      // const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true`;
+
+      // Option 3: Direct checkout with simple session param
+      // const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true&session_token=${sessionToken}`;
 
       console.log("Redirecting to Gumroad with URL:", gumroadUrl);
+      console.log("Session token saved to localStorage:", sessionToken);
       alert("About to redirect to: " + gumroadUrl);
       window.location.href = gumroadUrl;
     } catch (err) {

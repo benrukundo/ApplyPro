@@ -47,7 +47,16 @@ function SuccessPageContent() {
   useEffect(() => {
     const verifyPaymentSession = async () => {
       const paymentParam = searchParams.get("payment");
-      const sessionParam = searchParams.get("session");
+
+      // Try multiple parameter names for session token (Gumroad may format differently)
+      const sessionParam =
+        searchParams.get("session") ||
+        searchParams.get("custom[session]") ||
+        searchParams.get("session_token") ||
+        null;
+
+      console.log("Payment param:", paymentParam);
+      console.log("Session param from URL:", sessionParam);
 
       // Check basic payment parameter
       if (paymentParam !== "true") {
@@ -55,10 +64,11 @@ function SuccessPageContent() {
         return;
       }
 
-      // Get session token from URL or localStorage
+      // Get session token from URL or localStorage (fallback)
       let sessionToken = sessionParam;
       if (!sessionToken) {
         sessionToken = localStorage.getItem("applypro_session_token");
+        console.log("Session token from localStorage:", sessionToken);
       }
 
       if (!sessionToken) {
