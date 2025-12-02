@@ -11,6 +11,7 @@ import {
   Download,
   Sparkles,
   PartyPopper,
+  AlertCircle,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx";
