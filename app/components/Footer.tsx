@@ -11,8 +11,7 @@ export default function Footer() {
           <div className="text-center md:text-left">
             <p className="text-sm">
               © {currentYear}{" "}
-              <span className="font-semibold text-white">ApplyPro</span>. AI-Powered
-              Resume Tailoring
+              <span className="font-semibold text-white">ApplyPro</span>
             </p>
           </div>
 
@@ -45,30 +44,6 @@ export default function Footer() {
               </a>
             </p>
           </div>
-        </div>
-
-        {/* Bottom: Powered by */}
-        <div className="mt-6 pt-6 border-t border-gray-800 text-center">
-          <p className="text-xs text-gray-500">
-            Powered by{" "}
-            <a
-              href="https://www.anthropic.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              Anthropic Claude AI
-            </a>
-            {" • "}
-            <a
-              href="https://vercel.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              Hosted on Vercel
-            </a>
-          </p>
         </div>
       </div>
     </footer>

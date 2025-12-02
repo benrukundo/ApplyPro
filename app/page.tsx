@@ -22,7 +22,7 @@ export default function Home() {
     {
       question: "How does ApplyPro work?",
       answer:
-        "ApplyPro uses advanced AI (Anthropic Claude) to analyze your resume and the job description. It then tailors your resume to match the specific requirements, optimizes keywords for ATS systems, and generates a matching cover letter. The entire process takes just minutes.",
+        "ApplyPro uses advanced AI to analyze your resume and the job description. It then tailors your resume to match the specific requirements, optimizes keywords for ATS systems, and generates a matching cover letter. The entire process takes just minutes.",
     },
     {
       question: "Will this work with ATS systems?",
