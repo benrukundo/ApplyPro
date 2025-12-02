@@ -4,10 +4,6 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import Link from "next/link";
 import { Upload, FileText, Loader2, CheckCircle2, ArrowLeft, TrendingUp, AlertCircle, Sparkles, ShoppingCart } from "lucide-react";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mammoth = require("mammoth") as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const pdfParse = require("pdf-parse") as any;
 
 export const dynamic = 'force-dynamic';
 
@@ -33,6 +29,9 @@ export default function GeneratePage() {
 
   // Extract text from PDF
   const extractPdfText = async (file: File): Promise<string> => {
+    // Dynamically import pdf-parse only when needed
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfParse = (await import("pdf-parse" as any)).default;
     const arrayBuffer = await file.arrayBuffer();
     const data = await pdfParse(Buffer.from(arrayBuffer));
     return data.text;
@@ -40,6 +39,9 @@ export default function GeneratePage() {
 
   // Extract text from DOCX
   const extractDocxText = async (file: File): Promise<string> => {
+    // Dynamically import mammoth only when needed
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mammoth = (await import("mammoth" as any)).default;
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
     return result.value;
