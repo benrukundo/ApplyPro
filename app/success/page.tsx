@@ -27,10 +27,9 @@ interface GeneratedContent {
 }
 
 function SuccessPageContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
   const [paymentVerified, setPaymentVerified] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(true);
+  const [licenseKey, setLicenseKey] = useState<string>("");
+  const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string>("");
 
   const [resumeText, setResumeText] = useState<string>("");
@@ -44,70 +43,66 @@ function SuccessPageContent() {
   const [isDownloadingDOCX, setIsDownloadingDOCX] = useState(false);
   const [downloadError, setDownloadError] = useState<string>("");
 
-  // Gumroad license key verification
+  // Load resume data from localStorage on mount
   useEffect(() => {
-    const verifyLicense = async () => {
-      const licenseKey = searchParams.get("key");
+    try {
+      const savedResumeText = localStorage.getItem("applypro_resume_text");
+      const savedJobDesc = localStorage.getItem("applypro_job_description");
 
-      // Check for license key in URL
-      if (!licenseKey) {
-        setVerificationError("No license key found. Please purchase from the generate page.");
+      if (savedResumeText) {
+        setResumeText(savedResumeText);
+      }
+      if (savedJobDesc) {
+        setJobDescription(savedJobDesc);
+      }
+    } catch (err) {
+      console.error("Error loading from localStorage:", err);
+    }
+  }, []);
+
+  // Handle license key verification
+  const handleVerifyLicense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsVerifying(true);
+    setVerificationError("");
+
+    if (!licenseKey.trim()) {
+      setVerificationError("Please enter a license key");
+      setIsVerifying(false);
+      return;
+    }
+
+    console.log("Verifying license key...");
+
+    try {
+      // Verify license with our API (which calls Gumroad)
+      const response = await fetch("/api/verify-license", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ licenseKey: licenseKey.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.valid) {
+        setVerificationError(data.error || "Invalid license key");
         setIsVerifying(false);
-        setTimeout(() => router.push("/"), 3000);
         return;
       }
 
-      console.log("Verifying license key...");
+      console.log("License verified successfully");
 
-      try {
-        // Verify license with our API (which calls Gumroad)
-        const response = await fetch("/api/verify-license", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ licenseKey }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.valid) {
-          setVerificationError(data.error || "Invalid license key");
-          setIsVerifying(false);
-          setTimeout(() => router.push("/"), 3000);
-          return;
-        }
-
-        console.log("License verified successfully");
-
-        // License is valid
-        setPaymentVerified(true);
-        setIsVerifying(false);
-
-        // Load resume data from localStorage
-        try {
-          const savedResumeText = localStorage.getItem("applypro_resume_text");
-          const savedJobDesc = localStorage.getItem("applypro_job_description");
-
-          if (savedResumeText) {
-            setResumeText(savedResumeText);
-          }
-          if (savedJobDesc) {
-            setJobDescription(savedJobDesc);
-          }
-        } catch (err) {
-          console.error("Error loading from localStorage:", err);
-        }
-      } catch (err) {
-        console.error("Error verifying license:", err);
-        setVerificationError("Failed to verify license. Please try again.");
-        setIsVerifying(false);
-        setTimeout(() => router.push("/"), 3000);
-      }
-    };
-
-    verifyLicense();
-  }, [searchParams, router]);
+      // License is valid
+      setPaymentVerified(true);
+      setIsVerifying(false);
+    } catch (err) {
+      console.error("Error verifying license:", err);
+      setVerificationError("Failed to verify license. Please try again.");
+      setIsVerifying(false);
+    }
+  };
 
   // Handle generate full resume
   const handleGenerate = async () => {
@@ -381,39 +376,111 @@ function SuccessPageContent() {
     }
   };
 
-  // Show verification state
-  if (isVerifying) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <p className="text-gray-600 dark:text-gray-400">Verifying your license key...</p>
-      </div>
-    );
-  }
-
-  // Show verification error
-  if (verificationError) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
-        <div className="max-w-md rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950/20">
-          <AlertCircle className="mx-auto h-12 w-12 text-red-600 dark:text-red-400" />
-          <h2 className="mt-4 text-xl font-bold text-red-900 dark:text-red-100">
-            License Verification Failed
-          </h2>
-          <p className="mt-2 text-red-700 dark:text-red-300">{verificationError}</p>
-          <p className="mt-4 text-sm text-red-600 dark:text-red-400">
-            Redirecting to homepage...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // License verified - show main content
+  // Show license key input form if not verified
   if (!paymentVerified) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+        {/* Header */}
+        <header className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between">
+              <Link
+                href="/"
+                className="flex items-center gap-2 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Home
+              </Link>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                ApplyPro
+              </h1>
+            </div>
+          </div>
+        </header>
+
+        {/* License Key Form */}
+        <main className="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+            <div className="text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
+                <CheckCircle2 className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
+                Enter Your License Key
+              </h2>
+              <p className="mt-3 text-lg text-gray-600 dark:text-gray-300">
+                Copy your license key from the Gumroad purchase page and paste it below
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyLicense} className="mt-8 space-y-6">
+              <div>
+                <label
+                  htmlFor="licenseKey"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  License Key
+                </label>
+                <input
+                  type="text"
+                  id="licenseKey"
+                  value={licenseKey}
+                  onChange={(e) => setLicenseKey(e.target.value)}
+                  placeholder="ABC123-DEF456-GHI789"
+                  className="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                  disabled={isVerifying}
+                />
+              </div>
+
+              {verificationError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/20">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                      {verificationError}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isVerifying || !licenseKey.trim()}
+                className={`flex w-full items-center justify-center gap-3 rounded-full px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all ${
+                  isVerifying || !licenseKey.trim()
+                    ? "cursor-not-allowed bg-gray-400 dark:bg-gray-700"
+                    : "bg-blue-600 hover:bg-blue-700 hover:shadow-xl"
+                }`}
+              >
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    Verifying License...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-6 w-6" />
+                    Verify & Generate Resume
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-8 border-t border-gray-200 pt-6 dark:border-gray-700">
+              <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+                Lost your license key?{" "}
+                <a
+                  href="https://gumroad.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  Check your Gumroad library
+                </a>
+              </p>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
