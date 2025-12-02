@@ -80,12 +80,13 @@ export default function Home() {
                 Try Free Preview
                 <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               </Link>
-              <a
-                href="#how-it-works"
-                className="px-8 py-4 bg-white text-gray-900 text-lg font-semibold rounded-xl border-2 border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all duration-300"
+              <Link
+                href="/templates"
+                className="px-8 py-4 bg-white text-gray-900 text-lg font-semibold rounded-xl border-2 border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all duration-300 inline-flex items-center gap-2"
               >
-                See How It Works
-              </a>
+                <FileText className="w-5 h-5" />
+                View Templates
+              </Link>
             </div>
 
             <div className="mb-8 animate-fadeInUp delay-300">
@@ -319,6 +320,12 @@ export default function Home() {
                           <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
                           <span className="text-gray-700">
                             Custom cover letter generation
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
+                          <span className="text-gray-700">
+                            <strong>3 professional templates</strong> - Modern, Traditional, ATS-Optimized
                           </span>
                         </li>
                         <li className="flex items-start gap-3">

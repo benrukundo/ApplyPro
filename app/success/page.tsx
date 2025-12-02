@@ -170,188 +170,425 @@ function SuccessPageContent() {
       const pageHeight = doc.internal.pageSize.getHeight();
 
       if (selectedTemplate === "modern") {
-        // MODERN TEMPLATE - Two columns with blue accents
-        const leftMargin = 15;
-        const leftColWidth = 65;
-        const rightMargin = leftMargin + leftColWidth + 5;
-        const rightColWidth = pageWidth - rightMargin - 15;
-        let leftY = 30;
-        let rightY = 30;
+        // ===== MODERN TEMPLATE - Professional Two-Column Layout with Colored Sidebar =====
 
-        // Header with blue background
-        doc.setFillColor(59, 130, 246);
-        doc.rect(0, 0, pageWidth, 20, "F");
-        doc.setTextColor(255, 255, 255);
+        // Left sidebar dimensions (30% width with blue background)
+        const sidebarWidth = pageWidth * 0.3;
+        const sidebarPadding = 8;
+        const sidebarTextWidth = sidebarWidth - (sidebarPadding * 2);
+
+        // Right content area dimensions (70% width)
+        const contentX = sidebarWidth + 10;
+        const contentWidth = pageWidth - contentX - 10;
+
+        let sidebarY = 20;
+        let contentY = 20;
+
+        // Draw blue sidebar background for entire page
+        doc.setFillColor(239, 246, 255); // Light blue #EFF6FF
+        doc.rect(0, 0, sidebarWidth, pageHeight, "F");
+
+        // Helper function for sidebar text
+        const addSidebarText = (text: string, fontSize: number, isBold: boolean = false, color: "blue" | "black" = "black") => {
+          doc.setFontSize(fontSize);
+          doc.setFont("helvetica", isBold ? "bold" : "normal");
+          if (color === "blue") {
+            doc.setTextColor(59, 130, 246); // Blue
+          } else {
+            doc.setTextColor(33, 33, 33); // Dark gray
+          }
+          const lines = doc.splitTextToSize(text, sidebarTextWidth);
+          lines.forEach((line: string) => {
+            if (sidebarY > pageHeight - 20) {
+              doc.addPage();
+              doc.setFillColor(239, 246, 255);
+              doc.rect(0, 0, sidebarWidth, pageHeight, "F");
+              sidebarY = 20;
+            }
+            doc.text(line, sidebarPadding, sidebarY);
+            sidebarY += fontSize * 0.45;
+          });
+        };
+
+        // Helper function for main content text
+        const addContentText = (text: string, fontSize: number, isBold: boolean = false, color: "blue" | "black" = "black") => {
+          doc.setFontSize(fontSize);
+          doc.setFont("helvetica", isBold ? "bold" : "normal");
+          if (color === "blue") {
+            doc.setTextColor(59, 130, 246);
+          } else {
+            doc.setTextColor(33, 33, 33);
+          }
+          const lines = doc.splitTextToSize(text, contentWidth);
+          lines.forEach((line: string) => {
+            if (contentY > pageHeight - 20) {
+              doc.addPage();
+              doc.setFillColor(239, 246, 255);
+              doc.rect(0, 0, sidebarWidth, pageHeight, "F");
+              contentY = 20;
+            }
+            doc.text(line, contentX, contentY);
+            contentY += fontSize * 0.45;
+          });
+        };
+
+        // Parse resume into sections
+        const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
+        const sections: { [key: string]: string[] } = {};
+        let currentSection = "header";
+        sections[currentSection] = [];
+
+        resumeLines.forEach(line => {
+          const trimmed = line.trim();
+          // Detect section headers (ALL CAPS or ends with colon)
+          if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 30 && !trimmed.match(/^[•\-\*]/)) {
+            currentSection = trimmed.toLowerCase();
+            sections[currentSection] = [];
+          } else if (trimmed.endsWith(":") && trimmed.split(" ").length <= 4) {
+            currentSection = trimmed.replace(":", "").toLowerCase();
+            sections[currentSection] = [];
+          } else if (trimmed.length > 0) {
+            sections[currentSection].push(trimmed);
+          }
+        });
+
+        // Extract name and contact from header
+        const headerLines = sections["header"] || [];
+        const name = headerLines[0] || "Professional Name";
+        const contact = headerLines.slice(1, 4).join(" | ");
+
+        // LEFT SIDEBAR - Profile, Contact, Skills, Education
+        doc.setTextColor(33, 33, 33);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        sidebarY = 25;
+
+        // Name in sidebar
+        const nameLines = doc.splitTextToSize(name, sidebarTextWidth);
+        nameLines.forEach((line: string) => {
+          doc.text(line, sidebarPadding, sidebarY);
+          sidebarY += 8;
+        });
+
+        sidebarY += 5;
+
+        // Contact section
+        if (contact) {
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "normal");
+          const contactLines = doc.splitTextToSize(contact, sidebarTextWidth);
+          contactLines.forEach((line: string) => {
+            doc.text(line, sidebarPadding, sidebarY);
+            sidebarY += 3.5;
+          });
+          sidebarY += 8;
+        }
+
+        // Skills section
+        if (sections["skills"] || sections["technical skills"] || sections["core competencies"]) {
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(59, 130, 246);
+          doc.text("SKILLS", sidebarPadding, sidebarY);
+          sidebarY += 6;
+
+          const skillsContent = sections["skills"] || sections["technical skills"] || sections["core competencies"] || [];
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(33, 33, 33);
+
+          skillsContent.forEach(skill => {
+            // Add bullet point
+            doc.setFillColor(59, 130, 246);
+            doc.circle(sidebarPadding + 1, sidebarY - 1.5, 0.8, "F");
+
+            const skillLines = doc.splitTextToSize(skill.replace(/^[•\-\*]\s*/, ""), sidebarTextWidth - 5);
+            skillLines.forEach((line: string) => {
+              doc.text(line, sidebarPadding + 4, sidebarY);
+              sidebarY += 3.5;
+            });
+            sidebarY += 1;
+          });
+          sidebarY += 5;
+        }
+
+        // Education section
+        if (sections["education"]) {
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(59, 130, 246);
+          doc.text("EDUCATION", sidebarPadding, sidebarY);
+          sidebarY += 6;
+
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(33, 33, 33);
+
+          sections["education"].forEach(edu => {
+            const eduLines = doc.splitTextToSize(edu.replace(/^[•\-\*]\s*/, ""), sidebarTextWidth);
+            eduLines.forEach((line: string) => {
+              doc.text(line, sidebarPadding, sidebarY);
+              sidebarY += 3.5;
+            });
+            sidebarY += 2;
+          });
+        }
+
+        // RIGHT CONTENT AREA - Professional Summary, Experience
+
+        // Professional Summary
+        if (sections["professional summary"] || sections["summary"] || sections["profile"]) {
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(59, 130, 246);
+          doc.text("PROFESSIONAL SUMMARY", contentX, contentY);
+          contentY += 7;
+
+          // Add accent line
+          doc.setDrawColor(59, 130, 246);
+          doc.setLineWidth(0.5);
+          doc.line(contentX, contentY, contentX + 40, contentY);
+          contentY += 5;
+
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(33, 33, 33);
+
+          const summaryContent = sections["professional summary"] || sections["summary"] || sections["profile"] || [];
+          summaryContent.forEach(para => {
+            addContentText(para.replace(/^[•\-\*]\s*/, ""), 9, false);
+            contentY += 2;
+          });
+          contentY += 8;
+        }
+
+        // Work Experience
+        if (sections["experience"] || sections["work experience"] || sections["professional experience"]) {
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(59, 130, 246);
+          doc.text("WORK EXPERIENCE", contentX, contentY);
+          contentY += 7;
+
+          // Add accent line
+          doc.setDrawColor(59, 130, 246);
+          doc.line(contentX, contentY, contentX + 40, contentY);
+          contentY += 5;
+
+          const expContent = sections["experience"] || sections["work experience"] || sections["professional experience"] || [];
+
+          expContent.forEach((exp, index) => {
+            // Timeline dot
+            doc.setFillColor(59, 130, 246);
+            doc.circle(contentX + 2, contentY - 1, 1.2, "F");
+
+            doc.setFontSize(9);
+            doc.setFont("helvetica", exp.match(/^\-/) ? "normal" : "bold");
+            doc.setTextColor(33, 33, 33);
+
+            const expLines = doc.splitTextToSize(exp.replace(/^[•\-\*]\s*/, ""), contentWidth - 8);
+            expLines.forEach((line: string) => {
+              doc.text(line, contentX + 6, contentY);
+              contentY += 4;
+            });
+            contentY += 1;
+          });
+        }
+
+        // Cover Letter on new page
+        doc.addPage();
+        doc.setFillColor(239, 246, 255);
+        doc.rect(0, 0, sidebarWidth, pageHeight, "F");
+
+        contentY = 25;
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
-        doc.text("ApplyPro - Tailored Resume", pageWidth / 2, 12, { align: "center" });
-
-        // Reset text color
-        doc.setTextColor(0, 0, 0);
-
-        // Helper to add text in left column
-        const addLeftText = (text: string, fontSize: number, isBold: boolean = false) => {
-          doc.setFontSize(fontSize);
-          doc.setFont("helvetica", isBold ? "bold" : "normal");
-          const lines = doc.splitTextToSize(text, leftColWidth);
-          lines.forEach((line: string) => {
-            if (leftY > pageHeight - 20) {
-              doc.addPage();
-              leftY = 20;
-            }
-            doc.text(line, leftMargin, leftY);
-            leftY += fontSize * 0.5;
-          });
-          leftY += 3;
-        };
-
-        // Helper to add text in right column
-        const addRightText = (text: string, fontSize: number, isBold: boolean = false) => {
-          doc.setFontSize(fontSize);
-          doc.setFont("helvetica", isBold ? "bold" : "normal");
-          const lines = doc.splitTextToSize(text, rightColWidth);
-          lines.forEach((line: string) => {
-            if (rightY > pageHeight - 20) {
-              doc.addPage();
-              rightY = 20;
-            }
-            doc.text(line, rightMargin, rightY);
-            rightY += fontSize * 0.5;
-          });
-          rightY += 3;
-        };
-
-        // Parse resume content
-        const resumeSections = generatedContent.tailoredResume.split("\n\n").filter(p => p.trim());
-
-        // Left column: Skills and Education (first 40% of content)
-        const leftContent = resumeSections.slice(0, Math.ceil(resumeSections.length * 0.4));
-        leftContent.forEach(section => {
-          if (section.toUpperCase() === section.trim() && section.split(" ").length <= 3) {
-            // Section header
-            doc.setTextColor(59, 130, 246);
-            addLeftText(section, 12, true);
-            doc.setTextColor(0, 0, 0);
-          } else {
-            addLeftText(section, 10);
-          }
-        });
-
-        // Right column: Experience (remaining content)
-        const rightContent = resumeSections.slice(Math.ceil(resumeSections.length * 0.4));
-        rightContent.forEach(section => {
-          if (section.toUpperCase() === section.trim() && section.split(" ").length <= 3) {
-            // Section header
-            doc.setTextColor(59, 130, 246);
-            addRightText(section, 12, true);
-            doc.setTextColor(0, 0, 0);
-          } else {
-            addRightText(section, 10);
-          }
-        });
-
-        // Cover letter on new page
-        doc.addPage();
-        leftY = 20;
         doc.setTextColor(59, 130, 246);
-        addLeftText("COVER LETTER", 14, true);
-        doc.setTextColor(0, 0, 0);
+        doc.text("COVER LETTER", contentX, contentY);
+        contentY += 12;
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(33, 33, 33);
 
         generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          addLeftText(paragraph, 10);
+          addContentText(paragraph, 10);
+          contentY += 5;
         });
 
       } else if (selectedTemplate === "traditional") {
-        // TRADITIONAL TEMPLATE - Single column, serif font, conservative
-        const margin = 25;
-        const maxWidth = pageWidth - 2 * margin;
-        let yPosition = margin;
+        // ===== TRADITIONAL TEMPLATE - Classic Professional Format =====
 
-        const addText = (text: string, fontSize: number, isBold: boolean = false) => {
+        const margin = 25;
+        const maxWidth = pageWidth - (2 * margin);
+        let yPos = margin;
+
+        const addText = (text: string, fontSize: number, isBold: boolean = false, align: "left" | "center" = "left") => {
           doc.setFontSize(fontSize);
           doc.setFont("times", isBold ? "bold" : "normal");
-          const lines = doc.splitTextToSize(text, maxWidth);
-          lines.forEach((line: string) => {
-            if (yPosition > pageHeight - margin) {
-              doc.addPage();
-              yPosition = margin;
-            }
-            doc.text(line, margin, yPosition);
-            yPosition += fontSize * 0.55;
-          });
-          yPosition += 4;
+          doc.setTextColor(0, 0, 0);
+
+          if (align === "center") {
+            doc.text(text, pageWidth / 2, yPos, { align: "center" });
+            yPos += fontSize * 0.6;
+          } else {
+            const lines = doc.splitTextToSize(text, maxWidth);
+            lines.forEach((line: string) => {
+              if (yPos > pageHeight - margin) {
+                doc.addPage();
+                yPos = margin;
+              }
+              doc.text(line, margin, yPos);
+              yPos += fontSize * 0.55;
+            });
+          }
         };
 
-        // Simple header - black text only
-        doc.setFont("times", "bold");
-        doc.setFontSize(18);
-        doc.text("Tailored Resume", pageWidth / 2, yPosition, { align: "center" });
-        yPosition += 15;
+        const addSectionHeader = (title: string) => {
+          if (yPos > pageHeight - 40) {
+            doc.addPage();
+            yPos = margin;
+          }
+          yPos += 5;
+          doc.setFont("times", "bold");
+          doc.setFontSize(12);
+          doc.setTextColor(0, 0, 0);
+          doc.text(title.toUpperCase(), margin, yPos);
+          yPos += 2;
+          // Underline
+          doc.setLineWidth(0.5);
+          doc.setDrawColor(0, 0, 0);
+          doc.line(margin, yPos, margin + 60, yPos);
+          yPos += 8;
+        };
 
-        // Resume section
-        doc.setFont("times", "bold");
-        doc.setFontSize(14);
-        doc.text("RESUME", margin, yPosition);
-        yPosition += 8;
+        // Parse resume
+        const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
+        const name = resumeLines[0] || "Professional Name";
+        const contact = resumeLines.slice(1, 4).join(" • ");
 
-        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          addText(paragraph, 11);
+        // Header - Name centered and larger
+        yPos = 30;
+        doc.setFont("times", "bold");
+        doc.setFontSize(20);
+        doc.text(name, pageWidth / 2, yPos, { align: "center" });
+        yPos += 8;
+
+        // Contact info centered
+        doc.setFont("times", "normal");
+        doc.setFontSize(10);
+        doc.text(contact, pageWidth / 2, yPos, { align: "center" });
+        yPos += 8;
+
+        // Horizontal line
+        doc.setLineWidth(0.8);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 8;
+
+        // Process resume sections
+        let currentSection = "";
+        const sections: { [key: string]: string[] } = {};
+
+        resumeLines.slice(4).forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 30 && !trimmed.match(/^[•\-\*]/)) {
+            currentSection = trimmed;
+            sections[currentSection] = [];
+          } else if (trimmed.endsWith(":") && trimmed.split(" ").length <= 4) {
+            currentSection = trimmed.replace(":", "");
+            sections[currentSection] = [];
+          } else if (trimmed.length > 0) {
+            if (!sections[currentSection]) sections[currentSection] = [];
+            sections[currentSection].push(trimmed);
+          }
         });
 
-        // Cover letter on new page
-        doc.addPage();
-        yPosition = margin;
-        doc.setFont("times", "bold");
-        doc.setFontSize(14);
-        doc.text("COVER LETTER", margin, yPosition);
-        yPosition += 8;
+        // Render sections in professional order
+        const sectionOrder = ["PROFESSIONAL SUMMARY", "SUMMARY", "PROFILE", "EXPERIENCE", "WORK EXPERIENCE", "PROFESSIONAL EXPERIENCE", "EDUCATION", "SKILLS", "TECHNICAL SKILLS"];
 
+        sectionOrder.forEach(sectionName => {
+          const sectionKey = Object.keys(sections).find(k => k.toUpperCase().includes(sectionName));
+          if (sectionKey && sections[sectionKey]) {
+            addSectionHeader(sectionName);
+            sections[sectionKey].forEach(content => {
+              addText(content.replace(/^[•\-\*]\s*/, "• "), 11, false);
+              yPos += 1;
+            });
+            yPos += 5;
+          }
+        });
+
+        // Cover Letter
+        doc.addPage();
+        yPos = margin + 10;
+        doc.setFont("times", "bold");
+        doc.setFontSize(16);
+        doc.text("COVER LETTER", pageWidth / 2, yPos, { align: "center" });
+        yPos += 12;
+
+        doc.setLineWidth(0.8);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 12;
+
+        doc.setFont("times", "normal");
+        doc.setFontSize(11);
         generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
           addText(paragraph, 11);
+          yPos += 6;
         });
 
       } else {
-        // ATS-OPTIMIZED TEMPLATE - Simple, machine-readable, no graphics
+        // ===== ATS-OPTIMIZED TEMPLATE - Maximum Machine Readability =====
+
         const margin = 20;
-        const maxWidth = pageWidth - 2 * margin;
-        let yPosition = margin;
+        const maxWidth = pageWidth - (2 * margin);
+        let yPos = margin;
 
         const addText = (text: string, fontSize: number, isBold: boolean = false) => {
           doc.setFontSize(fontSize);
           doc.setFont("helvetica", isBold ? "bold" : "normal");
+          doc.setTextColor(0, 0, 0);
+
           const lines = doc.splitTextToSize(text, maxWidth);
           lines.forEach((line: string) => {
-            if (yPosition > pageHeight - margin) {
+            if (yPos > pageHeight - margin) {
               doc.addPage();
-              yPosition = margin;
+              yPos = margin;
             }
-            doc.text(line, margin, yPosition);
-            yPosition += fontSize * 0.5;
+            doc.text(line, margin, yPos);
+            yPos += fontSize * 0.5;
           });
-          yPosition += 2;
         };
 
-        // Simple plain text header
-        addText("TAILORED RESUME", 14, true);
-        yPosition += 3;
-        addText("Generated by ApplyPro", 10, false);
-        yPosition += 8;
+        // Parse and render resume - ultra simple
+        const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
 
-        // Resume section with clear headers
-        addText("========== RESUME ==========", 12, true);
-        yPosition += 5;
+        resumeLines.forEach(line => {
+          const trimmed = line.trim();
 
-        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          addText(paragraph, 10);
+          // Check if section header (ALL CAPS)
+          if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 40 && !trimmed.match(/^[•\-\*]/)) {
+            yPos += 4;
+            addText(trimmed, 12, true);
+            yPos += 2;
+          } else if (trimmed.length > 0) {
+            // Regular content - replace fancy bullets with simple ones
+            const cleanLine = trimmed.replace(/^[•\-\*•◦▪]\s*/, "• ");
+            addText(cleanLine, 10, false);
+            yPos += 1;
+          }
         });
 
-        // Cover letter
-        yPosition += 10;
-        addText("========== COVER LETTER ==========", 12, true);
-        yPosition += 5;
+        // Cover Letter
+        yPos += 10;
+        addText("COVER LETTER", 12, true);
+        yPos += 6;
+        addText("_".repeat(80), 10, false);
+        yPos += 6;
 
         generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          addText(paragraph, 10);
+          addText(paragraph, 10, false);
+          yPos += 4;
         });
       }
 
@@ -377,130 +614,430 @@ function SuccessPageContent() {
     setDownloadError("");
 
     try {
-      const sections: any[] = [];
+      let docSections: any[] = [];
 
       if (selectedTemplate === "modern") {
-        // MODERN TEMPLATE - Blue accents, modern styling
-        const createModernParagraph = (text: string, isHeader: boolean = false, isSection: boolean = false) => {
-          return new Paragraph({
-            children: [
-              new TextRun({
-                text: text.trim(),
-                bold: isHeader || isSection,
-                size: isHeader ? 32 : isSection ? 26 : 22, // 16pt, 13pt, 11pt
-                color: isHeader || isSection ? "3B82F6" : "000000",
-                font: "Arial",
-              }),
-            ],
-            spacing: {
-              after: isHeader ? 400 : isSection ? 300 : 200,
-              before: isSection ? 300 : 100,
+        // ===== MODERN TEMPLATE - Professional with Blue Accents =====
+
+        const children: any[] = [];
+
+        // Parse resume into sections
+        const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
+        const sections: { [key: string]: string[] } = {};
+        let currentSection = "header";
+        sections[currentSection] = [];
+
+        resumeLines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 30 && !trimmed.match(/^[•\-\*]/)) {
+            currentSection = trimmed.toLowerCase();
+            sections[currentSection] = [];
+          } else if (trimmed.endsWith(":") && trimmed.split(" ").length <= 4) {
+            currentSection = trimmed.replace(":", "").toLowerCase();
+            sections[currentSection] = [];
+          } else if (trimmed.length > 0) {
+            sections[currentSection].push(trimmed);
+          }
+        });
+
+        // Extract name and contact
+        const headerLines = sections["header"] || [];
+        const name = headerLines[0] || "Professional Name";
+        const contact = headerLines.slice(1, 4).join(" | ");
+
+        // Name - Large and Bold
+        children.push(new Paragraph({
+          children: [new TextRun({
+            text: name,
+            bold: true,
+            size: 32,
+            color: "212121",
+            font: "Arial",
+          })],
+          spacing: { after: 100 },
+        }));
+
+        // Contact info with blue accent
+        if (contact) {
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: contact,
+              size: 18,
+              color: "3B82F6",
+              font: "Arial",
+            })],
+            spacing: { after: 300 },
+          }));
+        }
+
+        // Professional Summary with blue header
+        if (sections["professional summary"] || sections["summary"] || sections["profile"]) {
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: "PROFESSIONAL SUMMARY",
+              bold: true,
+              size: 26,
+              color: "3B82F6",
+              font: "Arial",
+            })],
+            spacing: { before: 200, after: 200 },
+            border: {
+              bottom: { color: "3B82F6", space: 1, style: "single", size: 6 },
             },
+          }));
+
+          const summaryContent = sections["professional summary"] || sections["summary"] || sections["profile"] || [];
+          summaryContent.forEach(para => {
+            children.push(new Paragraph({
+              children: [new TextRun({
+                text: para.replace(/^[•\-\*]\s*/, ""),
+                size: 22,
+                color: "212121",
+                font: "Arial",
+              })],
+              spacing: { after: 160 },
+            }));
           });
-        };
+        }
 
-        // Header
-        sections.push(createModernParagraph("ApplyPro - Tailored Resume", true));
+        // Work Experience with timeline bullets
+        if (sections["experience"] || sections["work experience"] || sections["professional experience"]) {
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: "WORK EXPERIENCE",
+              bold: true,
+              size: 26,
+              color: "3B82F6",
+              font: "Arial",
+            })],
+            spacing: { before: 300, after: 200 },
+            border: {
+              bottom: { color: "3B82F6", space: 1, style: "single", size: 6 },
+            },
+          }));
 
-        // Resume section
-        sections.push(createModernParagraph("RESUME", false, true));
-        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          sections.push(createModernParagraph(paragraph));
-        });
+          const expContent = sections["experience"] || sections["work experience"] || sections["professional experience"] || [];
+          expContent.forEach(exp => {
+            const cleanExp = exp.replace(/^[•\-\*]\s*/, "");
+            const isBullet = exp.match(/^[•\-\*]/);
 
-        // Page break
-        sections.push(new Paragraph({ children: [new TextRun({ text: "", break: 1 })], pageBreakBefore: true }));
+            children.push(new Paragraph({
+              children: [new TextRun({
+                text: isBullet ? `• ${cleanExp}` : cleanExp,
+                size: 22,
+                bold: !isBullet,
+                color: "212121",
+                font: "Arial",
+              })],
+              spacing: { after: isBullet ? 120 : 160 },
+              indent: isBullet ? { left: 360 } : undefined,
+            }));
+          });
+        }
 
-        // Cover letter
-        sections.push(createModernParagraph("COVER LETTER", false, true));
+        // Skills with blue bullets
+        if (sections["skills"] || sections["technical skills"] || sections["core competencies"]) {
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: "SKILLS",
+              bold: true,
+              size: 26,
+              color: "3B82F6",
+              font: "Arial",
+            })],
+            spacing: { before: 300, after: 200 },
+            border: {
+              bottom: { color: "3B82F6", space: 1, style: "single", size: 6 },
+            },
+          }));
+
+          const skillsContent = sections["skills"] || sections["technical skills"] || sections["core competencies"] || [];
+          skillsContent.forEach(skill => {
+            children.push(new Paragraph({
+              children: [new TextRun({
+                text: `• ${skill.replace(/^[•\-\*]\s*/, "")}`,
+                size: 22,
+                color: "212121",
+                font: "Arial",
+              })],
+              spacing: { after: 120 },
+              indent: { left: 360 },
+            }));
+          });
+        }
+
+        // Education
+        if (sections["education"]) {
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: "EDUCATION",
+              bold: true,
+              size: 26,
+              color: "3B82F6",
+              font: "Arial",
+            })],
+            spacing: { before: 300, after: 200 },
+            border: {
+              bottom: { color: "3B82F6", space: 1, style: "single", size: 6 },
+            },
+          }));
+
+          sections["education"].forEach(edu => {
+            children.push(new Paragraph({
+              children: [new TextRun({
+                text: edu.replace(/^[•\-\*]\s*/, ""),
+                size: 22,
+                color: "212121",
+                font: "Arial",
+              })],
+              spacing: { after: 160 },
+            }));
+          });
+        }
+
+        // Cover Letter on new page
+        children.push(new Paragraph({
+          children: [new TextRun({ text: "" })],
+          pageBreakBefore: true,
+        }));
+
+        children.push(new Paragraph({
+          children: [new TextRun({
+            text: "COVER LETTER",
+            bold: true,
+            size: 32,
+            color: "3B82F6",
+            font: "Arial",
+          })],
+          spacing: { after: 400 },
+        }));
+
         generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          sections.push(createModernParagraph(paragraph));
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: paragraph,
+              size: 22,
+              color: "212121",
+              font: "Arial",
+            })],
+            spacing: { after: 240 },
+          }));
         });
+
+        docSections = [{ properties: {}, children }];
 
       } else if (selectedTemplate === "traditional") {
-        // TRADITIONAL TEMPLATE - Serif font, conservative, black only
-        const createTraditionalParagraph = (text: string, isHeader: boolean = false, isSection: boolean = false) => {
-          return new Paragraph({
-            children: [
-              new TextRun({
-                text: text.trim(),
-                bold: isHeader || isSection,
-                size: isHeader ? 36 : isSection ? 28 : 24, // 18pt, 14pt, 12pt
-                color: "000000", // Black only
-                font: "Times New Roman",
-              }),
-            ],
-            alignment: isHeader ? AlignmentType.CENTER : AlignmentType.LEFT,
-            spacing: {
-              after: isHeader ? 600 : isSection ? 400 : 240,
-              before: isSection ? 400 : 120,
+        // ===== TRADITIONAL TEMPLATE - Classic Professional Format =====
+
+        const children: any[] = [];
+
+        // Parse resume
+        const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
+        const name = resumeLines[0] || "Professional Name";
+        const contact = resumeLines.slice(1, 4).join(" • ");
+
+        // Name - Centered, Large, Bold
+        children.push(new Paragraph({
+          children: [new TextRun({
+            text: name,
+            bold: true,
+            size: 40,
+            color: "000000",
+            font: "Times New Roman",
+          })],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 150 },
+        }));
+
+        // Contact - Centered
+        if (contact) {
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: contact,
+              size: 22,
+              color: "000000",
+              font: "Times New Roman",
+            })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 300 },
+            border: {
+              bottom: { color: "000000", space: 1, style: "single", size: 12 },
             },
-          });
-        };
+          }));
+        }
 
-        // Header
-        sections.push(createTraditionalParagraph("Tailored Resume", true));
+        // Process sections
+        let currentSection = "";
+        const sections: { [key: string]: string[] } = {};
 
-        // Resume section
-        sections.push(createTraditionalParagraph("RESUME", false, true));
-        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          sections.push(createTraditionalParagraph(paragraph));
+        resumeLines.slice(4).forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 30 && !trimmed.match(/^[•\-\*]/)) {
+            currentSection = trimmed;
+            sections[currentSection] = [];
+          } else if (trimmed.endsWith(":") && trimmed.split(" ").length <= 4) {
+            currentSection = trimmed.replace(":", "");
+            sections[currentSection] = [];
+          } else if (trimmed.length > 0) {
+            if (!sections[currentSection]) sections[currentSection] = [];
+            sections[currentSection].push(trimmed);
+          }
         });
 
-        // Page break
-        sections.push(new Paragraph({ children: [new TextRun({ text: "", break: 1 })], pageBreakBefore: true }));
+        // Render sections
+        const sectionOrder = ["PROFESSIONAL SUMMARY", "SUMMARY", "PROFILE", "EXPERIENCE", "WORK EXPERIENCE", "PROFESSIONAL EXPERIENCE", "EDUCATION", "SKILLS", "TECHNICAL SKILLS"];
 
-        // Cover letter
-        sections.push(createTraditionalParagraph("COVER LETTER", false, true));
+        sectionOrder.forEach(sectionName => {
+          const sectionKey = Object.keys(sections).find(k => k.toUpperCase().includes(sectionName));
+          if (sectionKey && sections[sectionKey]) {
+            // Section header with underline
+            children.push(new Paragraph({
+              children: [new TextRun({
+                text: sectionName,
+                bold: true,
+                size: 28,
+                color: "000000",
+                font: "Times New Roman",
+              })],
+              spacing: { before: 350, after: 200 },
+              border: {
+                bottom: { color: "000000", space: 1, style: "single", size: 8 },
+              },
+            }));
+
+            // Section content
+            sections[sectionKey].forEach(content => {
+              const cleanContent = content.replace(/^[•\-\*]\s*/, "");
+              const hasBullet = content.match(/^[•\-\*]/);
+
+              children.push(new Paragraph({
+                children: [new TextRun({
+                  text: hasBullet ? `• ${cleanContent}` : cleanContent,
+                  size: 24,
+                  color: "000000",
+                  font: "Times New Roman",
+                })],
+                spacing: { after: 180 },
+                indent: hasBullet ? { left: 360 } : undefined,
+              }));
+            });
+          }
+        });
+
+        // Cover Letter
+        children.push(new Paragraph({
+          children: [new TextRun({ text: "" })],
+          pageBreakBefore: true,
+        }));
+
+        children.push(new Paragraph({
+          children: [new TextRun({
+            text: "COVER LETTER",
+            bold: true,
+            size: 32,
+            color: "000000",
+            font: "Times New Roman",
+          })],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 300 },
+          border: {
+            bottom: { color: "000000", space: 1, style: "single", size: 12 },
+          },
+        }));
+
         generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          sections.push(createTraditionalParagraph(paragraph));
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: paragraph,
+              size: 24,
+              color: "000000",
+              font: "Times New Roman",
+            })],
+            spacing: { after: 280 },
+          }));
         });
+
+        docSections = [{ properties: {}, children }];
 
       } else {
-        // ATS-OPTIMIZED TEMPLATE - Simple, plain, machine-readable
-        const createATSParagraph = (text: string, isHeader: boolean = false, isDivider: boolean = false) => {
-          return new Paragraph({
-            children: [
-              new TextRun({
-                text: text.trim(),
-                bold: isHeader || isDivider,
-                size: isHeader ? 28 : 22, // 14pt, 11pt
+        // ===== ATS-OPTIMIZED TEMPLATE - Ultra Simple, Machine Readable =====
+
+        const children: any[] = [];
+        const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
+
+        resumeLines.forEach(line => {
+          const trimmed = line.trim();
+
+          // Section header
+          if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 40 && !trimmed.match(/^[•\-\*]/)) {
+            children.push(new Paragraph({
+              children: [new TextRun({
+                text: trimmed,
+                bold: true,
+                size: 26,
                 color: "000000",
                 font: "Calibri",
-              }),
-            ],
-            spacing: {
-              after: isHeader ? 200 : isDivider ? 300 : 160,
-              before: isDivider ? 300 : 80,
-            },
-          });
-        };
+              })],
+              spacing: { before: 280, after: 160 },
+            }));
+          } else if (trimmed.length > 0) {
+            // Regular content
+            const cleanLine = trimmed.replace(/^[•\-\*•◦▪]\s*/, "");
+            const hasBullet = trimmed.match(/^[•\-\*]/);
 
-        // Simple header
-        sections.push(createATSParagraph("TAILORED RESUME", true));
-        sections.push(createATSParagraph("Generated by ApplyPro"));
-
-        // Resume section
-        sections.push(createATSParagraph("========== RESUME ==========", false, true));
-        generatedContent.tailoredResume.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          sections.push(createATSParagraph(paragraph));
+            children.push(new Paragraph({
+              children: [new TextRun({
+                text: hasBullet ? `• ${cleanLine}` : cleanLine,
+                size: 22,
+                color: "000000",
+                font: "Calibri",
+              })],
+              spacing: { after: 140 },
+              indent: hasBullet ? { left: 360 } : undefined,
+            }));
+          }
         });
 
-        // Cover letter (no page break for ATS - keep it simple)
-        sections.push(createATSParagraph("========== COVER LETTER ==========", false, true));
+        // Cover Letter
+        children.push(new Paragraph({
+          children: [new TextRun({
+            text: "COVER LETTER",
+            bold: true,
+            size: 26,
+            color: "000000",
+            font: "Calibri",
+          })],
+          spacing: { before: 400, after: 160 },
+        }));
+
+        children.push(new Paragraph({
+          children: [new TextRun({
+            text: "_".repeat(80),
+            size: 22,
+            color: "000000",
+            font: "Calibri",
+          })],
+          spacing: { after: 240 },
+        }));
+
         generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          sections.push(createATSParagraph(paragraph));
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: paragraph,
+              size: 22,
+              color: "000000",
+              font: "Calibri",
+            })],
+            spacing: { after: 200 },
+          }));
         });
+
+        docSections = [{ properties: {}, children }];
       }
 
       // Create document
       const doc = new Document({
-        sections: [
-          {
-            properties: {},
-            children: sections,
-          },
-        ],
+        sections: docSections,
       });
 
       // Generate and save the document
