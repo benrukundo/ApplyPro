@@ -238,3 +238,4 @@ For issues or questions:
 ---
 
 Built with ❤️ using Next.js and Claude AI
+# Force rebuild 
