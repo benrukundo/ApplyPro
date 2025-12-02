@@ -26,6 +26,7 @@ export default function GeneratePage() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [apiError, setApiError] = useState<string>("");
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Extract text from PDF
   const extractPdfText = async (file: File): Promise<string> => {
@@ -147,6 +148,51 @@ export default function GeneratePage() {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle payment redirect to Gumroad with session token
+  const handlePaymentRedirect = async () => {
+    setIsRedirecting(true);
+    setApiError("");
+
+    try {
+      // Generate unique session token
+      const sessionToken = crypto.randomUUID();
+
+      // Create session on server
+      const response = await fetch("/api/session/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token: sessionToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create payment session");
+      }
+
+      // Save data to localStorage
+      try {
+        localStorage.setItem("applypro_resume_text", resumeText);
+        localStorage.setItem("applypro_job_description", jobDescription);
+        localStorage.setItem("applypro_session_token", sessionToken);
+      } catch (err) {
+        console.error("Error saving to localStorage:", err);
+      }
+
+      // Redirect to Gumroad with session token
+      const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true&session=${sessionToken}`;
+      window.location.href = gumroadUrl;
+    } catch (err) {
+      console.error("Error creating payment session:", err);
+      setApiError(
+        err instanceof Error
+          ? err.message
+          : "Failed to initiate payment. Please try again."
+      );
+      setIsRedirecting(false);
     }
   };
 
@@ -504,24 +550,27 @@ export default function GeneratePage() {
                   professional formatting
                 </p>
                 <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                  <a
-                    href="https://laurabi.gumroad.com/l/ykchtv"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => {
-                      // Save data to localStorage before redirecting
-                      try {
-                        localStorage.setItem("applypro_resume_text", resumeText);
-                        localStorage.setItem("applypro_job_description", jobDescription);
-                      } catch (err) {
-                        console.error("Error saving to localStorage:", err);
-                      }
-                    }}
-                    className="flex w-full items-center justify-center gap-3 rounded-full bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:w-auto"
+                  <button
+                    onClick={handlePaymentRedirect}
+                    disabled={isRedirecting}
+                    className={`flex w-full items-center justify-center gap-3 rounded-full px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all sm:w-auto ${
+                      isRedirecting
+                        ? "cursor-not-allowed bg-blue-400"
+                        : "bg-blue-600 hover:bg-blue-700 hover:shadow-xl"
+                    }`}
                   >
-                    <ShoppingCart className="h-5 w-5" />
-                    Get Full Resume - $4.99
-                  </a>
+                    {isRedirecting ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Redirecting to payment...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="h-5 w-5" />
+                        Get Full Resume - $4.99
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={() => {
                       setPreviewData(null);

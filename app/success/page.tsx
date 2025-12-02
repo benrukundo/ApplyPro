@@ -29,6 +29,8 @@ function SuccessPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [paymentVerified, setPaymentVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [verificationError, setVerificationError] = useState<string>("");
 
   const [resumeText, setResumeText] = useState<string>("");
   const [jobDescription, setJobDescription] = useState<string>("");
@@ -41,32 +43,90 @@ function SuccessPageContent() {
   const [isDownloadingDOCX, setIsDownloadingDOCX] = useState(false);
   const [downloadError, setDownloadError] = useState<string>("");
 
-  // Check for payment parameter and load from localStorage
+  // Verify payment session and load from localStorage
   useEffect(() => {
-    const paymentParam = searchParams.get("payment");
+    const verifyPaymentSession = async () => {
+      const paymentParam = searchParams.get("payment");
+      const sessionParam = searchParams.get("session");
 
-    if (paymentParam !== "true") {
-      // Redirect to home if no payment parameter
-      router.push("/");
-      return;
-    }
-
-    setPaymentVerified(true);
-
-    // Try to load data from localStorage
-    try {
-      const savedResumeText = localStorage.getItem("applypro_resume_text");
-      const savedJobDesc = localStorage.getItem("applypro_job_description");
-
-      if (savedResumeText) {
-        setResumeText(savedResumeText);
+      // Check basic payment parameter
+      if (paymentParam !== "true") {
+        router.push("/");
+        return;
       }
-      if (savedJobDesc) {
-        setJobDescription(savedJobDesc);
+
+      // Get session token from URL or localStorage
+      let sessionToken = sessionParam;
+      if (!sessionToken) {
+        sessionToken = localStorage.getItem("applypro_session_token");
       }
-    } catch (err) {
-      console.error("Error loading from localStorage:", err);
-    }
+
+      if (!sessionToken) {
+        setVerificationError("No valid payment session found. Please complete the payment process.");
+        setIsVerifying(false);
+        return;
+      }
+
+      // Verify session with server
+      try {
+        const response = await fetch("/api/session/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token: sessionToken }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.valid) {
+          setVerificationError(
+            data.error || "Invalid or expired payment session. Please complete the payment again."
+          );
+          setIsVerifying(false);
+          // Redirect to home after 3 seconds
+          setTimeout(() => {
+            router.push("/");
+          }, 3000);
+          return;
+        }
+
+        // Session is valid
+        setPaymentVerified(true);
+        setIsVerifying(false);
+
+        // Clear session token from localStorage (one-time use)
+        try {
+          localStorage.removeItem("applypro_session_token");
+        } catch (err) {
+          console.error("Error clearing session token:", err);
+        }
+
+        // Load resume data from localStorage
+        try {
+          const savedResumeText = localStorage.getItem("applypro_resume_text");
+          const savedJobDesc = localStorage.getItem("applypro_job_description");
+
+          if (savedResumeText) {
+            setResumeText(savedResumeText);
+          }
+          if (savedJobDesc) {
+            setJobDescription(savedJobDesc);
+          }
+        } catch (err) {
+          console.error("Error loading from localStorage:", err);
+        }
+      } catch (err) {
+        console.error("Error verifying session:", err);
+        setVerificationError("Failed to verify payment session. Please try again.");
+        setIsVerifying(false);
+        setTimeout(() => {
+          router.push("/");
+        }, 3000);
+      }
+    };
+
+    verifyPaymentSession();
   }, [searchParams, router]);
 
   // Handle generate full resume
@@ -341,6 +401,35 @@ function SuccessPageContent() {
     }
   };
 
+  // Show verification state
+  if (isVerifying) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <p className="text-gray-600 dark:text-gray-400">Verifying payment session...</p>
+      </div>
+    );
+  }
+
+  // Show verification error
+  if (verificationError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+        <div className="max-w-md rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-950/20">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-600 dark:text-red-400" />
+          <h2 className="mt-4 text-xl font-bold text-red-900 dark:text-red-100">
+            Payment Verification Failed
+          </h2>
+          <p className="mt-2 text-red-700 dark:text-red-300">{verificationError}</p>
+          <p className="mt-4 text-sm text-red-600 dark:text-red-400">
+            Redirecting to homepage...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Payment verified - show main content
   if (!paymentVerified) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
