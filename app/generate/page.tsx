@@ -185,8 +185,13 @@ export default function GeneratePage() {
         console.error("Error saving to localStorage:", err);
       }
 
-      // Redirect to Gumroad with session token
-      const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true&session=${sessionToken}`;
+      // Redirect to Gumroad with session token using custom fields
+      // Option 1: Custom fields (recommended - Gumroad will pass this through)
+      const gumroadUrl = `https://laurabi.gumroad.com/l/ykchtv?wanted=true&custom[session]=${sessionToken}`;
+
+      // Option 2: Direct checkout API (alternative approach)
+      // const gumroadUrl = `https://laurabi.gumroad.com/checkout/ykchtv?wanted=true&referrer=${encodeURIComponent(window.location.origin)}&session=${sessionToken}`;
+
       console.log("Redirecting to Gumroad with URL:", gumroadUrl);
       alert("About to redirect to: " + gumroadUrl);
       window.location.href = gumroadUrl;
