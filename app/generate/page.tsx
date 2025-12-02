@@ -27,6 +27,12 @@ export default function GeneratePage() {
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [apiError, setApiError] = useState<string>("");
 
+  // License key verification states
+  const [licenseKey, setLicenseKey] = useState<string>("");
+  const [isVerifyingLicense, setIsVerifyingLicense] = useState(false);
+  const [licenseError, setLicenseError] = useState<string>("");
+  const [remainingUses, setRemainingUses] = useState<number | null>(null);
+
   // Extract text from PDF
   const extractPdfText = async (file: File): Promise<string> => {
     // Dynamically import pdf-parse only when needed
@@ -162,6 +168,78 @@ export default function GeneratePage() {
 
     // Redirect directly to Gumroad
     window.location.href = "https://laurabi.gumroad.com/l/ykchtv";
+  };
+
+  // Handle license key verification and immediate generation
+  const handleLicenseGenerate = async () => {
+    if (!licenseKey.trim()) {
+      setLicenseError("Please enter your license key");
+      return;
+    }
+
+    setIsVerifyingLicense(true);
+    setLicenseError("");
+
+    try {
+      // Verify license with API
+      const verifyResponse = await fetch("/api/verify-license", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ licenseKey: licenseKey.trim() }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyResponse.ok || !verifyData.valid) {
+        setLicenseError(verifyData.error || "Invalid license key");
+        setIsVerifyingLicense(false);
+        return;
+      }
+
+      // License is valid, store remaining uses
+      setRemainingUses(verifyData.remaining || 0);
+
+      // Generate full resume immediately
+      const generateResponse = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resumeText,
+          jobDescription,
+        }),
+      });
+
+      const generateData = await generateResponse.json();
+
+      if (!generateResponse.ok) {
+        throw new Error(generateData.error || "Failed to generate resume");
+      }
+
+      // Save data and redirect to success page with generated content
+      try {
+        localStorage.setItem("applypro_resume_text", resumeText);
+        localStorage.setItem("applypro_job_description", jobDescription);
+        localStorage.setItem("applypro_generated_content", JSON.stringify(generateData));
+        localStorage.setItem("applypro_remaining_uses", String(verifyData.remaining || 0));
+      } catch (err) {
+        console.error("Error saving to localStorage:", err);
+      }
+
+      // Redirect to success page
+      window.location.href = "/success?verified=true";
+    } catch (err) {
+      console.error("Error with license generation:", err);
+      setLicenseError(
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred. Please try again."
+      );
+      setIsVerifyingLicense(false);
+    }
   };
 
   // Get match score color
@@ -342,29 +420,92 @@ export default function GeneratePage() {
           </div>
         </div>
 
-        {/* Generate Button */}
-        <div className="mt-8 flex justify-center">
-          <button
-            onClick={handleAnalyze}
-            disabled={isGenerateDisabled}
-            className={`flex items-center gap-3 rounded-full px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all ${
-              isGenerateDisabled
-                ? "cursor-not-allowed bg-gray-400 dark:bg-gray-700"
-                : "bg-blue-600 hover:bg-blue-700 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-            }`}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-6 w-6 animate-spin" />
-                Analyzing your resume...
-              </>
-            ) : (
-              "Analyze Resume - Free Preview"
-            )}
-          </button>
+        {/* Two Options: Preview OR License Key */}
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+          {/* Left Option: Free Preview */}
+          <div className="rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm dark:border-blue-800 dark:from-blue-950/20 dark:to-gray-900">
+            <div className="text-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                Get Free Preview
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                See match score, improvements, and missing keywords before purchasing
+              </p>
+            </div>
+            <button
+              onClick={handleAnalyze}
+              disabled={isGenerateDisabled || isVerifyingLicense}
+              className={`w-full flex items-center justify-center gap-3 rounded-xl px-6 py-4 text-lg font-semibold text-white shadow-lg transition-all ${
+                isGenerateDisabled || isVerifyingLicense
+                  ? "cursor-not-allowed bg-gray-400 dark:bg-gray-700"
+                  : "bg-blue-600 hover:bg-blue-700 hover:shadow-xl"
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-5 w-5" />
+                  Analyze Resume
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Right Option: License Key */}
+          <div className="rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-white p-6 shadow-sm dark:border-green-800 dark:from-green-950/20 dark:to-gray-900">
+            <div className="text-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                Already have a license key?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Enter your key to generate full resume immediately
+              </p>
+            </div>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={licenseKey}
+                onChange={(e) => setLicenseKey(e.target.value)}
+                placeholder="Enter license key"
+                disabled={isVerifyingLicense}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 disabled:opacity-50"
+              />
+              {licenseError && (
+                <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span>{licenseError}</span>
+                </div>
+              )}
+              <button
+                onClick={handleLicenseGenerate}
+                disabled={isGenerateDisabled || !licenseKey.trim() || isVerifyingLicense}
+                className={`w-full flex items-center justify-center gap-3 rounded-xl px-6 py-4 text-lg font-semibold text-white shadow-lg transition-all ${
+                  isGenerateDisabled || !licenseKey.trim() || isVerifyingLicense
+                    ? "cursor-not-allowed bg-gray-400 dark:bg-gray-700"
+                    : "bg-green-600 hover:bg-green-700 hover:shadow-xl"
+                }`}
+              >
+                {isVerifyingLicense ? (
+                  <>
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-5 w-5" />
+                    Verify & Generate
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
 
-        {isGenerateDisabled && !isLoading && !isExtracting && (
+        {isGenerateDisabled && !isLoading && !isExtracting && !isVerifyingLicense && (
           <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
             {!resumeText && "Please upload your resume"}
             {resumeText &&

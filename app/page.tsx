@@ -72,7 +72,7 @@ export default function Home() {
               minutes with AI-powered optimization.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 animate-fadeInUp delay-200">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6 animate-fadeInUp delay-200">
               <Link
                 href="/generate"
                 className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-lg font-semibold rounded-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 inline-flex items-center gap-2"
@@ -88,7 +88,30 @@ export default function Home() {
               </a>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600 animate-fadeInUp delay-300">
+            <div className="mb-8 animate-fadeInUp delay-300">
+              <Link
+                href="/generate"
+                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors group"
+              >
+                <span>Already purchased? Generate resume</span>
+                <svg
+                  className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </Link>
+              <p className="text-xs text-gray-500 mt-1">Have a license key? Click here</p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600 animate-fadeInUp delay-400">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
                 <span>No signup required</span>
