@@ -523,7 +523,7 @@ export default function GeneratePage() {
                     className="flex w-full items-center justify-center gap-3 rounded-full bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:w-auto"
                   >
                     <ShoppingCart className="h-5 w-5" />
-                    Get Full Resume - $4.99
+                    $4.99 - 3 Resumes
                   </button>
                   <button
                     onClick={() => {

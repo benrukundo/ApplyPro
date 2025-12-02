@@ -31,6 +31,7 @@ function SuccessPageContent() {
   const [licenseKey, setLicenseKey] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string>("");
+  const [remainingUses, setRemainingUses] = useState<number | null>(null);
 
   const [resumeText, setResumeText] = useState<string>("");
   const [jobDescription, setJobDescription] = useState<string>("");
@@ -90,8 +91,9 @@ function SuccessPageContent() {
         return;
       }
 
-      // License is valid
+      // License is valid - store remaining uses
       setPaymentVerified(true);
+      setRemainingUses(data.remaining || 0);
       setIsVerifying(false);
     } catch (err) {
       console.error("Error verifying license:", err);
@@ -507,13 +509,25 @@ function SuccessPageContent() {
         <div className="mb-8 rounded-2xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-6 shadow-sm dark:border-green-800 dark:from-green-950/20 dark:to-emerald-950/20">
           <div className="flex items-center gap-3">
             <PartyPopper className="h-8 w-8 text-green-600 dark:text-green-400" />
-            <div>
+            <div className="flex-1">
               <h2 className="text-2xl font-bold text-green-900 dark:text-green-100">
                 Payment Successful! 🎉
               </h2>
               <p className="mt-1 text-green-700 dark:text-green-300">
                 Thank you for your purchase. Let's create your tailored resume!
               </p>
+              {remainingUses !== null && (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-green-800 shadow-sm dark:bg-green-900/30 dark:text-green-200">
+                  <CheckCircle2 className="h-5 w-5" />
+                  {remainingUses > 0 ? (
+                    <span>
+                      You have <strong>{remainingUses}</strong> resume generation{remainingUses !== 1 ? "s" : ""} remaining
+                    </span>
+                  ) : (
+                    <span>This is your last resume generation</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -759,18 +773,43 @@ function SuccessPageContent() {
                 </div>
               </div>
 
+              {/* Usage Limit Message */}
+              {remainingUses === 0 && (
+                <div className="rounded-2xl border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-6 shadow-sm dark:border-amber-800 dark:from-amber-950/20 dark:to-yellow-950/20">
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100">
+                      You've used all 3 resume generations!
+                    </h3>
+                    <p className="mt-2 text-amber-700 dark:text-amber-300">
+                      Purchase again to create more tailored resumes for different job applications.
+                    </p>
+                    <a
+                      href={process.env.NEXT_PUBLIC_GUMROAD_URL || "https://laurabi.gumroad.com/l/ykchtv"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 inline-flex items-center gap-2 rounded-full bg-blue-600 px-8 py-3 font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl"
+                    >
+                      Buy More Resumes - $4.99
+                      <Sparkles className="h-5 w-5" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex justify-center gap-4">
-                <button
-                  onClick={() => {
-                    setGeneratedContent(null);
-                    setResumeText("");
-                    setJobDescription("");
-                  }}
-                  className="rounded-full border-2 border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-all hover:border-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-800"
-                >
-                  Generate Another Resume
-                </button>
+                {remainingUses !== null && remainingUses > 0 && (
+                  <button
+                    onClick={() => {
+                      setGeneratedContent(null);
+                      setResumeText("");
+                      setJobDescription("");
+                    }}
+                    className="rounded-full border-2 border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-all hover:border-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-800"
+                  >
+                    Generate Another Resume ({remainingUses} left)
+                  </button>
+                )}
               </div>
             </div>
           </>

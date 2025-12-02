@@ -32,7 +32,7 @@ export default function Home() {
     {
       question: "Can I use it multiple times?",
       answer:
-        "Each license key ($4.99) is valid for one resume generation. If you're applying to multiple jobs, you'll need a separate license for each tailored resume. This ensures you get a uniquely optimized resume for each position.",
+        "Yes! Each $4.99 purchase includes 3 resume generations, perfect for tailoring your resume to multiple job applications. This gives you the flexibility to apply to different positions with optimized resumes for each.",
     },
     {
       question: "What file formats do you support?",
@@ -254,17 +254,20 @@ export default function Home() {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                   <div className="flex-1 text-center md:text-left">
                     <div className="inline-block px-4 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold mb-4">
-                      Limited Time Offer
+                      Best Value
                     </div>
                     <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-                      Per Resume
+                      3 Resumes Bundle
                     </h3>
-                    <div className="flex items-baseline justify-center md:justify-start gap-2 mb-6">
+                    <div className="flex items-baseline justify-center md:justify-start gap-2 mb-3">
                       <span className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                         $4.99
                       </span>
                       <span className="text-xl text-gray-600">one-time</span>
                     </div>
+                    <p className="text-lg font-semibold text-green-600 mb-4">
+                      Just $1.66 per resume
+                    </p>
                     <p className="text-gray-600 mb-6">
                       Professional resume writers charge $100-300. Get the same
                       quality powered by AI for a fraction of the cost.
@@ -277,6 +280,12 @@ export default function Home() {
                         What You Get:
                       </h4>
                       <ul className="space-y-3">
+                        <li className="flex items-start gap-3">
+                          <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
+                          <span className="text-gray-700">
+                            <strong>3 resume generations</strong> - Perfect for multiple applications
+                          </span>
+                        </li>
                         <li className="flex items-start gap-3">
                           <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
                           <span className="text-gray-700">
