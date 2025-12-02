@@ -16,11 +16,7 @@ interface PreviewResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    // Debug: Check API key configuration
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    console.log("API Key exists:", !!apiKey);
-    console.log("API Key length:", apiKey?.length || 0);
-    console.log("API Key starts with sk-ant:", apiKey?.startsWith("sk-ant-") || false);
 
     // Parse request body
     const body: PreviewRequest = await request.json();

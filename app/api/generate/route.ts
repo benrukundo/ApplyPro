@@ -111,8 +111,6 @@ Response format:
   "matchScore": 85
 }`;
 
-    console.log("Calling Claude API for full resume generation...");
-
     // Call Claude API with Sonnet 4 for high quality
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514", // Claude Sonnet 4 - high quality
@@ -133,8 +131,6 @@ Response format:
     if (!responseText) {
       throw new Error("No response from Claude API");
     }
-
-    console.log("Claude API response received, parsing...");
 
     // Parse JSON from response
     let parsedResponse: GenerateResponse;
@@ -202,8 +198,6 @@ Response format:
         "Generated cover letter is too short. Please try again."
       );
     }
-
-    console.log("Successfully generated resume and cover letter");
 
     // Return successful response
     return NextResponse.json(parsedResponse, { status: 200 });

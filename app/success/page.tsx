@@ -72,8 +72,6 @@ function SuccessPageContent() {
       return;
     }
 
-    console.log("Verifying license key...");
-
     try {
       // Verify license with our API (which calls Gumroad)
       const response = await fetch("/api/verify-license", {
@@ -91,8 +89,6 @@ function SuccessPageContent() {
         setIsVerifying(false);
         return;
       }
-
-      console.log("License verified successfully");
 
       // License is valid
       setPaymentVerified(true);
