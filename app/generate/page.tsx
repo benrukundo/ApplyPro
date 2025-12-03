@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import Link from "next/link";
-import { Upload, FileText, Loader2, CheckCircle2, ArrowLeft, TrendingUp, AlertCircle, Sparkles, ShoppingCart } from "lucide-react";
+import { Upload, FileText, Loader2, CheckCircle2, ArrowLeft, TrendingUp, AlertCircle, Sparkles, ShoppingCart, Target, Search, Briefcase, Award, XCircle, AlertTriangle, Lightbulb, Zap, Star } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -11,10 +11,21 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MIN_JOB_DESC_LENGTH = 100;
 
 interface PreviewData {
-  matchScore: number;
-  improvements: string[];
-  missingKeywords: string[];
+  overallScore: number;
+  atsScore: number;
+  keywordScore: number;
+  experienceScore: number;
+  skillsScore: number;
+  matchedKeywords: string[];
+  missingKeywords: Array<{keyword: string; priority: string; context: string}>;
+  improvements: Array<{issue: string; fix: string; impact: string}>;
+  strengths: string[];
+  insights: string[];
   previewText: string;
+  keywordStats: {
+    matched: number;
+    total: number;
+  };
 }
 
 export default function GeneratePage() {
@@ -531,106 +542,348 @@ export default function GeneratePage() {
           </div>
         )}
 
-        {/* Preview Results */}
+        {/* Comprehensive Resume Score Dashboard */}
         {previewData && (
-          <div className="mt-8 space-y-6">
-            {/* Match Score Card */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600">
-                    <TrendingUp className="h-6 w-6 text-white" />
+          <div className="mt-8 space-y-6 animate-in fade-in duration-500">
+            {/* Overall Score Section with Circular Progress */}
+            <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-8 shadow-lg dark:border-gray-800 dark:from-gray-900 dark:to-gray-950">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Resume Match Score
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                  How well your resume aligns with this job opportunity
+                </p>
+
+                {/* Circular Progress Indicator */}
+                <div className="flex justify-center mb-6">
+                  <div className="relative w-48 h-48">
+                    {/* Background circle */}
+                    <svg className="transform -rotate-90 w-48 h-48">
+                      <circle
+                        cx="96"
+                        cy="96"
+                        r="88"
+                        stroke="currentColor"
+                        strokeWidth="12"
+                        fill="none"
+                        className="text-gray-200 dark:text-gray-700"
+                      />
+                      {/* Progress circle */}
+                      <circle
+                        cx="96"
+                        cy="96"
+                        r="88"
+                        stroke="currentColor"
+                        strokeWidth="12"
+                        fill="none"
+                        strokeDasharray={`${2 * Math.PI * 88}`}
+                        strokeDashoffset={`${2 * Math.PI * 88 * (1 - previewData.overallScore / 100)}`}
+                        className={`transition-all duration-1000 ease-out ${
+                          previewData.overallScore >= 81 ? 'text-green-500' :
+                          previewData.overallScore >= 61 ? 'text-yellow-500' :
+                          'text-red-500'
+                        }`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    {/* Score text in center */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={`text-5xl font-bold ${getMatchScoreColor(previewData.overallScore)}`}>
+                        {previewData.overallScore}
+                      </span>
+                      <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">out of 100</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
+                  {previewData.overallScore >= 81 && "Excellent match! Your resume is well-aligned with this position."}
+                  {previewData.overallScore >= 61 && previewData.overallScore <= 80 && "Good foundation, but there's room for improvement to stand out."}
+                  {previewData.overallScore < 61 && "Significant improvements needed to compete effectively for this role."}
+                </p>
+              </div>
+            </div>
+
+            {/* Score Breakdown Cards */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {/* ATS Compatibility Score */}
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <Target className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">ATS Score</h4>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-3xl font-bold ${getMatchScoreColor(previewData.atsScore)}`}>
+                    {previewData.atsScore}
+                  </span>
+                  <span className="text-sm text-gray-500">/100</span>
+                </div>
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    className={`h-full transition-all duration-500 ${getMatchScoreBgColor(previewData.atsScore)}`}
+                    style={{ width: `${previewData.atsScore}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                  Applicant Tracking System compatibility
+                </p>
+              </div>
+
+              {/* Keyword Match Score */}
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <Search className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Keywords</h4>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-3xl font-bold ${getMatchScoreColor(previewData.keywordScore)}`}>
+                    {previewData.keywordScore}
+                  </span>
+                  <span className="text-sm text-gray-500">/100</span>
+                </div>
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    className={`h-full transition-all duration-500 ${getMatchScoreBgColor(previewData.keywordScore)}`}
+                    style={{ width: `${previewData.keywordScore}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                  {previewData.keywordStats.matched} of {previewData.keywordStats.total} key terms found
+                </p>
+              </div>
+
+              {/* Experience Relevance Score */}
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                    <Briefcase className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Experience</h4>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-3xl font-bold ${getMatchScoreColor(previewData.experienceScore)}`}>
+                    {previewData.experienceScore}
+                  </span>
+                  <span className="text-sm text-gray-500">/100</span>
+                </div>
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    className={`h-full transition-all duration-500 ${getMatchScoreBgColor(previewData.experienceScore)}`}
+                    style={{ width: `${previewData.experienceScore}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                  Relevance to job requirements
+                </p>
+              </div>
+
+              {/* Skills Alignment Score */}
+              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                    <Award className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Skills</h4>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-3xl font-bold ${getMatchScoreColor(previewData.skillsScore)}`}>
+                    {previewData.skillsScore}
+                  </span>
+                  <span className="text-sm text-gray-500">/100</span>
+                </div>
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    className={`h-full transition-all duration-500 ${getMatchScoreBgColor(previewData.skillsScore)}`}
+                    style={{ width: `${previewData.skillsScore}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                  Technical & soft skills match
+                </p>
+              </div>
+            </div>
+
+            {/* Detailed Insights Grid */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Missing Keywords - RED */}
+              <div className="rounded-xl border-2 border-red-200 bg-gradient-to-br from-red-50 to-white p-6 dark:border-red-900/50 dark:from-red-950/20 dark:to-gray-900">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-600">
+                    <XCircle className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Match Score
+                      Missing Keywords
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      How well your resume matches the job
+                      Critical terms to add for ATS
                     </p>
                   </div>
                 </div>
-                <div
-                  className={`text-5xl font-bold ${getMatchScoreColor(
-                    previewData.matchScore
-                  )}`}
-                >
-                  {previewData.matchScore}%
+                <div className="space-y-3">
+                  {previewData.missingKeywords.map((item, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg bg-white p-4 border border-red-200 dark:bg-gray-800 dark:border-red-900/50"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <span className="font-semibold text-gray-900 dark:text-white">
+                          {item.keyword}
+                        </span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          item.priority === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                          item.priority === 'medium' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        }`}>
+                          {item.priority}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {item.context}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Progress Bar */}
-              <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  className={`h-full transition-all duration-500 ${getMatchScoreBgColor(
-                    previewData.matchScore
-                  )}`}
-                  style={{ width: `${previewData.matchScore}%` }}
-                />
+              {/* Improvements Needed - YELLOW */}
+              <div className="rounded-xl border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-white p-6 dark:border-yellow-900/50 dark:from-yellow-950/20 dark:to-gray-900">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-600">
+                    <AlertTriangle className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Improvements Needed
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Actionable fixes to boost your score
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {previewData.improvements.map((item, index) => (
+                    <div
+                      key={index}
+                      className="rounded-lg bg-white p-4 border border-yellow-200 dark:bg-gray-800 dark:border-yellow-900/50"
+                    >
+                      <div className="flex items-start gap-2 mb-2">
+                        <span className={`flex-shrink-0 mt-0.5 h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                          item.impact === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                          item.impact === 'medium' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        }`}>
+                          !
+                        </span>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white mb-1">
+                            {item.issue}
+                          </p>
+                          <p className="text-sm text-green-700 dark:text-green-400">
+                            → {item.fix}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-
-              <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                {previewData.matchScore >= 70 && "Great match! Your resume aligns well with this job."}
-                {previewData.matchScore >= 50 && previewData.matchScore < 70 && "Decent match. Our AI can significantly improve your chances."}
-                {previewData.matchScore < 50 && "Low match. Let our AI tailor your resume for better results."}
-              </p>
             </div>
 
-            {/* Improvements Section */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-600">
-                  <CheckCircle2 className="h-5 w-5 text-white" />
+            {/* Strengths Section - GREEN */}
+            {previewData.strengths.length > 0 && (
+              <div className="rounded-xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-white p-6 dark:border-green-900/50 dark:from-green-950/20 dark:to-gray-900">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600">
+                    <CheckCircle2 className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Your Strengths
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      What you're doing right
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Top 5 Improvements Needed
-                </h3>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {previewData.strengths.map((strength, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 rounded-lg bg-white p-4 border border-green-200 dark:bg-gray-800 dark:border-green-900/50"
+                    >
+                      <Star className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {strength}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <ul className="space-y-3">
-                {previewData.improvements.map((improvement, index) => (
-                  <li
-                    key={index}
-                    className="flex items-start gap-3 text-gray-700 dark:text-gray-300"
-                  >
-                    <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
-                      {index + 1}
-                    </span>
-                    <span className="pt-0.5">{improvement}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            )}
 
-            {/* Missing Keywords Section */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-600">
-                  <Sparkles className="h-5 w-5 text-white" />
+            {/* AI Strategic Insights */}
+            {previewData.insights.length > 0 && (
+              <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-6 dark:border-gray-800 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-pink-950/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+                    <Lightbulb className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      AI Strategic Insights
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Expert recommendations for this role
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Missing ATS Keywords
+                <div className="space-y-3">
+                  {previewData.insights.map((insight, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 rounded-lg bg-white/80 p-4 backdrop-blur-sm dark:bg-gray-900/80"
+                    >
+                      <Zap className="h-5 w-5 text-purple-600 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        {insight}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Matched Keywords Display */}
+            {previewData.matchedKeywords.length > 0 && (
+              <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center gap-3 mb-4">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Keywords Already in Your Resume ({previewData.matchedKeywords.length})
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Add these to pass applicant tracking systems
-                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {previewData.matchedKeywords.map((keyword, index) => (
+                    <span
+                      key={index}
+                      className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                    >
+                      {keyword}
+                    </span>
+                  ))}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {previewData.missingKeywords.map((keyword, index) => (
-                  <span
-                    key={index}
-                    className="rounded-full bg-orange-100 px-4 py-2 text-sm font-medium text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
-                  >
-                    {keyword}
-                  </span>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Preview Text Section */}
-            <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-blue-50 to-purple-50 p-6 shadow-sm dark:border-gray-800 dark:from-blue-950/20 dark:to-purple-950/20">
-              <div className="mb-4 flex items-center gap-3">
+            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-purple-50 p-6 dark:border-gray-800 dark:from-blue-950/20 dark:to-purple-950/20">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
                   <FileText className="h-5 w-5 text-white" />
                 </div>
@@ -643,28 +896,61 @@ export default function GeneratePage() {
                   </p>
                 </div>
               </div>
-              <p className="leading-relaxed text-gray-700 dark:text-gray-300">
-                {previewData.previewText}
-              </p>
+              <div className="rounded-lg bg-white p-4 dark:bg-gray-900">
+                <p className="leading-relaxed text-gray-700 dark:text-gray-300">
+                  {previewData.previewText}
+                </p>
+              </div>
             </div>
 
-            {/* CTA for Full Resume */}
-            <div className="rounded-2xl border-2 border-blue-600 bg-white p-8 shadow-lg dark:bg-gray-900">
-              <div className="text-center">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Ready to Get Your Full Tailored Resume?
+            {/* Upgrade CTA with Benefits */}
+            <div className="rounded-2xl border-2 border-blue-600 bg-gradient-to-br from-blue-600 to-purple-600 p-8 shadow-xl">
+              <div className="text-center text-white">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
+                  <Sparkles className="h-8 w-8" />
+                </div>
+                <h3 className="text-3xl font-bold mb-3">
+                  Ready to Transform Your Resume?
                 </h3>
-                <p className="mt-3 text-lg text-gray-600 dark:text-gray-300">
-                  Get the complete AI-optimized resume with ATS keywords and
-                  professional formatting
+                <p className="text-lg text-blue-100 mb-6 max-w-2xl mx-auto">
+                  Get the complete AI-optimized resume that fixes all these issues and gets you interviews
                 </p>
-                <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+
+                {/* Benefits List */}
+                <div className="grid gap-3 md:grid-cols-2 max-w-3xl mx-auto mb-8 text-left">
+                  <div className="flex items-start gap-3 text-white">
+                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm">All missing keywords strategically added</span>
+                  </div>
+                  <div className="flex items-start gap-3 text-white">
+                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm">Professional ATS-optimized formatting</span>
+                  </div>
+                  <div className="flex items-start gap-3 text-white">
+                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm">All improvements implemented by AI</span>
+                  </div>
+                  <div className="flex items-start gap-3 text-white">
+                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm">3 professional templates (PDF & DOCX)</span>
+                  </div>
+                  <div className="flex items-start gap-3 text-white">
+                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm">Tailored for this specific job</span>
+                  </div>
+                  <div className="flex items-start gap-3 text-white">
+                    <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <span className="text-sm">3 resume generations included</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                   <button
                     onClick={handlePaymentRedirect}
-                    className="flex w-full items-center justify-center gap-3 rounded-full bg-blue-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:w-auto"
+                    className="flex w-full items-center justify-center gap-3 rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-lg transition-all hover:shadow-xl hover:scale-105 sm:w-auto"
                   >
                     <ShoppingCart className="h-5 w-5" />
-                    $4.99 - 3 Resumes
+                    Get Full Resume - $4.99
                   </button>
                   <button
                     onClick={() => {
@@ -673,7 +959,7 @@ export default function GeneratePage() {
                       setResumeText("");
                       setJobDescription("");
                     }}
-                    className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                    className="text-sm font-medium text-white hover:text-blue-100 underline"
                   >
                     Try Another Resume
                   </button>

@@ -8,10 +8,21 @@ interface PreviewRequest {
 }
 
 interface PreviewResponse {
-  matchScore: number;
-  improvements: string[];
-  missingKeywords: string[];
+  overallScore: number;
+  atsScore: number;
+  keywordScore: number;
+  experienceScore: number;
+  skillsScore: number;
+  matchedKeywords: string[];
+  missingKeywords: Array<{keyword: string; priority: string; context: string}>;
+  improvements: Array<{issue: string; fix: string; impact: string}>;
+  strengths: string[];
+  insights: string[];
   previewText: string;
+  keywordStats: {
+    matched: number;
+    total: number;
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -65,13 +76,8 @@ export async function POST(request: NextRequest) {
       apiKey: apiKey,
     });
 
-    // Create cost-effective prompt
-    const prompt = `Analyze this resume against this job description. Provide a structured analysis with:
-
-1. Match score (0-100) - How well does the resume match the job requirements?
-2. Top 5 specific improvements needed - Be concrete and actionable
-3. 3 missing keywords for ATS - Keywords from the job description that should be in the resume
-4. Preview text - First 100 words of what a tailored resume opening would say
+    // Create comprehensive scoring prompt
+    const prompt = `Analyze this resume against this job description. Provide detailed scoring and insights.
 
 Resume:
 ${resumeText.substring(0, 2000)}
@@ -81,16 +87,42 @@ ${jobDescription.substring(0, 2000)}
 
 Respond in this exact JSON format:
 {
-  "matchScore": <number 0-100>,
-  "improvements": ["improvement 1", "improvement 2", "improvement 3", "improvement 4", "improvement 5"],
-  "missingKeywords": ["keyword1", "keyword2", "keyword3"],
-  "previewText": "First 100 words of tailored resume..."
-}`;
+  "overallScore": <number 0-100>,
+  "atsScore": <number 0-100>,
+  "keywordScore": <number 0-100>,
+  "experienceScore": <number 0-100>,
+  "skillsScore": <number 0-100>,
+  "matchedKeywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
+  "missingKeywords": [
+    {"keyword": "keyword1", "priority": "high|medium|low", "context": "why this matters"},
+    {"keyword": "keyword2", "priority": "high|medium|low", "context": "why this matters"},
+    {"keyword": "keyword3", "priority": "high|medium|low", "context": "why this matters"}
+  ],
+  "improvements": [
+    {"issue": "specific issue", "fix": "how to fix", "impact": "high|medium|low"},
+    {"issue": "specific issue", "fix": "how to fix", "impact": "high|medium|low"},
+    {"issue": "specific issue", "fix": "how to fix", "impact": "high|medium|low"}
+  ],
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "insights": ["strategic insight 1", "strategic insight 2"],
+  "previewText": "First 100 words of tailored resume opening...",
+  "keywordStats": {
+    "matched": <number>,
+    "total": <number>
+  }
+}
+
+Scoring criteria:
+- overallScore: Holistic match between resume and job (0-100)
+- atsScore: ATS compatibility (formatting, keywords, structure)
+- keywordScore: % of job keywords found in resume
+- experienceScore: Relevance of past experience to job requirements
+- skillsScore: Technical/soft skills alignment with job needs`;
 
     // Call Claude API with cost-effective settings
     const message = await anthropic.messages.create({
       model: "claude-3-haiku-20240307", // Fastest and most cost-effective model
-      max_tokens: 500, // Limit response length to minimize cost
+      max_tokens: 1000, // Increased for comprehensive scoring data
       temperature: 0.7,
       messages: [
         {
@@ -119,35 +151,56 @@ Respond in this exact JSON format:
       console.error("Failed to parse Claude response:", responseText);
       // Fallback: try to extract information manually
       parsedResponse = {
-        matchScore: 50,
-        improvements: [
-          "Unable to parse full analysis",
-          "Please try again with a different resume or job description",
+        overallScore: 50,
+        atsScore: 50,
+        keywordScore: 50,
+        experienceScore: 50,
+        skillsScore: 50,
+        matchedKeywords: [],
+        missingKeywords: [
+          { keyword: "N/A", priority: "low", context: "Unable to parse analysis" }
         ],
-        missingKeywords: ["N/A"],
+        improvements: [
+          { issue: "Unable to parse full analysis", fix: "Please try again", impact: "low" }
+        ],
+        strengths: [],
+        insights: [],
         previewText: responseText.substring(0, 200),
+        keywordStats: { matched: 0, total: 0 }
       };
     }
 
     // Validate parsed response structure
     if (
-      typeof parsedResponse.matchScore !== "number" ||
-      !Array.isArray(parsedResponse.improvements) ||
+      typeof parsedResponse.overallScore !== "number" ||
+      typeof parsedResponse.atsScore !== "number" ||
+      typeof parsedResponse.keywordScore !== "number" ||
+      typeof parsedResponse.experienceScore !== "number" ||
+      typeof parsedResponse.skillsScore !== "number" ||
+      !Array.isArray(parsedResponse.matchedKeywords) ||
       !Array.isArray(parsedResponse.missingKeywords) ||
-      typeof parsedResponse.previewText !== "string"
+      !Array.isArray(parsedResponse.improvements) ||
+      !Array.isArray(parsedResponse.strengths) ||
+      !Array.isArray(parsedResponse.insights) ||
+      typeof parsedResponse.previewText !== "string" ||
+      typeof parsedResponse.keywordStats !== "object"
     ) {
       throw new Error("Invalid response format from Claude API");
     }
 
-    // Ensure matchScore is within valid range
-    parsedResponse.matchScore = Math.max(
-      0,
-      Math.min(100, parsedResponse.matchScore)
-    );
+    // Ensure scores are within valid range (0-100)
+    parsedResponse.overallScore = Math.max(0, Math.min(100, parsedResponse.overallScore));
+    parsedResponse.atsScore = Math.max(0, Math.min(100, parsedResponse.atsScore));
+    parsedResponse.keywordScore = Math.max(0, Math.min(100, parsedResponse.keywordScore));
+    parsedResponse.experienceScore = Math.max(0, Math.min(100, parsedResponse.experienceScore));
+    parsedResponse.skillsScore = Math.max(0, Math.min(100, parsedResponse.skillsScore));
 
-    // Ensure arrays have the expected number of items
+    // Ensure arrays are properly formatted
+    parsedResponse.matchedKeywords = parsedResponse.matchedKeywords.slice(0, 10);
+    parsedResponse.missingKeywords = parsedResponse.missingKeywords.slice(0, 5);
     parsedResponse.improvements = parsedResponse.improvements.slice(0, 5);
-    parsedResponse.missingKeywords = parsedResponse.missingKeywords.slice(0, 3);
+    parsedResponse.strengths = parsedResponse.strengths.slice(0, 5);
+    parsedResponse.insights = parsedResponse.insights.slice(0, 3);
 
     // Return successful response
     return NextResponse.json(parsedResponse, { status: 200 });
