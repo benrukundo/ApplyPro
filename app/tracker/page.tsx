@@ -356,112 +356,7 @@ function TrackerContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/80">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-xl font-bold text-gray-900 dark:text-white">
-              ApplyPro
-            </Link>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-6">
-              <Link
-                href="/dashboard"
-                className="font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/tracker"
-                className="font-medium text-blue-600 dark:text-blue-400"
-              >
-                Tracker
-              </Link>
-              <Link
-                href="/generate"
-                className="font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-              >
-                Generate Resume
-              </Link>
-              <Link
-                href="/ats-checker"
-                className="font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-              >
-                ATS Checker
-              </Link>
-            </nav>
-
-            {/* User Menu */}
-            <div className="hidden md:flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {user.name}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750"
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
-            </div>
-
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden"
-            >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6 text-gray-900 dark:text-white" />
-              ) : (
-                <Menu className="h-6 w-6 text-gray-900 dark:text-white" />
-              )}
-            </button>
-          </div>
-
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <div className="mt-4 space-y-2 border-t border-gray-200 pt-4 dark:border-gray-800 md:hidden">
-              <Link
-                href="/dashboard"
-                className="block rounded-lg px-4 py-2 font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/tracker"
-                className="block rounded-lg bg-blue-50 px-4 py-2 font-medium text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-              >
-                Tracker
-              </Link>
-              <Link
-                href="/generate"
-                className="block rounded-lg px-4 py-2 font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800"
-              >
-                Generate Resume
-              </Link>
-              <Link
-                href="/ats-checker"
-                className="block rounded-lg px-4 py-2 font-medium text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800"
-              >
-                ATS Checker
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="flex w-full items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750"
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -753,7 +648,6 @@ function TrackerContent() {
             )}
           </div>
         )}
-      </main>
 
       {/* Add/Edit Application Modal */}
       {showAddModal && (
@@ -1346,6 +1240,7 @@ function TrackerContent() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

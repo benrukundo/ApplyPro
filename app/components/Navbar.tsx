@@ -2,145 +2,307 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { isAuthenticated, getCurrentUser, logout, User } from "@/lib/auth";
+import { Menu, X, LogOut } from "lucide-react";
 
 export default function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const router = useRouter();
   const pathname = usePathname();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
+    const authenticated = isAuthenticated();
+    setIsLoggedIn(authenticated);
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    if (authenticated) {
+      const currentUser = getCurrentUser();
+      setUser(currentUser);
+    }
+  }, [pathname]); // Re-check on route change
 
-  const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/#how-it-works", label: "How It Works" },
-    { href: "/#pricing", label: "Pricing" },
-    { href: "/contact", label: "Contact" },
-  ];
-
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href.split("#")[0]);
+  const handleLogout = () => {
+    logout();
+    setIsLoggedIn(false);
+    setUser(null);
+    setMobileMenuOpen(false);
+    router.push("/");
   };
 
+  // Don't show navbar on login/signup pages
+  if (pathname === "/login" || pathname === "/signup") {
+    return null;
+  }
+
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-white shadow-md py-3"
-          : "bg-white/95 backdrop-blur-sm py-4"
-      }`}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/80">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link
             href="/"
-            className="flex items-center gap-2 group"
+            className="text-xl font-bold text-gray-900 dark:text-white"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-transform">
-              <span className="text-white font-bold text-xl">A</span>
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              ApplyPro
-            </span>
+            ApplyPro
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`font-medium transition-colors relative group ${
-                  isActive(link.href)
-                    ? "text-blue-600"
-                    : "text-gray-700 hover:text-blue-600"
-                }`}
-              >
-                {link.label}
-                <span
-                  className={`absolute -bottom-1 left-0 h-0.5 bg-blue-600 transition-all duration-300 ${
-                    isActive(link.href) ? "w-full" : "w-0 group-hover:w-full"
+          <nav className="hidden md:flex items-center gap-8">
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href="/dashboard"
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                    pathname === "/dashboard"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
                   }`}
-                />
-              </Link>
-            ))}
-            <Link
-              href="/generate"
-              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-300"
-            >
-              Get Started
-            </Link>
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/tracker"
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                    pathname === "/tracker"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  Tracker
+                </Link>
+                <Link
+                  href="/generate"
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                    pathname === "/generate"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  Generate Resume
+                </Link>
+                <Link
+                  href="/ats-checker"
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                    pathname === "/ats-checker"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  ATS Checker
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/"
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                    pathname === "/"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/templates"
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                    pathname === "/templates"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  Templates
+                </Link>
+                <Link
+                  href="/ats-checker"
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                    pathname === "/ats-checker"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  ATS Checker
+                </Link>
+              </>
+            )}
+          </nav>
+
+          {/* Desktop Auth Buttons */}
+          <div className="hidden md:flex items-center gap-4">
+            {isLoggedIn ? (
+              <>
+                <div className="text-sm text-gray-700 dark:text-gray-300">
+                  <div className="font-medium">{user?.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {user?.email}
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
           <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-gray-700 hover:text-blue-600 transition-colors"
-            aria-label="Toggle menu"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              {isMobileMenuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
           </button>
         </div>
 
         {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-gray-200 animate-fadeIn">
-            <div className="flex flex-col gap-4 pt-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`font-medium transition-colors px-2 py-2 rounded-lg ${
-                    isActive(link.href)
-                      ? "text-blue-600 bg-blue-50"
-                      : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <Link
-                href="/generate"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg text-center hover:shadow-lg transition-all duration-300"
-              >
-                Get Started
-              </Link>
-            </div>
+        {mobileMenuOpen && (
+          <div className="border-t border-gray-200 py-4 md:hidden dark:border-gray-800">
+            <nav className="flex flex-col gap-4">
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                      pathname === "/dashboard"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    href="/tracker"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                      pathname === "/tracker"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    Tracker
+                  </Link>
+                  <Link
+                    href="/generate"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                      pathname === "/generate"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    Generate Resume
+                  </Link>
+                  <Link
+                    href="/ats-checker"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                      pathname === "/ats-checker"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    ATS Checker
+                  </Link>
+                  <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
+                    <div className="mb-3 text-sm text-gray-700 dark:text-gray-300">
+                      <div className="font-medium">{user?.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {user?.email}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                      pathname === "/"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    Home
+                  </Link>
+                  <Link
+                    href="/templates"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                      pathname === "/templates"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    Templates
+                  </Link>
+                  <Link
+                    href="/ats-checker"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                      pathname === "/ats-checker"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    ATS Checker
+                  </Link>
+                  <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
+                    <div className="flex flex-col gap-2">
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="rounded-lg px-4 py-2 text-center text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        href="/signup"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="rounded-lg bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                      >
+                        Sign Up
+                      </Link>
+                    </div>
+                  </div>
+                </>
+              )}
+            </nav>
           </div>
         )}
       </div>
-    </nav>
+    </header>
   );
 }
