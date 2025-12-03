@@ -130,6 +130,33 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Free ATS Checker Banner */}
+      <section className="py-12 bg-gradient-to-r from-green-600 to-emerald-600">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 rounded-full mb-4">
+              <Target className="w-5 h-5 text-white" />
+              <span className="text-sm font-semibold text-white">
+                100% Free • No Signup Required
+              </span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Not Ready to Buy? Try Our Free ATS Checker First!
+            </h2>
+            <p className="text-lg text-green-100 mb-6 max-w-2xl mx-auto">
+              See if your resume can pass Applicant Tracking Systems. Get instant feedback on formatting, keywords, and compatibility.
+            </p>
+            <Link
+              href="/ats-checker"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-green-600 text-lg font-semibold rounded-xl hover:shadow-xl hover:scale-105 transition-all duration-300"
+            >
+              <Shield className="w-5 h-5" />
+              Check My Resume For Free
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
