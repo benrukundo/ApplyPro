@@ -14,7 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
-import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx";
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableCell, TableRow, WidthType, BorderStyle, ShadingType, VerticalAlign } from "docx";
 import { saveAs } from "file-saver";
 
 export const dynamic = 'force-dynamic';
@@ -617,9 +617,7 @@ function SuccessPageContent() {
       let docSections: any[] = [];
 
       if (selectedTemplate === "modern") {
-        // ===== MODERN TEMPLATE - Professional with Blue Accents =====
-
-        const children: any[] = [];
+        // ===== MODERN TEMPLATE - Professional Two-Column Layout with Blue Sidebar =====
 
         // Parse resume into sections
         const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
@@ -643,76 +641,148 @@ function SuccessPageContent() {
         // Extract name and contact
         const headerLines = sections["header"] || [];
         const name = headerLines[0] || "Professional Name";
-        const contact = headerLines.slice(1, 4).join(" | ");
+        const contactInfo = headerLines.slice(1, 4);
 
-        // Name - Large and Bold
-        children.push(new Paragraph({
+        // LEFT SIDEBAR CONTENT
+        const leftSidebarContent: Paragraph[] = [];
+
+        // Name in sidebar
+        leftSidebarContent.push(new Paragraph({
           children: [new TextRun({
-            text: name,
+            text: name.toUpperCase(),
             bold: true,
-            size: 32,
-            color: "212121",
+            size: 28,
+            color: "1E3A8A",
             font: "Arial",
           })],
-          spacing: { after: 100 },
+          spacing: { after: 300 },
         }));
 
-        // Contact info with blue accent
-        if (contact) {
-          children.push(new Paragraph({
+        // Contact section
+        if (contactInfo.length > 0) {
+          leftSidebarContent.push(new Paragraph({
             children: [new TextRun({
-              text: contact,
-              size: 18,
+              text: "CONTACT",
+              bold: true,
+              size: 20,
               color: "3B82F6",
               font: "Arial",
             })],
-            spacing: { after: 300 },
+            spacing: { before: 200, after: 150 },
           }));
+
+          contactInfo.forEach(info => {
+            leftSidebarContent.push(new Paragraph({
+              children: [new TextRun({
+                text: info.replace(/^[•\-\*]\s*/, ""),
+                size: 18,
+                color: "1F2937",
+                font: "Arial",
+              })],
+              spacing: { after: 100 },
+            }));
+          });
         }
 
-        // Professional Summary with blue header
+        // Skills in sidebar
+        if (sections["skills"] || sections["technical skills"] || sections["core competencies"]) {
+          leftSidebarContent.push(new Paragraph({
+            children: [new TextRun({
+              text: "SKILLS",
+              bold: true,
+              size: 20,
+              color: "3B82F6",
+              font: "Arial",
+            })],
+            spacing: { before: 300, after: 150 },
+          }));
+
+          const skillsContent = sections["skills"] || sections["technical skills"] || sections["core competencies"] || [];
+          skillsContent.slice(0, 10).forEach(skill => {
+            leftSidebarContent.push(new Paragraph({
+              children: [new TextRun({
+                text: `• ${skill.replace(/^[•\-\*]\s*/, "")}`,
+                size: 18,
+                color: "1F2937",
+                font: "Arial",
+              })],
+              spacing: { after: 100 },
+            }));
+          });
+        }
+
+        // Education in sidebar
+        if (sections["education"]) {
+          leftSidebarContent.push(new Paragraph({
+            children: [new TextRun({
+              text: "EDUCATION",
+              bold: true,
+              size: 20,
+              color: "3B82F6",
+              font: "Arial",
+            })],
+            spacing: { before: 300, after: 150 },
+          }));
+
+          sections["education"].forEach(edu => {
+            leftSidebarContent.push(new Paragraph({
+              children: [new TextRun({
+                text: edu.replace(/^[•\-\*]\s*/, ""),
+                size: 18,
+                color: "1F2937",
+                font: "Arial",
+              })],
+              spacing: { after: 150 },
+            }));
+          });
+        }
+
+        // RIGHT CONTENT AREA
+        const rightContentArea: Paragraph[] = [];
+
+        // Professional Summary
         if (sections["professional summary"] || sections["summary"] || sections["profile"]) {
-          children.push(new Paragraph({
+          rightContentArea.push(new Paragraph({
             children: [new TextRun({
               text: "PROFESSIONAL SUMMARY",
               bold: true,
-              size: 26,
+              size: 24,
               color: "3B82F6",
               font: "Arial",
             })],
-            spacing: { before: 200, after: 200 },
+            spacing: { after: 150 },
             border: {
-              bottom: { color: "3B82F6", space: 1, style: "single", size: 6 },
+              bottom: { color: "3B82F6", space: 1, style: BorderStyle.SINGLE, size: 8 },
             },
           }));
 
           const summaryContent = sections["professional summary"] || sections["summary"] || sections["profile"] || [];
           summaryContent.forEach(para => {
-            children.push(new Paragraph({
+            rightContentArea.push(new Paragraph({
               children: [new TextRun({
                 text: para.replace(/^[•\-\*]\s*/, ""),
-                size: 22,
-                color: "212121",
+                size: 20,
+                color: "1F2937",
                 font: "Arial",
               })],
-              spacing: { after: 160 },
+              spacing: { after: 200 },
             }));
           });
         }
 
-        // Work Experience with timeline bullets
+        // Work Experience
         if (sections["experience"] || sections["work experience"] || sections["professional experience"]) {
-          children.push(new Paragraph({
+          rightContentArea.push(new Paragraph({
             children: [new TextRun({
               text: "WORK EXPERIENCE",
               bold: true,
-              size: 26,
+              size: 24,
               color: "3B82F6",
               font: "Arial",
             })],
-            spacing: { before: 300, after: 200 },
+            spacing: { before: 300, after: 150 },
             border: {
-              bottom: { color: "3B82F6", space: 1, style: "single", size: 6 },
+              bottom: { color: "3B82F6", space: 1, style: BorderStyle.SINGLE, size: 8 },
             },
           }));
 
@@ -721,87 +791,76 @@ function SuccessPageContent() {
             const cleanExp = exp.replace(/^[•\-\*]\s*/, "");
             const isBullet = exp.match(/^[•\-\*]/);
 
-            children.push(new Paragraph({
+            rightContentArea.push(new Paragraph({
               children: [new TextRun({
                 text: isBullet ? `• ${cleanExp}` : cleanExp,
-                size: 22,
+                size: 20,
                 bold: !isBullet,
-                color: "212121",
+                color: "1F2937",
                 font: "Arial",
               })],
-              spacing: { after: isBullet ? 120 : 160 },
+              spacing: { after: isBullet ? 100 : 200 },
               indent: isBullet ? { left: 360 } : undefined,
             }));
           });
         }
 
-        // Skills with blue bullets
-        if (sections["skills"] || sections["technical skills"] || sections["core competencies"]) {
-          children.push(new Paragraph({
-            children: [new TextRun({
-              text: "SKILLS",
-              bold: true,
-              size: 26,
-              color: "3B82F6",
-              font: "Arial",
-            })],
-            spacing: { before: 300, after: 200 },
-            border: {
-              bottom: { color: "3B82F6", space: 1, style: "single", size: 6 },
-            },
-          }));
-
-          const skillsContent = sections["skills"] || sections["technical skills"] || sections["core competencies"] || [];
-          skillsContent.forEach(skill => {
-            children.push(new Paragraph({
-              children: [new TextRun({
-                text: `• ${skill.replace(/^[•\-\*]\s*/, "")}`,
-                size: 22,
-                color: "212121",
-                font: "Arial",
-              })],
-              spacing: { after: 120 },
-              indent: { left: 360 },
-            }));
-          });
-        }
-
-        // Education
-        if (sections["education"]) {
-          children.push(new Paragraph({
-            children: [new TextRun({
-              text: "EDUCATION",
-              bold: true,
-              size: 26,
-              color: "3B82F6",
-              font: "Arial",
-            })],
-            spacing: { before: 300, after: 200 },
-            border: {
-              bottom: { color: "3B82F6", space: 1, style: "single", size: 6 },
-            },
-          }));
-
-          sections["education"].forEach(edu => {
-            children.push(new Paragraph({
-              children: [new TextRun({
-                text: edu.replace(/^[•\-\*]\s*/, ""),
-                size: 22,
-                color: "212121",
-                font: "Arial",
-              })],
-              spacing: { after: 160 },
-            }));
-          });
-        }
+        // Create two-column table
+        const table = new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: {
+            top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+            bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+            left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+            right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+            insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+            insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+          },
+          rows: [
+            new TableRow({
+              children: [
+                // LEFT COLUMN (30%) - Blue sidebar
+                new TableCell({
+                  width: { size: 30, type: WidthType.PERCENTAGE },
+                  shading: {
+                    fill: "EFF6FF",
+                    type: ShadingType.SOLID,
+                  },
+                  margins: {
+                    top: 200,
+                    bottom: 200,
+                    left: 200,
+                    right: 200,
+                  },
+                  verticalAlign: VerticalAlign.TOP,
+                  children: leftSidebarContent,
+                }),
+                // RIGHT COLUMN (70%) - Main content
+                new TableCell({
+                  width: { size: 70, type: WidthType.PERCENTAGE },
+                  margins: {
+                    top: 200,
+                    bottom: 200,
+                    left: 400,
+                    right: 200,
+                  },
+                  verticalAlign: VerticalAlign.TOP,
+                  children: rightContentArea,
+                }),
+              ],
+            }),
+          ],
+        });
 
         // Cover Letter on new page
-        children.push(new Paragraph({
+        const coverLetterContent: Paragraph[] = [];
+
+        coverLetterContent.push(new Paragraph({
           children: [new TextRun({ text: "" })],
           pageBreakBefore: true,
         }));
 
-        children.push(new Paragraph({
+        coverLetterContent.push(new Paragraph({
           children: [new TextRun({
             text: "COVER LETTER",
             bold: true,
@@ -813,23 +872,26 @@ function SuccessPageContent() {
         }));
 
         generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          children.push(new Paragraph({
+          coverLetterContent.push(new Paragraph({
             children: [new TextRun({
               text: paragraph,
               size: 22,
-              color: "212121",
+              color: "1F2937",
               font: "Arial",
             })],
             spacing: { after: 240 },
           }));
         });
 
-        docSections = [{ properties: {}, children }];
+        docSections = [{
+          properties: {},
+          children: [table, ...coverLetterContent]
+        }];
 
       } else if (selectedTemplate === "traditional") {
         // ===== TRADITIONAL TEMPLATE - Classic Professional Format =====
 
-        const children: any[] = [];
+        const children: Paragraph[] = [];
 
         // Parse resume
         const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
@@ -839,9 +901,9 @@ function SuccessPageContent() {
         // Name - Centered, Large, Bold
         children.push(new Paragraph({
           children: [new TextRun({
-            text: name,
+            text: name.toUpperCase(),
             bold: true,
-            size: 40,
+            size: 36,
             color: "000000",
             font: "Times New Roman",
           })],
@@ -854,14 +916,20 @@ function SuccessPageContent() {
           children.push(new Paragraph({
             children: [new TextRun({
               text: contact,
-              size: 22,
+              size: 20,
               color: "000000",
               font: "Times New Roman",
             })],
             alignment: AlignmentType.CENTER,
-            spacing: { after: 300 },
+            spacing: { after: 200 },
+          }));
+
+          // Horizontal line separator
+          children.push(new Paragraph({
+            children: [new TextRun({ text: "" })],
+            spacing: { after: 200 },
             border: {
-              bottom: { color: "000000", space: 1, style: "single", size: 12 },
+              bottom: { color: "000000", space: 1, style: BorderStyle.SINGLE, size: 15 },
             },
           }));
         }
@@ -884,7 +952,7 @@ function SuccessPageContent() {
           }
         });
 
-        // Render sections
+        // Render sections in professional order
         const sectionOrder = ["PROFESSIONAL SUMMARY", "SUMMARY", "PROFILE", "EXPERIENCE", "WORK EXPERIENCE", "PROFESSIONAL EXPERIENCE", "EDUCATION", "SKILLS", "TECHNICAL SKILLS"];
 
         sectionOrder.forEach(sectionName => {
@@ -895,13 +963,13 @@ function SuccessPageContent() {
               children: [new TextRun({
                 text: sectionName,
                 bold: true,
-                size: 28,
+                size: 26,
                 color: "000000",
                 font: "Times New Roman",
               })],
-              spacing: { before: 350, after: 200 },
+              spacing: { before: 350, after: 150 },
               border: {
-                bottom: { color: "000000", space: 1, style: "single", size: 8 },
+                bottom: { color: "000000", space: 1, style: BorderStyle.SINGLE, size: 10 },
               },
             }));
 
@@ -913,18 +981,18 @@ function SuccessPageContent() {
               children.push(new Paragraph({
                 children: [new TextRun({
                   text: hasBullet ? `• ${cleanContent}` : cleanContent,
-                  size: 24,
+                  size: 22,
                   color: "000000",
                   font: "Times New Roman",
                 })],
-                spacing: { after: 180 },
+                spacing: { after: 160 },
                 indent: hasBullet ? { left: 360 } : undefined,
               }));
             });
           }
         });
 
-        // Cover Letter
+        // Cover Letter on new page
         children.push(new Paragraph({
           children: [new TextRun({ text: "" })],
           pageBreakBefore: true,
@@ -934,90 +1002,20 @@ function SuccessPageContent() {
           children: [new TextRun({
             text: "COVER LETTER",
             bold: true,
-            size: 32,
+            size: 30,
             color: "000000",
             font: "Times New Roman",
           })],
           alignment: AlignmentType.CENTER,
-          spacing: { after: 300 },
+          spacing: { after: 200 },
+        }));
+
+        children.push(new Paragraph({
+          children: [new TextRun({ text: "" })],
+          spacing: { after: 200 },
           border: {
-            bottom: { color: "000000", space: 1, style: "single", size: 12 },
+            bottom: { color: "000000", space: 1, style: BorderStyle.SINGLE, size: 15 },
           },
-        }));
-
-        generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
-          children.push(new Paragraph({
-            children: [new TextRun({
-              text: paragraph,
-              size: 24,
-              color: "000000",
-              font: "Times New Roman",
-            })],
-            spacing: { after: 280 },
-          }));
-        });
-
-        docSections = [{ properties: {}, children }];
-
-      } else {
-        // ===== ATS-OPTIMIZED TEMPLATE - Ultra Simple, Machine Readable =====
-
-        const children: any[] = [];
-        const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
-
-        resumeLines.forEach(line => {
-          const trimmed = line.trim();
-
-          // Section header
-          if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 40 && !trimmed.match(/^[•\-\*]/)) {
-            children.push(new Paragraph({
-              children: [new TextRun({
-                text: trimmed,
-                bold: true,
-                size: 26,
-                color: "000000",
-                font: "Calibri",
-              })],
-              spacing: { before: 280, after: 160 },
-            }));
-          } else if (trimmed.length > 0) {
-            // Regular content
-            const cleanLine = trimmed.replace(/^[•\-\*•◦▪]\s*/, "");
-            const hasBullet = trimmed.match(/^[•\-\*]/);
-
-            children.push(new Paragraph({
-              children: [new TextRun({
-                text: hasBullet ? `• ${cleanLine}` : cleanLine,
-                size: 22,
-                color: "000000",
-                font: "Calibri",
-              })],
-              spacing: { after: 140 },
-              indent: hasBullet ? { left: 360 } : undefined,
-            }));
-          }
-        });
-
-        // Cover Letter
-        children.push(new Paragraph({
-          children: [new TextRun({
-            text: "COVER LETTER",
-            bold: true,
-            size: 26,
-            color: "000000",
-            font: "Calibri",
-          })],
-          spacing: { before: 400, after: 160 },
-        }));
-
-        children.push(new Paragraph({
-          children: [new TextRun({
-            text: "_".repeat(80),
-            size: 22,
-            color: "000000",
-            font: "Calibri",
-          })],
-          spacing: { after: 240 },
         }));
 
         generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
@@ -1026,9 +1024,87 @@ function SuccessPageContent() {
               text: paragraph,
               size: 22,
               color: "000000",
+              font: "Times New Roman",
+            })],
+            spacing: { after: 260 },
+            alignment: AlignmentType.LEFT,
+          }));
+        });
+
+        docSections = [{ properties: {}, children }];
+
+      } else {
+        // ===== ATS-OPTIMIZED TEMPLATE - Ultra Simple, Machine Readable =====
+
+        const children: Paragraph[] = [];
+        const resumeLines = generatedContent.tailoredResume.split("\n").filter(l => l.trim());
+
+        resumeLines.forEach(line => {
+          const trimmed = line.trim();
+
+          // Section header (ALL CAPS)
+          if (trimmed === trimmed.toUpperCase() && trimmed.length > 0 && trimmed.length < 40 && !trimmed.match(/^[•\-\*]/)) {
+            children.push(new Paragraph({
+              children: [new TextRun({
+                text: trimmed,
+                bold: true,
+                size: 24,
+                color: "000000",
+                font: "Calibri",
+              })],
+              spacing: { before: 280, after: 140 },
+            }));
+          } else if (trimmed.length > 0) {
+            // Regular content - clean and simple
+            const cleanLine = trimmed.replace(/^[•\-\*•◦▪]\s*/, "");
+            const hasBullet = trimmed.match(/^[•\-\*]/);
+
+            children.push(new Paragraph({
+              children: [new TextRun({
+                text: hasBullet ? `• ${cleanLine}` : cleanLine,
+                size: 20,
+                color: "000000",
+                font: "Calibri",
+              })],
+              spacing: { after: 120 },
+              indent: hasBullet ? { left: 360 } : undefined,
+            }));
+          }
+        });
+
+        // Cover Letter section
+        children.push(new Paragraph({
+          children: [new TextRun({
+            text: "COVER LETTER",
+            bold: true,
+            size: 24,
+            color: "000000",
+            font: "Calibri",
+          })],
+          spacing: { before: 400, after: 140 },
+        }));
+
+        // Simple divider
+        children.push(new Paragraph({
+          children: [new TextRun({
+            text: "________________________________________",
+            size: 20,
+            color: "000000",
+            font: "Calibri",
+          })],
+          spacing: { after: 200 },
+        }));
+
+        // Cover letter content
+        generatedContent.coverLetter.split("\n\n").filter(p => p.trim()).forEach(paragraph => {
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: paragraph,
+              size: 20,
+              color: "000000",
               font: "Calibri",
             })],
-            spacing: { after: 200 },
+            spacing: { after: 180 },
           }));
         });
 

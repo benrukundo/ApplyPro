@@ -210,10 +210,14 @@ export default function TemplatesPage() {
                 {selectedTemplate === "traditional" && "Traditional Template Preview"}
                 {selectedTemplate === "ats" && "ATS-Optimized Template Preview"}
               </h2>
-              <div className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
-                <Lock className="h-4 w-4" />
-                Purchase to download
-              </div>
+              <Link
+                href="/generate"
+                className="group flex items-center gap-2 rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl"
+                title="Start by uploading your resume"
+              >
+                <Lock className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                Purchase to Download
+              </Link>
             </div>
 
             {/* Modern Template Preview */}
