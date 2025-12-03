@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, FileText, Lock } from "lucide-react";
-import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 export default function TemplatesPage() {
@@ -59,7 +58,6 @@ export default function TemplatesPage() {
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
         {/* Header */}
         <header className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
