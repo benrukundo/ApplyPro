@@ -652,7 +652,7 @@ function SuccessPageContent() {
             text: name.toUpperCase(),
             bold: true,
             size: 28,
-            color: "1E3A8A",
+            color: "1E40AF",
             font: "Arial",
           })],
           spacing: { after: 300 },
@@ -676,7 +676,7 @@ function SuccessPageContent() {
               children: [new TextRun({
                 text: info.replace(/^[•\-\*]\s*/, ""),
                 size: 18,
-                color: "1F2937",
+                color: "374151",
                 font: "Arial",
               })],
               spacing: { after: 100 },
@@ -703,7 +703,7 @@ function SuccessPageContent() {
               children: [new TextRun({
                 text: `• ${skill.replace(/^[•\-\*]\s*/, "")}`,
                 size: 18,
-                color: "1F2937",
+                color: "374151",
                 font: "Arial",
               })],
               spacing: { after: 100 },
@@ -729,7 +729,7 @@ function SuccessPageContent() {
               children: [new TextRun({
                 text: edu.replace(/^[•\-\*]\s*/, ""),
                 size: 18,
-                color: "1F2937",
+                color: "374151",
                 font: "Arial",
               })],
               spacing: { after: 150 },
@@ -762,7 +762,7 @@ function SuccessPageContent() {
               children: [new TextRun({
                 text: para.replace(/^[•\-\*]\s*/, ""),
                 size: 20,
-                color: "1F2937",
+                color: "000000",
                 font: "Arial",
               })],
               spacing: { after: 200 },
@@ -796,7 +796,7 @@ function SuccessPageContent() {
                 text: isBullet ? `• ${cleanExp}` : cleanExp,
                 size: 20,
                 bold: !isBullet,
-                color: "1F2937",
+                color: "000000",
                 font: "Arial",
               })],
               spacing: { after: isBullet ? 100 : 200 },
@@ -876,7 +876,7 @@ function SuccessPageContent() {
             children: [new TextRun({
               text: paragraph,
               size: 22,
-              color: "1F2937",
+              color: "000000",
               font: "Arial",
             })],
             spacing: { after: 240 },
