@@ -83,16 +83,6 @@ export default function Navbar() {
                   Generate Resume
                 </Link>
                 <Link
-                  href="/builder/template-select"
-                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
-                    pathname.startsWith("/builder")
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  Resume Builder
-                </Link>
-                <Link
                   href="/ats-checker"
                   className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
                     pathname === "/ats-checker"
@@ -124,16 +114,6 @@ export default function Navbar() {
                   }`}
                 >
                   Templates
-                </Link>
-                <Link
-                  href="/builder/template-select"
-                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
-                    pathname.startsWith("/builder")
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  Resume Builder
                 </Link>
                 <Link
                   href="/ats-checker"
@@ -238,17 +218,6 @@ export default function Navbar() {
                     Generate Resume
                   </Link>
                   <Link
-                    href="/builder/template-select"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
-                      pathname.startsWith("/builder")
-                        ? "text-blue-600 dark:text-blue-400"
-                        : "text-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    Resume Builder
-                  </Link>
-                  <Link
                     href="/ats-checker"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
@@ -298,17 +267,6 @@ export default function Navbar() {
                     }`}
                   >
                     Templates
-                  </Link>
-                  <Link
-                    href="/builder/template-select"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
-                      pathname.startsWith("/builder")
-                        ? "text-blue-600 dark:text-blue-400"
-                        : "text-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    Resume Builder
                   </Link>
                   <Link
                     href="/ats-checker"
