@@ -1,19 +1,34 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Upload, FileText, Check, ArrowLeft, ChevronDown } from "lucide-react";
-import { initializeResumeData, saveResumeData, type TemplateType } from "@/lib/builder";
+import { initializeResumeData, saveResumeData, loadResumeData, type TemplateType } from "@/lib/builder";
 
-export default function TemplateSelectPage() {
+function TemplateSelectContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preserveData = searchParams.get("preserve") === "true";
+
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>("modern");
   const [showUploadOptions, setShowUploadOptions] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
   const handleCreateNew = () => {
+    // Check if we should preserve existing data
+    if (preserveData) {
+      const existingData = loadResumeData();
+      if (existingData) {
+        // Only change the template, keep all other data
+        const updatedData = { ...existingData, template: selectedTemplate };
+        saveResumeData(updatedData);
+        router.push(`/builder/create?template=${selectedTemplate}&step=7`);
+        return;
+      }
+    }
+
     // Initialize new resume data with selected template
     const data = initializeResumeData(selectedTemplate);
     saveResumeData(data);
@@ -117,14 +132,36 @@ export default function TemplateSelectPage() {
         {/* Headline */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            How would you like to build your resume?
+            {preserveData ? "Change Your Template" : "How would you like to build your resume?"}
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
-            Choose your starting point and we'll guide you through the process
+            {preserveData
+              ? "Select a new template below. All your resume data will be preserved."
+              : "Choose your starting point and we'll guide you through the process"}
           </p>
         </div>
 
-        {/* Option Cards */}
+        {/* Preserve Data Notice */}
+        {preserveData && (
+          <div className="mb-8 max-w-2xl mx-auto">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950">
+              <div className="flex items-start gap-3">
+                <Check className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-green-900 dark:text-green-100 mb-1">
+                    Your Data is Safe
+                  </h3>
+                  <p className="text-sm text-green-800 dark:text-green-200">
+                    Don't worry! All your resume information (experience, education, skills, etc.) will be kept. Only the visual design will change.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Option Cards - Only show when NOT preserving data */}
+        {!preserveData && (
         <div className="grid gap-6 md:grid-cols-2 mb-16 max-w-4xl mx-auto">
           {/* Card A: Create New */}
           <div className="rounded-2xl border-2 border-gray-200 bg-white p-8 hover:border-blue-500 hover:shadow-lg transition-all dark:border-gray-700 dark:bg-gray-800">
@@ -198,6 +235,7 @@ export default function TemplateSelectPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* Template Selection */}
         <div className="mb-16">
@@ -268,5 +306,20 @@ export default function TemplateSelectPage() {
         </footer>
       </div>
     </div>
+  );
+}
+
+export default function TemplateSelectPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <TemplateSelectContent />
+    </Suspense>
   );
 }

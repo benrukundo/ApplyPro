@@ -17,6 +17,7 @@ import {
   Save,
   ZoomIn,
 } from "lucide-react";
+import ResumePreview from "@/app/components/ResumePreview";
 import {
   type ResumeData,
   type WorkExperience,
@@ -305,6 +306,21 @@ function BuilderContent() {
           {/* Form Area */}
           <div className="w-full lg:w-2/5 p-8 overflow-y-auto">
             <div className="max-w-2xl">
+              {/* Sample Data Notice */}
+              <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                      Sample Data Included
+                    </h3>
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      This resume is pre-filled with sample data to help you get started. Simply replace it with your own information as you go through each step.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Step Content */}
               {currentStep === 1 && <HeaderStep data={resumeData} updateHeader={updateHeader} />}
 
@@ -418,11 +434,14 @@ function BuilderContent() {
               </div>
             </div>
 
-            {/* Live Preview Component Will Go Here */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 min-h-[800px]">
-              <div className="text-center text-gray-500 dark:text-gray-400 py-12">
-                <p className="mb-2">Live preview will appear here</p>
-                <p className="text-sm">Template: {template}</p>
+            {/* Live Preview */}
+            <div className="bg-gray-100 dark:bg-gray-950 rounded-lg overflow-hidden">
+              <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
+                <div className="flex justify-center p-8">
+                  <div style={{ transform: "scale(0.75)", transformOrigin: "top center" }}>
+                    <ResumePreview data={resumeData} />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -534,20 +553,15 @@ function HeaderStep({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              State/Province
+              State/Province/Region
             </label>
-            <select
+            <input
+              type="text"
               value={data.header.state || ""}
               onChange={(e) => updateHeader("state", e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            >
-              <option value="">Select state</option>
-              {usStates.map((state) => (
-                <option key={state} value={state}>
-                  {state}
-                </option>
-              ))}
-            </select>
+              placeholder="California, Ontario, Kigali, etc."
+            />
           </div>
         </div>
 
@@ -697,8 +711,93 @@ function ExperienceStep({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="City"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            />
+            <input
+              type="text"
+              placeholder="State/Province/Region"
+              value={formData.state}
+              onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <select
+              value={formData.startMonth}
+              onChange={(e) => setFormData({ ...formData, startMonth: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="">Start Month *</option>
+              {months.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
+            </select>
+            <select
+              value={formData.startYear}
+              onChange={(e) => setFormData({ ...formData, startYear: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="">Start Year *</option>
+              {getYearOptions().map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <select
+              value={formData.endMonth}
+              onChange={(e) => setFormData({ ...formData, endMonth: e.target.value })}
+              disabled={formData.current}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900"
+            >
+              <option value="">End Month</option>
+              {months.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
+            </select>
+            <select
+              value={formData.endYear}
+              onChange={(e) => setFormData({ ...formData, endYear: e.target.value })}
+              disabled={formData.current}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900"
+            >
+              <option value="">End Year</option>
+              {getYearOptions().map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={formData.current}
+              onChange={(e) => setFormData({ ...formData, current: e.target.checked, endMonth: "", endYear: "" })}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+            />
+            <label className="text-sm text-gray-700 dark:text-gray-300">
+              I currently work here
+            </label>
+          </div>
+
           <textarea
-            placeholder="Description/Achievements"
+            placeholder="Describe your responsibilities and achievements"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             rows={6}
@@ -708,7 +807,8 @@ function ExperienceStep({
           <div className="flex gap-2">
             <button
               onClick={handleSubmit}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              disabled={!formData.jobTitle || !formData.employer || !formData.startMonth || !formData.startYear}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {editingExperience ? "Update" : "Add"} Position
             </button>
@@ -736,16 +836,224 @@ function ExperienceStep({
   );
 }
 
-// Education Step (simplified)
-function EducationStep({ data, addEducation, updateEducation, deleteEducation, showForm, setShowForm }: any) {
+// Education Step (complete)
+function EducationStep({ data, addEducation, updateEducation, deleteEducation, editingEducation, setEditingEducation, showForm, setShowForm }: any) {
+  const [formData, setFormData] = useState<Partial<Education>>({
+    school: "",
+    location: "",
+    degree: "",
+    field: "",
+    gradMonth: "",
+    gradYear: "",
+    stillEnrolled: false,
+    details: "",
+  });
+  const [stillEnrolled, setStillEnrolled] = useState(false);
+
+  useEffect(() => {
+    if (editingEducation) {
+      setFormData(editingEducation);
+      setStillEnrolled(editingEducation.stillEnrolled);
+      setShowForm(true);
+    }
+  }, [editingEducation, setShowForm]);
+
+  const handleSubmit = () => {
+    if (!formData.school || !formData.degree || !formData.field) return;
+
+    if (editingEducation) {
+      updateEducation(editingEducation.id, formData);
+    } else {
+      addEducation(formData);
+    }
+    setFormData({
+      school: "",
+      location: "",
+      degree: "",
+      field: "",
+      gradMonth: "",
+      gradYear: "",
+      stillEnrolled: false,
+      details: "",
+    });
+    setStillEnrolled(false);
+  };
+
   return (
     <div>
-      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
+      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
         Now, let's add your education
       </h2>
-      <p className="text-gray-600 dark:text-gray-400 mb-4">
+      <p className="text-gray-600 dark:text-gray-400 mb-8">
         Add at least one education entry to continue
       </p>
+
+      {/* Existing Education List */}
+      {data.education.length > 0 && !showForm && (
+        <div className="space-y-4 mb-6">
+          {data.education.map((edu: Education) => (
+            <div
+              key={edu.id}
+              className="p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">{edu.school}</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{edu.degree} in {edu.field}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    {edu.location} • {edu.stillEnrolled ? "Currently enrolled" : `Graduated ${edu.gradMonth} ${edu.gradYear}`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setEditingEducation(edu)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded dark:hover:bg-blue-900/20"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => deleteEducation(edu.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded dark:hover:bg-red-900/20"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add/Edit Form */}
+      {showForm ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="School Name *"
+              value={formData.school}
+              onChange={(e) => setFormData({ ...formData, school: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            />
+            <input
+              type="text"
+              placeholder="Location (City, State/Province)"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <select
+              value={formData.degree}
+              onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="">Select Degree *</option>
+              {degreeOptions.map((degree) => (
+                <option key={degree} value={degree}>
+                  {degree}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="Field of Study *"
+              value={formData.field}
+              onChange={(e) => setFormData({ ...formData, field: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <select
+              value={formData.gradMonth}
+              onChange={(e) => setFormData({ ...formData, gradMonth: e.target.value })}
+              disabled={stillEnrolled}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900"
+            >
+              <option value="">Graduation Month</option>
+              {months.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
+            </select>
+            <select
+              value={formData.gradYear}
+              onChange={(e) => setFormData({ ...formData, gradYear: e.target.value })}
+              disabled={stillEnrolled}
+              className="w-full rounded-lg border border-gray-300 px-4 py-3 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:disabled:bg-gray-900"
+            >
+              <option value="">Graduation Year</option>
+              {getYearOptions().map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={stillEnrolled}
+              onChange={(e) => {
+                setStillEnrolled(e.target.checked);
+                setFormData({ ...formData, stillEnrolled: e.target.checked });
+              }}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+            />
+            <label className="text-sm text-gray-700 dark:text-gray-300">
+              I'm still enrolled
+            </label>
+          </div>
+
+          <details className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+            <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300">
+              + Add course work or other details
+            </summary>
+            <textarea
+              value={formData.details || ""}
+              onChange={(e) => setFormData({ ...formData, details: e.target.value })}
+              placeholder="Honors, relevant coursework, activities..."
+              rows={3}
+              className="mt-3 w-full rounded-lg border border-gray-300 px-4 py-3 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            />
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-500">
+              Pro Tip: Details like honors, clubs, and research projects show employers your growth and learning.
+            </p>
+          </details>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleSubmit}
+              disabled={!formData.school || !formData.degree || !formData.field}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {editingEducation ? "Update" : "Add"} Education
+            </button>
+            <button
+              onClick={() => {
+                setShowForm(false);
+                setEditingEducation(null);
+              }}
+              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+        >
+          <Plus className="h-5 w-5" />
+          Add {data.education.length > 0 ? "another" : ""} education
+        </button>
+      )}
     </div>
   );
 }

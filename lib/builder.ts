@@ -59,29 +59,77 @@ const STORAGE_KEY = 'applypro_resume_builder';
 
 const isBrowser = typeof window !== 'undefined';
 
-// Initialize empty resume data
+// Initialize resume data with sample data
 export function initializeResumeData(template: TemplateType = 'modern'): ResumeData {
   return {
     template,
     header: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      city: '',
-      state: '',
+      firstName: 'Jane',
+      lastName: 'Smith',
+      email: 'jane.smith@email.com',
+      phone: '(555) 123-4567',
+      city: 'San Francisco',
+      state: 'CA',
       country: 'United States',
-      linkedin: '',
-      website: '',
+      linkedin: 'linkedin.com/in/janesmith',
+      website: 'janesmith.com',
     },
-    experience: [],
-    education: [],
-    skills: [],
-    summary: '',
+    experience: [
+      {
+        id: crypto.randomUUID(),
+        jobTitle: 'Senior Product Manager',
+        employer: 'Tech Company Inc.',
+        city: 'San Francisco',
+        state: 'CA',
+        startMonth: 'January',
+        startYear: '2021',
+        endMonth: '',
+        endYear: '',
+        current: true,
+        description: '• Led cross-functional team of 8 engineers and designers to launch new product features\n• Increased user engagement by 35% through data-driven feature improvements\n• Managed product roadmap and prioritized features based on customer feedback\n• Collaborated with stakeholders to define product strategy and KPIs',
+      },
+      {
+        id: crypto.randomUUID(),
+        jobTitle: 'Product Manager',
+        employer: 'Startup XYZ',
+        city: 'Los Angeles',
+        state: 'CA',
+        startMonth: 'June',
+        startYear: '2019',
+        endMonth: 'December',
+        endYear: '2020',
+        current: false,
+        description: '• Launched 3 major features that contributed to 50% revenue growth\n• Conducted user research and competitive analysis to inform product decisions\n• Worked closely with engineering team to deliver high-quality products on time\n• Presented product updates to executive team and board of directors',
+      },
+    ],
+    education: [
+      {
+        id: crypto.randomUUID(),
+        school: 'University of California, Berkeley',
+        location: 'Berkeley, CA',
+        degree: "Bachelor's Degree",
+        field: 'Computer Science',
+        gradMonth: 'May',
+        gradYear: '2019',
+        stillEnrolled: false,
+        details: 'Graduated with Honors • GPA: 3.8/4.0 • Relevant coursework: Data Structures, Algorithms, Machine Learning',
+      },
+    ],
+    skills: [
+      'Product Management',
+      'Agile/Scrum',
+      'Data Analysis',
+      'User Research',
+      'Roadmap Planning',
+      'SQL',
+      'Jira',
+      'Figma',
+    ],
+    summary: 'Results-driven Product Manager with 5+ years of experience leading cross-functional teams to deliver innovative products. Proven track record of increasing user engagement and driving revenue growth through data-driven decision making and customer-centric approach.',
     additional: {
-      certifications: [],
+      certifications: ['Certified Scrum Product Owner (CSPO)', 'Google Analytics Certified'],
       awards: [],
-      languages: [],
+      languages: ['English (Native)', 'Spanish (Professional)'],
       volunteer: [],
     },
     createdAt: Date.now(),
@@ -147,7 +195,12 @@ export function isStepComplete(data: ResumeData, step: number): boolean {
       );
     case 2: // Experience
       return data.experience.length > 0 &&
-        data.experience.every(exp => exp.jobTitle && exp.employer);
+        data.experience.every(exp =>
+          exp.jobTitle &&
+          exp.employer &&
+          exp.startMonth &&
+          exp.startYear
+        );
     case 3: // Education
       return data.education.length > 0 &&
         data.education.every(edu => edu.school && edu.degree && edu.field);

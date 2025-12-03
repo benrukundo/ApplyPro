@@ -127,7 +127,7 @@ export default function CheckoutPage() {
             {/* Edit Options */}
             <div className="space-y-3">
               <Link
-                href="/builder/template-select"
+                href="/builder/template-select?preserve=true"
                 className="flex items-center justify-center gap-2 w-full rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 Change Template

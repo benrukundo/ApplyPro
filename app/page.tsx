@@ -74,11 +74,18 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6 animate-fadeInUp delay-200">
               <Link
-                href="/generate"
+                href="/builder/template-select"
                 className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-lg font-semibold rounded-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 inline-flex items-center gap-2"
               >
+                <FileText className="w-5 h-5" />
+                Build Resume
+              </Link>
+              <Link
+                href="/generate"
+                className="px-8 py-4 bg-white text-gray-900 text-lg font-semibold rounded-xl border-2 border-gray-300 hover:border-blue-600 hover:text-blue-600 transition-all duration-300 inline-flex items-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
                 Try Free Preview
-                <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               </Link>
               <Link
                 href="/templates"
