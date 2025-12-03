@@ -252,53 +252,82 @@ function SuccessPageContent() {
           }
         });
 
-        // Extract name and contact from header
+        // Extract name, title, and contact from header
         const headerLines = sections["header"] || [];
-        const name = headerLines[0] || "Professional Name";
-        const contact = headerLines.slice(1, 4).join(" | ");
+        const name = headerLines[0] || "Your Name";
+        const title = headerLines[1] || "";
 
-        // LEFT SIDEBAR - Profile, Contact, Skills, Education
-        doc.setTextColor(33, 33, 33);
-        doc.setFont("helvetica", "bold");
+        // Extract contact info (email, phone, location)
+        const contactLines = headerLines.slice(1).filter(line =>
+          line.includes("@") || line.includes("(") || line.includes("|") ||
+          line.toLowerCase().includes("phone") || line.toLowerCase().includes("email")
+        );
+        const contactInfo = contactLines.length > 0 ? contactLines : headerLines.slice(1, 4);
+
+        // LEFT SIDEBAR - Name, Title, Contact, Skills, Education
+        sidebarY = 20;
+
+        // 1. NAME (large, dark blue)
         doc.setFontSize(16);
-        sidebarY = 25;
-
-        // Name in sidebar
-        const nameLines = doc.splitTextToSize(name, sidebarTextWidth);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 64, 175); // Dark blue #1E40AF
+        const nameLines = doc.splitTextToSize(name.toUpperCase(), sidebarTextWidth);
         nameLines.forEach((line: string) => {
           doc.text(line, sidebarPadding, sidebarY);
           sidebarY += 8;
         });
-
         sidebarY += 5;
 
-        // Contact section
-        if (contact) {
-          doc.setFontSize(7);
+        // 2. TITLE (if available, medium blue)
+        if (title && !title.includes("@") && !title.includes("(")) {
+          doc.setFontSize(10);
           doc.setFont("helvetica", "normal");
-          const contactLines = doc.splitTextToSize(contact, sidebarTextWidth);
-          contactLines.forEach((line: string) => {
+          doc.setTextColor(59, 130, 246); // Blue #3B82F6
+          const titleLines = doc.splitTextToSize(title, sidebarTextWidth);
+          titleLines.forEach((line: string) => {
             doc.text(line, sidebarPadding, sidebarY);
-            sidebarY += 3.5;
+            sidebarY += 5;
           });
-          sidebarY += 8;
+          sidebarY += 5;
         }
 
-        // Skills section
-        if (sections["skills"] || sections["technical skills"] || sections["core competencies"]) {
-          doc.setFontSize(11);
+        // 3. CONTACT section
+        if (contactInfo.length > 0) {
+          doc.setFontSize(10);
           doc.setFont("helvetica", "bold");
-          doc.setTextColor(59, 130, 246);
+          doc.setTextColor(59, 130, 246); // Blue
+          doc.text("CONTACT", sidebarPadding, sidebarY);
+          sidebarY += 5;
+
+          doc.setFontSize(7.5);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(55, 65, 81); // Dark gray #374151
+
+          contactInfo.forEach(info => {
+            const infoLines = doc.splitTextToSize(info.replace(/^[•\-\*]\s*/, ""), sidebarTextWidth);
+            infoLines.forEach((line: string) => {
+              doc.text(line, sidebarPadding, sidebarY);
+              sidebarY += 4;
+            });
+          });
+          sidebarY += 5;
+        }
+
+        // 4. SKILLS section (ALL skills)
+        if (sections["skills"] || sections["technical skills"] || sections["core competencies"]) {
+          doc.setFontSize(10);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(59, 130, 246); // Blue
           doc.text("SKILLS", sidebarPadding, sidebarY);
-          sidebarY += 6;
+          sidebarY += 5;
 
           const skillsContent = sections["skills"] || sections["technical skills"] || sections["core competencies"] || [];
-          doc.setFontSize(8);
+          doc.setFontSize(7.5);
           doc.setFont("helvetica", "normal");
-          doc.setTextColor(33, 33, 33);
+          doc.setTextColor(55, 65, 81); // Dark gray
 
           skillsContent.forEach(skill => {
-            // Add bullet point
+            // Add blue bullet point
             doc.setFillColor(59, 130, 246);
             doc.circle(sidebarPadding + 1, sidebarY - 1.5, 0.8, "F");
 
@@ -307,22 +336,22 @@ function SuccessPageContent() {
               doc.text(line, sidebarPadding + 4, sidebarY);
               sidebarY += 3.5;
             });
-            sidebarY += 1;
+            sidebarY += 0.5;
           });
           sidebarY += 5;
         }
 
-        // Education section
+        // 5. EDUCATION section
         if (sections["education"]) {
-          doc.setFontSize(11);
+          doc.setFontSize(10);
           doc.setFont("helvetica", "bold");
-          doc.setTextColor(59, 130, 246);
+          doc.setTextColor(59, 130, 246); // Blue
           doc.text("EDUCATION", sidebarPadding, sidebarY);
-          sidebarY += 6;
+          sidebarY += 5;
 
-          doc.setFontSize(8);
+          doc.setFontSize(7.5);
           doc.setFont("helvetica", "normal");
-          doc.setTextColor(33, 33, 33);
+          doc.setTextColor(55, 65, 81); // Dark gray
 
           sections["education"].forEach(edu => {
             const eduLines = doc.splitTextToSize(edu.replace(/^[•\-\*]\s*/, ""), sidebarTextWidth);
@@ -638,27 +667,47 @@ function SuccessPageContent() {
           }
         });
 
-        // Extract name and contact
+        // Extract name, title, and contact info from header
         const headerLines = sections["header"] || [];
-        const name = headerLines[0] || "Professional Name";
-        const contactInfo = headerLines.slice(1, 4);
+        const name = headerLines[0] || "Your Name";
+        const title = headerLines[1] || "";
+
+        // Extract contact info (email, phone, location)
+        const contactLines = headerLines.slice(1).filter(line =>
+          line.includes("@") || line.includes("(") || line.includes("|") ||
+          line.toLowerCase().includes("phone") || line.toLowerCase().includes("email")
+        );
+        const contactInfo = contactLines.length > 0 ? contactLines : headerLines.slice(1, 4);
 
         // LEFT SIDEBAR CONTENT
         const leftSidebarContent: Paragraph[] = [];
 
-        // Name in sidebar
+        // 1. NAME in sidebar (large, dark blue)
         leftSidebarContent.push(new Paragraph({
           children: [new TextRun({
             text: name.toUpperCase(),
             bold: true,
-            size: 28,
+            size: 32,
             color: "1E40AF",
             font: "Arial",
           })],
-          spacing: { after: 300 },
+          spacing: { after: 200 },
         }));
 
-        // Contact section
+        // 2. TITLE (if available)
+        if (title && !title.includes("@") && !title.includes("(")) {
+          leftSidebarContent.push(new Paragraph({
+            children: [new TextRun({
+              text: title,
+              size: 20,
+              color: "3B82F6",
+              font: "Arial",
+            })],
+            spacing: { after: 300 },
+          }));
+        }
+
+        // 3. CONTACT section
         if (contactInfo.length > 0) {
           leftSidebarContent.push(new Paragraph({
             children: [new TextRun({
@@ -684,7 +733,7 @@ function SuccessPageContent() {
           });
         }
 
-        // Skills in sidebar
+        // 4. SKILLS section (ALL skills, not just first 10)
         if (sections["skills"] || sections["technical skills"] || sections["core competencies"]) {
           leftSidebarContent.push(new Paragraph({
             children: [new TextRun({
@@ -698,7 +747,7 @@ function SuccessPageContent() {
           }));
 
           const skillsContent = sections["skills"] || sections["technical skills"] || sections["core competencies"] || [];
-          skillsContent.slice(0, 10).forEach(skill => {
+          skillsContent.forEach(skill => {
             leftSidebarContent.push(new Paragraph({
               children: [new TextRun({
                 text: `• ${skill.replace(/^[•\-\*]\s*/, "")}`,
@@ -711,7 +760,7 @@ function SuccessPageContent() {
           });
         }
 
-        // Education in sidebar
+        // 5. EDUCATION section
         if (sections["education"]) {
           leftSidebarContent.push(new Paragraph({
             children: [new TextRun({
