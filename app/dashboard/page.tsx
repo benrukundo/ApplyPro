@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { isAuthenticated, getCurrentUser, logout, User } from "@/lib/auth";
+import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   getAllApplications,
   getStatistics,
   getUpcomingFollowUps,
   Application,
-} from "@/lib/tracker";
+} from '@/lib/tracker';
 import {
   Plus,
   Search,
@@ -25,34 +25,69 @@ import {
   XCircle,
   Clock,
   AlertCircle,
-} from "lucide-react";
+  Lock,
+  Loader2,
+  Sparkles,
+  Calendar,
+} from 'lucide-react';
+
+interface SubscriptionInfo {
+  plan: 'free' | 'monthly' | 'yearly' | 'pay-per-use' | null;
+  status: 'active' | 'cancelled' | 'failed' | null;
+  monthlyUsageCount: number;
+  monthlyLimit: number;
+  daysUntilReset: number;
+  isActive: boolean;
+}
 
 export default function DashboardPage() {
+  const { data: session } = useSession();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
 
+  // Redirect if not authenticated
   useEffect(() => {
-    // Check authentication
-    if (!isAuthenticated()) {
-      router.push("/login");
-      return;
+    if (!session?.user) {
+      router.push('/login?callbackUrl=/dashboard');
     }
+  }, [session, router]);
 
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
+  // Load subscription info
+  useEffect(() => {
+    const loadSubscription = async () => {
+      try {
+        const response = await fetch('/api/user/subscription');
+        const data = await response.json();
 
-    // Load applications
+        if (response.ok) {
+          setSubscription(data.subscription);
+        }
+      } catch (err) {
+        console.error('Error loading subscription:', err);
+      } finally {
+        setIsLoadingSubscription(false);
+      }
+    };
+
+    if (session?.user?.id) {
+      loadSubscription();
+    }
+  }, [session?.user?.id]);
+
+  // Load applications
+  useEffect(() => {
     const apps = getAllApplications();
     setApplications(apps);
-  }, [router]);
+  }, []);
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    router.push('/');
   };
 
   const stats = getStatistics();
@@ -61,7 +96,7 @@ export default function DashboardPage() {
   // Filter applications
   const filteredApplications = applications
     .filter((app) => {
-      if (filterStatus !== "all" && app.status !== filterStatus) {
+      if (filterStatus !== 'all' && app.status !== filterStatus) {
         return false;
       }
       if (searchQuery) {
@@ -77,321 +112,363 @@ export default function DashboardPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "saved":
-        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
-      case "applied":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
-      case "interview":
-        return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300";
-      case "offer":
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
-      case "rejected":
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+      case 'saved':
+        return 'bg-gray-100 text-gray-700';
+      case 'applied':
+        return 'bg-blue-100 text-blue-700';
+      case 'interview':
+        return 'bg-purple-100 text-purple-700';
+      case 'offer':
+        return 'bg-green-100 text-green-700';
+      case 'rejected':
+        return 'bg-red-100 text-red-700';
       default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "saved":
+      case 'saved':
         return <Briefcase className="h-4 w-4" />;
-      case "applied":
+      case 'applied':
         return <Clock className="h-4 w-4" />;
-      case "interview":
-        return <Target className="h-4 w-4" />;
-      case "offer":
+      case 'interview':
+        return <AlertCircle className="h-4 w-4" />;
+      case 'offer':
         return <CheckCircle2 className="h-4 w-4" />;
-      case "rejected":
+      case 'rejected':
         return <XCircle className="h-4 w-4" />;
       default:
         return <Briefcase className="h-4 w-4" />;
     }
   };
 
-  if (!user) {
+  if (!session?.user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Welcome back, {user.name}! 👋
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Track your job applications and stay organized
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Navbar */}
+      <nav className="bg-white shadow-sm border-b border-gray-200">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="text-2xl font-bold text-blue-600">
+            ApplyPro
+          </Link>
+
+          {/* Desktop menu */}
+          <div className="hidden md:flex items-center gap-6">
+            <Link href="/generate" className="text-gray-600 hover:text-gray-900 font-medium">
+              Generate
+            </Link>
+            <Link href="/ats-checker" className="text-gray-600 hover:text-gray-900 font-medium">
+              ATS Checker
+            </Link>
+            <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
+              <div className="text-right">
+                <p className="font-semibold text-gray-900">{session.user.email}</p>
+                {subscription?.isActive && (
+                  <p className="text-xs text-blue-600">
+                    {subscription.plan === 'monthly'
+                      ? 'Pro Monthly'
+                      : subscription.plan === 'yearly'
+                        ? 'Pro Yearly'
+                        : 'Pay-Per-Use'}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 text-gray-600 hover:text-red-600 transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile menu button */}
+          <button
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 p-4 space-y-2">
+            <Link href="/generate" className="block py-2 text-gray-600 hover:text-gray-900">
+              Generate
+            </Link>
+            <Link href="/ats-checker" className="block py-2 text-gray-600 hover:text-gray-900">
+              ATS Checker
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="w-full text-left py-2 text-red-600 hover:text-red-700 flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
+        )}
+      </nav>
+
+      <div className="container mx-auto px-4 py-12 max-w-7xl">
+        {/* Header */}
+        <div className="mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
+          <p className="text-xl text-gray-600">Track your job applications and manage your account</p>
+        </div>
+
+        {/* Subscription Card */}
+        {!isLoadingSubscription && (
+          <div className="mb-8 bg-white rounded-2xl shadow-lg p-8 border-2 border-blue-100">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-blue-600" />
+                  Your Plan
+                </h2>
+
+                {subscription?.isActive ? (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-lg font-semibold text-blue-600 mb-2">
+                        {subscription.plan === 'monthly'
+                          ? 'Pro Monthly'
+                          : subscription.plan === 'yearly'
+                            ? 'Pro Yearly'
+                            : 'Pay-Per-Use'}
+                      </p>
+                      <p className="text-gray-600">
+                        {subscription.plan === 'monthly' || subscription.plan === 'yearly'
+                          ? `${subscription.monthlyLimit} resumes per month`
+                          : 'Pay per resume'}
+                      </p>
+                    </div>
+
+                    {(subscription.plan === 'monthly' || subscription.plan === 'yearly') && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-700">Usage This Month</span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {subscription.monthlyUsageCount} / {subscription.monthlyLimit}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div
+                            className="bg-blue-600 h-3 rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(100, (subscription.monthlyUsageCount / subscription.monthlyLimit) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          <Calendar className="w-3 h-3 inline mr-1" />
+                          Resets in {subscription.daysUntilReset} days
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-amber-900">No Active Subscription</p>
+                      <p className="text-sm text-amber-800">
+                        Subscribe to start generating tailored resumes
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Link
+                href={subscription?.isActive ? 'https://gumroad.com/library' : '/pricing'}
+                target={subscription?.isActive ? '_blank' : undefined}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
+                {subscription?.isActive ? 'Manage Subscription' : 'Upgrade Plan'}
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Total Applications
-              </p>
-              <Briefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
-              {stats.total}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-              {25 - stats.total} remaining in free tier
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Active
-              </p>
-              <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
-              {stats.applied + stats.interview}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-              Applied & Interview stages
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Offers
-              </p>
-              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-            <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-              {stats.offer}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-              Job offers received
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Response Rate
-              </p>
-              <TrendingUp className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
-              {stats.responseRate}%
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-              Companies that responded
-            </p>
-          </div>
-        </div>
-
-        {/* Quick Actions Bar */}
-        <div className="mb-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          <Link
-            href="/tracker?action=add"
-            className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
-          >
-            <Plus className="h-5 w-5" />
-            Add Application
-          </Link>
-
-          <Link
-            href="/generate"
-            className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750"
-          >
-            <FileText className="h-5 w-5" />
-            Generate Resume
-          </Link>
-
-          <Link
-            href="/ats-checker"
-            className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750"
-          >
-            <Target className="h-5 w-5" />
-            Check ATS
-          </Link>
-
-          <div className="flex-1 sm:min-w-[300px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search applications..."
-                className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-4 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-              />
+        <div className="grid md:grid-cols-4 gap-6 mb-12">
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm font-medium">Total Applications</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p>
+              </div>
+              <Briefcase className="w-12 h-12 text-blue-600 opacity-10" />
             </div>
           </div>
 
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-          >
-            <option value="all">All Status</option>
-            <option value="saved">Saved</option>
-            <option value="applied">Applied</option>
-            <option value="interview">Interview</option>
-            <option value="offer">Offer</option>
-            <option value="rejected">Rejected</option>
-          </select>
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm font-medium">Applied</p>
+                <p className="text-3xl font-bold text-blue-600 mt-2">{stats.applied}</p>
+              </div>
+              <CheckCircle2 className="w-12 h-12 text-blue-600 opacity-10" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm font-medium">In Progress</p>
+                <p className="text-3xl font-bold text-purple-600 mt-2">
+                  {stats.interview + stats.offer}
+                </p>
+              </div>
+              <AlertCircle className="w-12 h-12 text-purple-600 opacity-10" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm font-medium">Success Rate</p>
+                <p className="text-3xl font-bold text-green-600 mt-2">
+                  {stats.total > 0
+                    ? ((stats.offer / stats.total) * 100).toFixed(1)
+                    : 0}
+                  %
+                </p>
+              </div>
+              <TrendingUp className="w-12 h-12 text-green-600 opacity-10" />
+            </div>
+          </div>
         </div>
 
         {/* Upcoming Follow-ups */}
         {upcomingFollowUps.length > 0 && (
-          <div className="mb-8 rounded-xl border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-yellow-50 p-6 dark:border-orange-900/50 dark:from-orange-950/20 dark:to-yellow-950/20">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Upcoming Follow-ups ({upcomingFollowUps.length})
-              </h3>
-            </div>
-            <div className="space-y-2">
-              {upcomingFollowUps.slice(0, 3).map((app) => (
-                <div
-                  key={app.id}
-                  className="flex items-center justify-between rounded-lg bg-white p-3 dark:bg-gray-800"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {app.companyName} - {app.positionTitle}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Follow up on{" "}
-                      {new Date(app.followUpDate!).toLocaleDateString()}
-                    </p>
+          <div className="mb-12 bg-white rounded-2xl shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Upcoming Follow-ups</h2>
+            <div className="space-y-3">
+              {upcomingFollowUps.slice(0, 5).map((app) => (
+                <div key={app.id} className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-gray-900">{app.companyName}</p>
+                      <p className="text-sm text-gray-600">{app.positionTitle}</p>
+                    </div>
+                    <span className="text-sm text-yellow-700 font-medium">
+                      Follow up on{' '}
+                      {new Date(app.followUpDate || 0).toLocaleDateString()}
+                    </span>
                   </div>
-                  <Link
-                    href={`/tracker?id=${app.id}`}
-                    className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-                  >
-                    View
-                  </Link>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Applications Table */}
-        <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-          <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-800">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Recent Applications ({filteredApplications.length})
-            </h2>
+        {/* Applications List */}
+        <div className="bg-white rounded-2xl shadow-lg p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Your Applications</h2>
+            <Link
+              href="/tracker"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Application
+            </Link>
           </div>
 
-          {filteredApplications.length === 0 ? (
-            <div className="py-12 text-center">
-              <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {searchQuery || filterStatus !== "all"
-                  ? "No applications found matching your search"
-                  : "No applications yet"}
-              </p>
-              <Link
-                href="/tracker?action=add"
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
-              >
-                <Plus className="h-5 w-5" />
-                Add Your First Application
-              </Link>
+          {/* Filters */}
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search companies or positions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+              />
             </div>
-          ) : (
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+            >
+              <option value="all">All Status</option>
+              <option value="saved">Saved</option>
+              <option value="applied">Applied</option>
+              <option value="interview">Interview</option>
+              <option value="offer">Offer</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          {/* Applications Table */}
+          {filteredApplications.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800">
+                <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                      Company / Position
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Company
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Position
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                      Applied Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                      Last Updated
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                      Actions
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Date
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                  {filteredApplications.slice(0, 10).map((app) => (
-                    <tr
-                      key={app.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                    >
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {app.companyName}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {app.positionTitle}
-                          </p>
-                        </div>
-                      </td>
+                <tbody className="divide-y">
+                  {filteredApplications.map((app) => (
+                    <tr key={app.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 font-medium text-gray-900">{app.companyName}</td>
+                      <td className="px-6 py-4 text-gray-700">{app.positionTitle}</td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(
+                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
                             app.status
                           )}`}
                         >
                           {getStatusIcon(app.status)}
-                          {app.status.charAt(0).toUpperCase() +
-                            app.status.slice(1)}
+                          {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                        {app.appliedDate
-                          ? new Date(app.appliedDate).toLocaleDateString()
-                          : "—"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                        {new Date(app.updatedAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link
-                          href={`/tracker?id=${app.id}`}
-                          className="text-blue-600 hover:underline dark:text-blue-400"
-                        >
-                          View
-                        </Link>
+                      <td className="px-6 py-4 text-gray-600 text-sm">
+                        {app.appliedDate ? new Date(app.appliedDate).toLocaleDateString() : '-'}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          ) : (
+            <div className="text-center py-12">
+              <Briefcase className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-4">No applications found</p>
+              <Link
+                href="/tracker"
+                className="text-blue-600 hover:text-blue-700 font-semibold"
+              >
+                Start tracking applications →
+              </Link>
+            </div>
           )}
         </div>
-
-        {filteredApplications.length > 10 && (
-          <div className="mt-4 text-center">
-            <Link
-              href="/tracker"
-              className="text-blue-600 hover:underline dark:text-blue-400"
-            >
-              View all {filteredApplications.length} applications →
-            </Link>
-          </div>
-        )}
       </div>
     </div>
   );
