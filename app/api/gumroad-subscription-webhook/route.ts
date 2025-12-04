@@ -28,14 +28,22 @@ export async function POST(request: NextRequest) {
     const permalinkUrl = String(body.permalink || '');
     // Extract slug from URL: https://laurabi.gumroad.com/l/pro-monthly → pro-monthly
     const permalinkSlug = permalinkUrl.split('/').pop() || '';
-    const saleType = String(body.sale_type || '');
+
+    // Use sale_type if available, otherwise fall back to resource_name
+    let saleType = String(body.sale_type || '');
+    if (!saleType && body.resource_name) {
+      saleType = String(body.resource_name);
+    }
+
     const subscriptionId = String(body.subscription_id || '');
+    const resourceName = String(body.resource_name || '');
 
     console.log('\n🔍 Extracted Fields:');
     console.log(`  📧 Email: ${email}`);
     console.log(`  🔗 Permalink URL: ${permalinkUrl}`);
     console.log(`  🏷️ Permalink Slug: ${permalinkSlug}`);
     console.log(`  💰 Sale Type: ${saleType}`);
+    console.log(`  📌 Resource Name: ${resourceName}`);
     console.log(`  🆔 Subscription ID: ${subscriptionId}`);
 
     if (!email) {
@@ -80,26 +88,33 @@ export async function POST(request: NextRequest) {
     console.log('\n🎯 Handling Event:');
     if (isSubscription) {
       switch(saleType) {
-        case 'sale':
+        case 'sale': // Initial purchase of subscription
         case 'subscription_started':
         case 'subscription_restarted':
           console.log(`  ✅ SUBSCRIPTION STARTED: ${plan} for ${email}`);
+          console.log(`  (Sending welcome email...)`);
           await sendSubscriptionEmail(email, 'welcome', plan);
+          console.log(`  ✅ Email sent successfully!`);
           break;
 
         case 'subscription_ended':
         case 'subscription_cancelled':
           console.log(`  ❌ SUBSCRIPTION CANCELLED: ${plan} for ${email}`);
+          console.log(`  (Sending cancellation email...)`);
           await sendSubscriptionEmail(email, 'cancelled', plan);
+          console.log(`  ✅ Email sent successfully!`);
           break;
 
         case 'subscription_payment_failed':
           console.log(`  ⚠️ PAYMENT FAILED: ${plan} for ${email}`);
+          console.log(`  (Sending payment failure email...)`);
           await sendSubscriptionEmail(email, 'payment_failed', plan);
+          console.log(`  ✅ Email sent successfully!`);
           break;
 
         default:
-          console.log(`  ⓘ UNHANDLED EVENT: ${saleType}`);
+          console.log(`  ⓘ UNHANDLED EVENT: "${saleType}"`);
+          console.log(`  No action taken for this event type`);
       }
     } else {
       // Handle pay-per-use purchase (license key delivery already handled by existing webhook)
