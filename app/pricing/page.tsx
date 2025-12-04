@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { Check, X } from 'lucide-react';
 
 export default function PricingPage() {
-  const monthlyLink = process.env.NEXT_PUBLIC_GUMROAD_MONTHLY_PRODUCT_ID;
-  const yearlyLink = process.env.NEXT_PUBLIC_GUMROAD_YEARLY_PRODUCT_ID;
-  const payPerUseLink = process.env.NEXT_PUBLIC_GUMROAD_PRODUCT_ID;
+  // Use PERMALINK (short URLs) not PRODUCT_ID (long encoded strings)
+  const payPerUseLink = process.env.NEXT_PUBLIC_GUMROAD_PRODUCT_PERMALINK || 'ykchtv';
+  const monthlyLink = process.env.NEXT_PUBLIC_GUMROAD_MONTHLY_PERMALINK || 'pro-monthly';
+  const yearlyLink = process.env.NEXT_PUBLIC_GUMROAD_YEARLY_PERMALINK || 'pro-yearly';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-20">
