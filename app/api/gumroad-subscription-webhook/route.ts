@@ -2,19 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Parse form data (Gumroad sends form-encoded, not JSON)
+    const formData = await request.formData();
+    const body = Object.fromEntries(formData);
+
+    // Extract and type-cast string values
+    const email = String(body.email || '');
+    const productPermalink = String(body.product_permalink || '');
+    const saleType = String(body.sale_type || '');
+    const subscriptionId = String(body.subscription_id || '');
 
     console.log('Gumroad webhook received:', {
-      event: body.sale_type || body.event,
-      email: body.email,
-      product: body.product_permalink,
+      event: saleType,
+      email: email,
+      product: productPermalink,
       timestamp: new Date().toISOString()
     });
-
-    const email = body.email;
-    const productPermalink = body.product_permalink;
-    const saleType = body.sale_type;
-    const subscriptionId = body.subscription_id;
 
     if (!email) {
       console.error('No email in webhook payload');
@@ -77,9 +80,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Subscription webhook error:', error);
+    console.error('Webhook error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Webhook processing failed', details: (error as Error).message },
+      { error: 'Webhook processing failed', details: errorMessage },
       { status: 500 }
     );
   }
