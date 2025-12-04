@@ -151,80 +151,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                5. Third-Party Services
-              </h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                We use the following trusted third-party services:
-              </p>
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-2">
-                    Anthropic (Claude API)
-                  </h3>
-                  <p className="text-gray-700 text-sm">
-                    Purpose: AI-powered resume generation and tailoring
-                    <br />
-                    Data Shared: Resume text and job descriptions (processed
-                    according to Anthropic's privacy policy)
-                    <br />
-                    Privacy Policy:{" "}
-                    <a
-                      href="https://www.anthropic.com/legal/privacy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      anthropic.com/legal/privacy
-                    </a>
-                  </p>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-2">Gumroad</h3>
-                  <p className="text-gray-700 text-sm">
-                    Purpose: Payment processing and license key generation
-                    <br />
-                    Data Shared: Payment information and email address (handled
-                    entirely by Gumroad)
-                    <br />
-                    Privacy Policy:{" "}
-                    <a
-                      href="https://gumroad.com/privacy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      gumroad.com/privacy
-                    </a>
-                  </p>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-2">
-                    Vercel (Hosting)
-                  </h3>
-                  <p className="text-gray-700 text-sm">
-                    Purpose: Web hosting and application infrastructure
-                    <br />
-                    Data Shared: Server logs and basic analytics
-                    <br />
-                    Privacy Policy:{" "}
-                    <a
-                      href="https://vercel.com/legal/privacy-policy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      vercel.com/legal/privacy-policy
-                    </a>
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                6. Data Security
+                5. Data Security
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
                 We implement industry-standard security measures to protect your
@@ -241,7 +168,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                7. Your Rights (GDPR & CCPA Compliance)
+                6. Your Rights (GDPR & CCPA Compliance)
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
                 You have the following rights regarding your personal data:
@@ -285,7 +212,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                8. Cookies and Tracking
+                7. Cookies and Tracking
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 We use minimal cookies and browser storage:
@@ -308,7 +235,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                9. International Data Transfers
+                8. International Data Transfers
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 Our services are hosted in the United States. By using ApplyPro,
@@ -321,7 +248,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                10. Children's Privacy
+                9. Children's Privacy
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 ApplyPro is not intended for users under the age of 18. We do
@@ -333,7 +260,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                11. Changes to This Privacy Policy
+                10. Changes to This Privacy Policy
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 We may update this Privacy Policy from time to time. Changes
@@ -346,7 +273,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                12. Contact Us
+                11. Contact Us
               </h2>
               <div className="bg-blue-50 p-6 rounded-lg">
                 <p className="text-gray-700 leading-relaxed mb-4">
