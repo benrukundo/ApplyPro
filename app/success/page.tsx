@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -27,6 +28,7 @@ interface GeneratedContent {
 }
 
 function SuccessPageContent() {
+  const { data: session } = useSession();
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [licenseKey, setLicenseKey] = useState<string>("");
   const [isVerifying, setIsVerifying] = useState(false);
@@ -47,6 +49,31 @@ function SuccessPageContent() {
   // Template selection
   type ResumeTemplate = "modern" | "traditional" | "ats";
   const [selectedTemplate, setSelectedTemplate] = useState<ResumeTemplate>("modern");
+
+  // Check for active subscription - skip license key for subscribers
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!session?.user?.id) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/user/subscription');
+        const data = await response.json();
+
+        if (response.ok && data.subscription?.isActive) {
+          // User has active subscription - skip license key verification
+          setPaymentVerified(true);
+          setRemainingUses(data.subscription?.monthlyLimit - data.subscription?.monthlyUsageCount || 0);
+        }
+      } catch (err) {
+        console.error('Error checking subscription:', err);
+        // Continue with license key verification if check fails
+      }
+    };
+
+    checkSubscription();
+  }, [session?.user?.id]);
 
   // Load resume data from localStorage on mount
   useEffect(() => {
