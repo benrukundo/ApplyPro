@@ -93,23 +93,29 @@ export async function POST(request: NextRequest) {
         case 'subscription_restarted':
           console.log(`  ✅ SUBSCRIPTION STARTED: ${plan} for ${email}`);
           console.log(`  (Sending welcome email...)`);
-          await sendSubscriptionEmail(email, 'welcome', plan);
-          console.log(`  ✅ Email sent successfully!`);
+          const welcomeSent = await sendSubscriptionEmail(email, 'welcome', plan);
+          if (welcomeSent) {
+            console.log(`  ✅ Welcome email sent successfully!`);
+          }
           break;
 
         case 'subscription_ended':
         case 'subscription_cancelled':
           console.log(`  ❌ SUBSCRIPTION CANCELLED: ${plan} for ${email}`);
           console.log(`  (Sending cancellation email...)`);
-          await sendSubscriptionEmail(email, 'cancelled', plan);
-          console.log(`  ✅ Email sent successfully!`);
+          const cancelledSent = await sendSubscriptionEmail(email, 'cancelled', plan);
+          if (cancelledSent) {
+            console.log(`  ✅ Cancellation email sent successfully!`);
+          }
           break;
 
         case 'subscription_payment_failed':
           console.log(`  ⚠️ PAYMENT FAILED: ${plan} for ${email}`);
           console.log(`  (Sending payment failure email...)`);
-          await sendSubscriptionEmail(email, 'payment_failed', plan);
-          console.log(`  ✅ Email sent successfully!`);
+          const failureSent = await sendSubscriptionEmail(email, 'payment_failed', plan);
+          if (failureSent) {
+            console.log(`  ✅ Payment failure email sent successfully!`);
+          }
           break;
 
         default:
@@ -148,14 +154,14 @@ async function sendSubscriptionEmail(
   email: string,
   type: 'welcome' | 'cancelled' | 'payment_failed',
   plan: string
-) {
+): Promise<boolean> {
   console.log(`\n📧 Sending ${type} email to ${email}...`);
 
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
     console.error('  ❌ ERROR: RESEND_API_KEY not configured');
-    return;
+    return false;
   }
 
   console.log('  ✓ RESEND_API_KEY is configured');
@@ -333,7 +339,8 @@ async function sendSubscriptionEmail(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'ApplyPro <noreply@send.applypro.org>',
+        // Use Resend's verified onboarding domain (no custom domain setup needed)
+        from: 'ApplyPro <onboarding@resend.dev>',
         to: email,
         subject: template.subject,
         html: template.html
@@ -346,13 +353,16 @@ async function sendSubscriptionEmail(
 
     if (!response.ok) {
       console.error(`  ❌ Email send FAILED:`, responseData);
+      console.error(`  Fix: Go to https://resend.com/domains to verify your domain, or use the default onboarding domain`);
       console.error(`  Response:`, JSON.stringify(responseData, null, 2));
+      return false;
     } else {
       console.log(`  ✅ Email sent successfully!`);
       console.log(`  Response ID:`, responseData.id);
-      console.log(`  Response:`, JSON.stringify(responseData, null, 2));
+      return true;
     }
   } catch (error) {
     console.error(`  ❌ Error sending email:`, error);
+    return false;
   }
 }
