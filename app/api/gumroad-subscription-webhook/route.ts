@@ -339,8 +339,8 @@ async function sendSubscriptionEmail(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        // Use Resend's verified onboarding domain (no custom domain setup needed)
-        from: 'ApplyPro <onboarding@resend.dev>',
+        // Use verified custom domain from Resend
+        from: 'ApplyPro <noreply@applypro.org>',
         to: email,
         subject: template.subject,
         html: template.html
