@@ -292,11 +292,25 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Simple, Transparent Pricing
+              Flexible Pricing for Every Job Seeker
             </h2>
-            <p className="text-xl text-gray-600">
-              One-time payment. No subscriptions. No hidden fees.
+            <p className="text-xl text-gray-600 mb-4">
+              Free tools, pay-per-use, or unlimited with Pro
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <span><strong>Free:</strong> ATS Checker, Tracker</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <span><strong>Pay-Per-Use:</strong> $4.99 for 3 resumes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <span><strong>Pro:</strong> $19.99/month unlimited</span>
+              </div>
+            </div>
           </div>
 
           <div className="max-w-4xl mx-auto">
