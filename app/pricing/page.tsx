@@ -96,7 +96,7 @@ export default function PricingPage() {
             </ul>
 
             <a
-              href={`https://applypro.gumroad.com/l/${payPerUseLink}`}
+              href={`https://laurabi.gumroad.com/l/${payPerUseLink}`}
               className="block w-full text-center bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
             >
               Buy Now
@@ -149,14 +149,14 @@ export default function PricingPage() {
             </ul>
 
             <a
-              href={`https://applypro.gumroad.com/l/${monthlyLink}`}
+              href={`https://laurabi.gumroad.com/l/${monthlyLink}`}
               className="block w-full text-center bg-white text-blue-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition mb-3"
             >
               Subscribe Monthly
             </a>
 
             <a
-              href={`https://applypro.gumroad.com/l/${yearlyLink}`}
+              href={`https://laurabi.gumroad.com/l/${yearlyLink}`}
               className="block w-full text-center bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-400 transition"
             >
               Save 17% - Pay Yearly ($199/yr)
