@@ -25,13 +25,16 @@ export async function POST(request: NextRequest) {
 
     // Extract and type-cast string values
     const email = String(body.email || '');
-    const productPermalink = String(body.product_permalink || '');
+    const permalinkUrl = String(body.permalink || '');
+    // Extract slug from URL: https://laurabi.gumroad.com/l/pro-monthly → pro-monthly
+    const permalinkSlug = permalinkUrl.split('/').pop() || '';
     const saleType = String(body.sale_type || '');
     const subscriptionId = String(body.subscription_id || '');
 
     console.log('\n🔍 Extracted Fields:');
     console.log(`  📧 Email: ${email}`);
-    console.log(`  🏷️ Product Permalink: ${productPermalink}`);
+    console.log(`  🔗 Permalink URL: ${permalinkUrl}`);
+    console.log(`  🏷️ Permalink Slug: ${permalinkSlug}`);
     console.log(`  💰 Sale Type: ${saleType}`);
     console.log(`  🆔 Subscription ID: ${subscriptionId}`);
 
@@ -48,18 +51,25 @@ export async function POST(request: NextRequest) {
     console.log(`  env.GUMROAD_MONTHLY_PERMALINK = ${process.env.GUMROAD_MONTHLY_PERMALINK}`);
     console.log(`  env.GUMROAD_YEARLY_PERMALINK = ${process.env.GUMROAD_YEARLY_PERMALINK}`);
     console.log(`  env.GUMROAD_PRODUCT_PERMALINK = ${process.env.GUMROAD_PRODUCT_PERMALINK}`);
+    console.log(`  Received slug = ${permalinkSlug}`);
 
-    if (productPermalink === process.env.GUMROAD_MONTHLY_PERMALINK ||
-        productPermalink === 'pro-monthly') {
+    // Match against slug (just the last part of the URL)
+    if (permalinkSlug === process.env.GUMROAD_MONTHLY_PERMALINK ||
+        permalinkSlug === 'pro-monthly') {
       isSubscription = true;
       plan = 'monthly';
-    } else if (productPermalink === process.env.GUMROAD_YEARLY_PERMALINK ||
-               productPermalink === 'pro-yearly') {
+      console.log('  ✓ Matched MONTHLY subscription');
+    } else if (permalinkSlug === process.env.GUMROAD_YEARLY_PERMALINK ||
+               permalinkSlug === 'pro-yearly') {
       isSubscription = true;
       plan = 'yearly';
-    } else if (productPermalink === process.env.GUMROAD_PRODUCT_PERMALINK ||
-               productPermalink === 'ykchtv') {
+      console.log('  ✓ Matched YEARLY subscription');
+    } else if (permalinkSlug === process.env.GUMROAD_PRODUCT_PERMALINK ||
+               permalinkSlug === 'ykchtv') {
       plan = 'pay-per-use';
+      console.log('  ✓ Matched PAY-PER-USE product');
+    } else {
+      console.log(`  ❌ NO MATCH: slug "${permalinkSlug}" didn't match any product`);
     }
 
     console.log('\n✅ Product Identified:');
@@ -102,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      product: productPermalink,
+      product: permalinkSlug,
       plan: plan,
       isSubscription: isSubscription
     });
