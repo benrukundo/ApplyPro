@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  createOrUpdateSubscription,
+  cancelSubscription,
+  markPaymentFailed
+} from '@/lib/subscription-db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,6 +14,8 @@ export async function POST(request: NextRequest) {
     // Extract and type-cast string values
     const email = String(body.email || '');
     const permalinkUrl = String(body.permalink || '');
+    const gumroadSubscriptionId = String(body.subscription_id || body.id || '');
+
     // Extract slug from URL: https://laurabi.gumroad.com/l/pro-monthly → pro-monthly
     const permalinkSlug = permalinkUrl.split('/').pop() || '';
 
@@ -47,15 +54,24 @@ export async function POST(request: NextRequest) {
         case 'sale': // Initial purchase of subscription
         case 'subscription_started':
         case 'subscription_restarted':
+          // Save to database
+          await createOrUpdateSubscription(email, plan, gumroadSubscriptionId);
+          // Send welcome email
           await sendSubscriptionEmail(email, 'welcome', plan);
           break;
 
         case 'subscription_ended':
         case 'subscription_cancelled':
+          // Update database
+          await cancelSubscription(gumroadSubscriptionId);
+          // Send cancellation email
           await sendSubscriptionEmail(email, 'cancelled', plan);
           break;
 
         case 'subscription_payment_failed':
+          // Mark as failed in database
+          await markPaymentFailed(gumroadSubscriptionId);
+          // Send failure email
           await sendSubscriptionEmail(email, 'payment_failed', plan);
           break;
       }
