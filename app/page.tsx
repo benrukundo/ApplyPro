@@ -313,106 +313,158 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="relative bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-1 animate-scaleIn">
-              <div className="bg-white rounded-3xl p-8 md:p-12">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                  <div className="flex-1 text-center md:text-left">
-                    <div className="inline-block px-4 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold mb-4">
-                      Best Value
-                    </div>
-                    <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-                      3 Resumes Bundle
-                    </h3>
-                    <div className="flex items-baseline justify-center md:justify-start gap-2 mb-3">
-                      <span className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                        $4.99
-                      </span>
-                      <span className="text-xl text-gray-600">one-time</span>
-                    </div>
-                    <p className="text-lg font-semibold text-green-600 mb-4">
-                      Just $1.66 per resume
-                    </p>
-                    <p className="text-gray-600 mb-6">
-                      Professional resume writers charge $100-300. Get the same
-                      quality powered by AI for a fraction of the cost.
-                    </p>
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-8">
+              {/* FREE PLAN */}
+              <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-200 hover:shadow-xl transition">
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold mb-2 text-gray-900">Free</h3>
+                  <div className="mb-6">
+                    <span className="text-5xl font-bold text-gray-900">$0</span>
                   </div>
-
-                  <div className="flex-1 w-full">
-                    <div className="bg-gray-50 rounded-2xl p-6">
-                      <h4 className="font-bold text-gray-900 mb-4 text-lg">
-                        What You Get:
-                      </h4>
-                      <ul className="space-y-3">
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
-                          <span className="text-gray-700">
-                            <strong>3 resume generations</strong> - Perfect for multiple applications
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
-                          <span className="text-gray-700">
-                            AI-powered resume optimization
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
-                          <span className="text-gray-700">
-                            Custom cover letter generation
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
-                          <span className="text-gray-700">
-                            <strong>3 professional templates</strong> - Modern, Traditional, ATS-Optimized
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
-                          <span className="text-gray-700">
-                            ATS keyword optimization
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
-                          <span className="text-gray-700">
-                            Match score analysis
-                          </span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-6 h-6 flex-shrink-0 text-green-600 mt-0.5" />
-                          <span className="text-gray-700">
-                            Instant delivery - No waiting
-                          </span>
-                        </li>
-                      </ul>
-                      <Link
-                        href="/generate"
-                        className="mt-6 block w-full px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-lg font-semibold rounded-xl hover:shadow-xl hover:scale-105 transition-all duration-300 text-center"
-                      >
-                        Get Started Now
-                      </Link>
-                    </div>
-                  </div>
+                  <p className="text-gray-600 mb-6">Perfect for getting started</p>
                 </div>
 
-                <div className="mt-8 pt-8 border-t border-gray-200">
-                  <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-5 h-5 text-blue-600" />
-                      <span>Secure payment via Gumroad</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-green-600" />
-                      <span>85%+ match score average</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Star className="w-5 h-5 text-yellow-600 fill-yellow-600" />
-                      <span>100+ satisfied users</span>
-                    </div>
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Free ATS Resume Checker</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Resume Score Dashboard</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Job Application Tracker</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Track up to 25 applications</span>
+                  </li>
+                </ul>
+
+                <Link
+                  href="/signup"
+                  className="block w-full text-center bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+                >
+                  Get Started Free
+                </Link>
+              </div>
+
+              {/* PAY-PER-USE PLAN */}
+              <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-blue-200 hover:shadow-xl transition">
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold mb-2 text-gray-900">Pay-Per-Use</h3>
+                  <div className="mb-6">
+                    <span className="text-5xl font-bold text-gray-900">$4.99</span>
+                    <span className="text-gray-600"> / 3 resumes</span>
                   </div>
+                  <p className="text-gray-600 mb-6">Perfect for occasional use</p>
+                </div>
+
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700"><strong>3 AI-tailored resumes</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">All 3 professional templates</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">PDF & DOCX downloads</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">ATS optimization included</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Only $1.66 per resume</span>
+                  </li>
+                </ul>
+
+                <Link
+                  href="/generate"
+                  className="block w-full text-center bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                >
+                  Buy Now
+                </Link>
+              </div>
+
+              {/* PRO PLAN */}
+              <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl shadow-2xl p-8 border-2 border-blue-500 relative hover:shadow-xl transition transform hover:scale-105">
+                {/* Popular badge */}
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-yellow-400 text-blue-900 px-4 py-1 rounded-full text-sm font-bold">
+                    MOST POPULAR
+                  </span>
+                </div>
+
+                <div className="text-center text-white">
+                  <h3 className="text-2xl font-bold mb-2">Pro</h3>
+                  <div className="mb-2">
+                    <span className="text-5xl font-bold">$19.99</span>
+                    <span className="text-blue-200"> / month</span>
+                  </div>
+                  <p className="text-blue-200 mb-6">Unlimited resume generation*</p>
+                </div>
+
+                <ul className="space-y-4 mb-8 text-white">
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-400 mr-3 flex-shrink-0" />
+                    <span><strong>Unlimited AI-tailored resumes*</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-400 mr-3 flex-shrink-0" />
+                    <span>All 3 professional templates</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-400 mr-3 flex-shrink-0" />
+                    <span>Unlimited job tracking</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-400 mr-3 flex-shrink-0" />
+                    <span>Priority email support</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-400 mr-3 flex-shrink-0" />
+                    <span>Early access to new features</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-400 mr-3 flex-shrink-0" />
+                    <span>Cancel anytime</span>
+                  </li>
+                </ul>
+
+                <Link
+                  href="/pricing"
+                  className="block w-full text-center bg-white text-blue-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
+                >
+                  Subscribe Now
+                </Link>
+
+                <p className="text-xs text-blue-200 mt-4 text-center">
+                  *Fair use: 100 resumes/month for personal job search
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-blue-600" />
+                  <span>Secure payment via Gumroad</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  <span>85%+ match score average</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-600 fill-yellow-600" />
+                  <span>100+ satisfied users</span>
                 </div>
               </div>
             </div>
