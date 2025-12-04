@@ -2,9 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
+    // TEMPORARY DEBUG - Log everything
+    const timestamp = new Date().toISOString();
+    console.log('\n🔔 ═══════════════════════════════════════════════════════');
+    console.log(`🔔 WEBHOOK HIT at ${timestamp}`);
+    console.log('🔔 ═══════════════════════════════════════════════════════');
+
+    // Log request headers
+    console.log('\n📋 Request Headers:');
+    const headersObj: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headersObj[key] = value;
+    });
+    console.log(JSON.stringify(headersObj, null, 2));
+
     // Parse form data (Gumroad sends form-encoded, not JSON)
     const formData = await request.formData();
     const body = Object.fromEntries(formData);
+
+    console.log('\n📦 Full Webhook Payload:');
+    console.log(JSON.stringify(body, null, 2));
 
     // Extract and type-cast string values
     const email = String(body.email || '');
@@ -12,21 +29,25 @@ export async function POST(request: NextRequest) {
     const saleType = String(body.sale_type || '');
     const subscriptionId = String(body.subscription_id || '');
 
-    console.log('Gumroad webhook received:', {
-      event: saleType,
-      email: email,
-      product: productPermalink,
-      timestamp: new Date().toISOString()
-    });
+    console.log('\n🔍 Extracted Fields:');
+    console.log(`  📧 Email: ${email}`);
+    console.log(`  🏷️ Product Permalink: ${productPermalink}`);
+    console.log(`  💰 Sale Type: ${saleType}`);
+    console.log(`  🆔 Subscription ID: ${subscriptionId}`);
 
     if (!email) {
-      console.error('No email in webhook payload');
+      console.error('❌ ERROR: No email in webhook payload');
       return NextResponse.json({ error: 'No email' }, { status: 400 });
     }
 
     // Determine product type and plan
     let isSubscription = false;
     let plan: 'monthly' | 'yearly' | 'pay-per-use' = 'pay-per-use';
+
+    console.log('\n🔎 Determining Product Type...');
+    console.log(`  env.GUMROAD_MONTHLY_PERMALINK = ${process.env.GUMROAD_MONTHLY_PERMALINK}`);
+    console.log(`  env.GUMROAD_YEARLY_PERMALINK = ${process.env.GUMROAD_YEARLY_PERMALINK}`);
+    console.log(`  env.GUMROAD_PRODUCT_PERMALINK = ${process.env.GUMROAD_PRODUCT_PERMALINK}`);
 
     if (productPermalink === process.env.GUMROAD_MONTHLY_PERMALINK ||
         productPermalink === 'pro-monthly') {
@@ -41,36 +62,43 @@ export async function POST(request: NextRequest) {
       plan = 'pay-per-use';
     }
 
-    console.log('Product identified:', { productPermalink, plan, isSubscription });
+    console.log('\n✅ Product Identified:');
+    console.log(`  Plan: ${plan}`);
+    console.log(`  Is Subscription: ${isSubscription}`);
 
     // Handle subscription events
+    console.log('\n🎯 Handling Event:');
     if (isSubscription) {
       switch(saleType) {
         case 'sale':
         case 'subscription_started':
         case 'subscription_restarted':
-          console.log(`Subscription ${plan} started for ${email}`);
+          console.log(`  ✅ SUBSCRIPTION STARTED: ${plan} for ${email}`);
           await sendSubscriptionEmail(email, 'welcome', plan);
           break;
 
         case 'subscription_ended':
         case 'subscription_cancelled':
-          console.log(`Subscription ${plan} cancelled for ${email}`);
+          console.log(`  ❌ SUBSCRIPTION CANCELLED: ${plan} for ${email}`);
           await sendSubscriptionEmail(email, 'cancelled', plan);
           break;
 
         case 'subscription_payment_failed':
-          console.log(`Payment failed for ${email}`);
+          console.log(`  ⚠️ PAYMENT FAILED: ${plan} for ${email}`);
           await sendSubscriptionEmail(email, 'payment_failed', plan);
           break;
 
         default:
-          console.log(`Unhandled subscription event: ${saleType}`);
+          console.log(`  ⓘ UNHANDLED EVENT: ${saleType}`);
       }
     } else {
       // Handle pay-per-use purchase (license key delivery already handled by existing webhook)
-      console.log(`Pay-per-use purchase by ${email} - license delivery handled by existing webhook`);
+      console.log(`  💳 PAY-PER-USE PURCHASE: ${email}`);
+      console.log(`  (License delivery handled by existing webhook)`);
     }
+
+    console.log('\n✨ Webhook Processing Complete');
+    console.log('🔔 ═══════════════════════════════════════════════════════\n');
 
     return NextResponse.json({
       success: true,
@@ -80,7 +108,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('\n❌ ═══════════════════════════════════════════════════════');
+    console.error('❌ WEBHOOK ERROR:', error);
+    console.error('❌ ═══════════════════════════════════════════════════════\n');
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { error: 'Webhook processing failed', details: errorMessage },
@@ -94,12 +124,16 @@ async function sendSubscriptionEmail(
   type: 'welcome' | 'cancelled' | 'payment_failed',
   plan: string
 ) {
+  console.log(`\n📧 Sending ${type} email to ${email}...`);
+
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    console.error('RESEND_API_KEY not configured');
+    console.error('  ❌ ERROR: RESEND_API_KEY not configured');
     return;
   }
+
+  console.log('  ✓ RESEND_API_KEY is configured');
 
   const templates = {
     welcome: {
@@ -264,6 +298,9 @@ async function sendSubscriptionEmail(
   const template = templates[type];
 
   try {
+    console.log(`  Sending to Resend API...`);
+    console.log(`    Subject: ${template.subject}`);
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -278,14 +315,19 @@ async function sendSubscriptionEmail(
       })
     });
 
+    console.log(`  Response status: ${response.status}`);
+
     const responseData = await response.json();
 
     if (!response.ok) {
-      console.error('Failed to send email:', responseData);
+      console.error(`  ❌ Email send FAILED:`, responseData);
+      console.error(`  Response:`, JSON.stringify(responseData, null, 2));
     } else {
-      console.log(`${type} email sent successfully to ${email}`, responseData);
+      console.log(`  ✅ Email sent successfully!`);
+      console.log(`  Response ID:`, responseData.id);
+      console.log(`  Response:`, JSON.stringify(responseData, null, 2));
     }
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error(`  ❌ Error sending email:`, error);
   }
 }
