@@ -116,6 +116,16 @@ export default function Navbar() {
                   Templates
                 </Link>
                 <Link
+                  href="/pricing"
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                    pathname === "/pricing"
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  Pricing
+                </Link>
+                <Link
                   href="/ats-checker"
                   className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
                     pathname === "/ats-checker"
@@ -267,6 +277,17 @@ export default function Navbar() {
                     }`}
                   >
                     Templates
+                  </Link>
+                  <Link
+                    href="/pricing"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
+                      pathname === "/pricing"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    Pricing
                   </Link>
                   <Link
                     href="/ats-checker"
