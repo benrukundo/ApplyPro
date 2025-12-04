@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense } from 'react';
-import { signIn } from 'next-auth/react';
+import { Suspense, useEffect } from 'react';
+import { signIn, useSession } from 'next-auth/react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -149,6 +149,38 @@ function LoginContent() {
   );
 }
 
+function LoginPageContent() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    // If user is already authenticated, redirect to dashboard
+    if (status === 'authenticated' && session) {
+      router.push('/dashboard');
+    }
+  }, [status, session, router]);
+
+  // Show loading state while checking authentication
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If authenticated, return null (will redirect via useEffect)
+  if (status === 'authenticated') {
+    return null;
+  }
+
+  // Show login UI if not authenticated
+  return <LoginContent />;
+}
+
 export default function LoginPage() {
   return (
     <Suspense fallback={
@@ -159,7 +191,7 @@ export default function LoginPage() {
         </div>
       </div>
     }>
-      <LoginContent />
+      <LoginPageContent />
     </Suspense>
   );
 }
