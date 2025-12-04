@@ -24,6 +24,7 @@ import {
   Zap,
   Star,
   Lock,
+  Download,
 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -58,6 +59,12 @@ interface SubscriptionInfo {
   isActive: boolean;
 }
 
+interface GeneratedResume {
+  fullResume: string;
+  atsOptimizedResume: string;
+}
+
+
 export default function GeneratePage() {
   const { data: session } = useSession();
 
@@ -75,6 +82,8 @@ export default function GeneratePage() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [apiError, setApiError] = useState<string>('');
+  const [generatedResume, setGeneratedResume] = useState<GeneratedResume | null>(null);
+  const [showResults, setShowResults] = useState(false);
 
   // Load subscription info
   useEffect(() => {
@@ -267,7 +276,7 @@ export default function GeneratePage() {
         method: 'POST',
       });
 
-      // Save data and redirect to success page
+      // Save data to localStorage for backup
       try {
         localStorage.setItem('applypro_resume_text', resumeText);
         localStorage.setItem('applypro_job_description', jobDescription);
@@ -276,8 +285,17 @@ export default function GeneratePage() {
         console.error('Error saving to localStorage:', err);
       }
 
-      // Redirect to success page
-      window.location.href = '/success?verified=true';
+      // Show results on the same page
+      setGeneratedResume(generateData);
+      setShowResults(true);
+
+      // Scroll to results
+      setTimeout(() => {
+        const resultsSection = document.getElementById('results-section');
+        if (resultsSection) {
+          resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
     } catch (err) {
       console.error('Error generating resume:', err);
       setError(
@@ -558,6 +576,96 @@ export default function GeneratePage() {
             )}
           </div>
         </div>
+
+        {/* Generated Resume Results Section */}
+        {showResults && generatedResume && (
+          <div id="results-section" className="mt-16 pt-16 border-t-2 border-gray-200">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-8 h-8 text-green-600" />
+                Your Tailored Resume is Ready!
+              </h2>
+              <p className="text-xl text-gray-600">
+                Here's your optimized resume tailored to the job description
+              </p>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Full Resume */}
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                  Tailored Resume
+                </h3>
+                <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
+                  <div className="text-gray-800 whitespace-pre-wrap font-serif text-sm leading-relaxed">
+                    {generatedResume.fullResume}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const element = document.createElement('a');
+                    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(generatedResume.fullResume));
+                    element.setAttribute('download', 'tailored-resume.txt');
+                    element.style.display = 'none';
+                    document.body.appendChild(element);
+                    element.click();
+                    document.body.removeChild(element);
+                  }}
+                  className="mt-4 w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Resume
+                </button>
+              </div>
+
+              {/* ATS Optimized Resume */}
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <Target className="w-6 h-6 text-green-600" />
+                  ATS-Optimized Version
+                </h3>
+                <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
+                  <div className="text-gray-800 whitespace-pre-wrap font-serif text-sm leading-relaxed">
+                    {generatedResume.atsOptimizedResume}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const element = document.createElement('a');
+                    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(generatedResume.atsOptimizedResume));
+                    element.setAttribute('download', 'ats-optimized-resume.txt');
+                    element.style.display = 'none';
+                    document.body.appendChild(element);
+                    element.click();
+                    document.body.removeChild(element);
+                  }}
+                  className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download ATS Version
+                </button>
+              </div>
+            </div>
+
+            {/* Generate Another Button */}
+            <div className="mt-12 text-center">
+              <button
+                onClick={() => {
+                  setShowResults(false);
+                  setGeneratedResume(null);
+                  setPreviewData(null);
+                  setResumeFile(null);
+                  setResumeText('');
+                  setJobDescription('');
+                }}
+                className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                Generate Another Resume
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
