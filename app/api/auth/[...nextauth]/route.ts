@@ -38,6 +38,19 @@ export const authOptions: NextAuthOptions = {
     }
   },
   callbacks: {
+    async signIn({ user }) {
+      return true; // Allow sign in
+    },
+    async redirect({ url, baseUrl }) {
+      // Always redirect to dashboard after sign in
+      if (url.includes('/api/auth/signin') || url.includes('/api/auth/callback')) {
+        return `${baseUrl}/dashboard`;
+      }
+      // If it's a valid redirect URL, use it
+      if (url.startsWith(baseUrl)) return url;
+      // Otherwise redirect to dashboard
+      return `${baseUrl}/dashboard`;
+    },
     async session({ session, user }): Promise<Session> {
       if (session.user) {
         session.user.id = user.id;
