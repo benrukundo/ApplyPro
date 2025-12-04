@@ -24,6 +24,7 @@ export const authOptions: NextAuthOptions = {
       allowDangerousEmailAccountLinking: true,
     }),
   ],
+  secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async session({ session, user }): Promise<Session> {
       if (session.user) {
@@ -38,6 +39,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "database",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 };
 
