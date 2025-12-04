@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -17,9 +17,6 @@ import {
   FileText,
   Target,
   TrendingUp,
-  LogOut,
-  Menu,
-  X,
   Briefcase,
   CheckCircle2,
   XCircle,
@@ -46,7 +43,6 @@ export default function DashboardPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
 
@@ -84,11 +80,6 @@ export default function DashboardPage() {
     const apps = getAllApplications();
     setApplications(apps);
   }, []);
-
-  const handleLogout = async () => {
-    await signOut({ redirect: false });
-    router.push('/');
-  };
 
   const stats = getStatistics();
   const upcomingFollowUps = getUpcomingFollowUps();
@@ -154,72 +145,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-blue-600">
-            ApplyPro
-          </Link>
-
-          {/* Desktop menu */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/generate" className="text-gray-600 hover:text-gray-900 font-medium">
-              Generate
-            </Link>
-            <Link href="/ats-checker" className="text-gray-600 hover:text-gray-900 font-medium">
-              ATS Checker
-            </Link>
-            <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
-              <div className="text-right">
-                <p className="font-semibold text-gray-900">{session.user.email}</p>
-                {subscription?.isActive && (
-                  <p className="text-xs text-blue-600">
-                    {subscription.plan === 'monthly'
-                      ? 'Pro Monthly'
-                      : subscription.plan === 'yearly'
-                        ? 'Pro Yearly'
-                        : 'Pay-Per-Use'}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-2 text-gray-600 hover:text-red-600 transition-colors"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 p-4 space-y-2">
-            <Link href="/generate" className="block py-2 text-gray-600 hover:text-gray-900">
-              Generate
-            </Link>
-            <Link href="/ats-checker" className="block py-2 text-gray-600 hover:text-gray-900">
-              ATS Checker
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="w-full text-left py-2 text-red-600 hover:text-red-700 flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
-          </div>
-        )}
-      </nav>
-
       <div className="container mx-auto px-4 py-12 max-w-7xl">
         {/* Header */}
         <div className="mb-12">
