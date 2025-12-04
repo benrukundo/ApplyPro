@@ -1,34 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { isAuthenticated, getCurrentUser, logout, User } from "@/lib/auth";
+import { useSession, signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { Menu, X, LogOut } from "lucide-react";
 
 export default function Navbar() {
-  const router = useRouter();
+  const { data: session } = useSession();
   const pathname = usePathname();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const authenticated = isAuthenticated();
-    setIsLoggedIn(authenticated);
-
-    if (authenticated) {
-      const currentUser = getCurrentUser();
-      setUser(currentUser);
-    }
-  }, [pathname]); // Re-check on route change
-
-  const handleLogout = () => {
-    logout();
-    setIsLoggedIn(false);
-    setUser(null);
-    setMobileMenuOpen(false);
-    router.push("/");
+  const handleLogout = async () => {
+    await signOut({ redirect: true, callbackUrl: "/" });
   };
 
   // Don't show navbar on login/signup pages
@@ -50,7 +34,7 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            {isLoggedIn ? (
+            {session ? (
               <>
                 <Link
                   href="/dashboard"
@@ -141,12 +125,12 @@ export default function Navbar() {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center gap-4">
-            {isLoggedIn ? (
+            {session ? (
               <>
                 <div className="text-sm text-gray-700 dark:text-gray-300">
-                  <div className="font-medium">{user?.name}</div>
+                  <div className="font-medium">{session.user?.name}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {user?.email}
+                    {session.user?.email}
                   </div>
                 </div>
                 <button
@@ -192,7 +176,7 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="border-t border-gray-200 py-4 md:hidden dark:border-gray-800">
             <nav className="flex flex-col gap-4">
-              {isLoggedIn ? (
+              {session ? (
                 <>
                   <Link
                     href="/dashboard"
@@ -240,9 +224,9 @@ export default function Navbar() {
                   </Link>
                   <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
                     <div className="mb-3 text-sm text-gray-700 dark:text-gray-300">
-                      <div className="font-medium">{user?.name}</div>
+                      <div className="font-medium">{session.user?.name}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {user?.email}
+                        {session.user?.email}
                       </div>
                     </div>
                     <button
