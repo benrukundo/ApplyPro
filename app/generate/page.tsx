@@ -62,6 +62,8 @@ interface SubscriptionInfo {
 interface GeneratedResume {
   fullResume: string;
   atsOptimizedResume: string;
+  coverLetter: string;
+  matchScore: number;
 }
 
 
@@ -85,6 +87,7 @@ export default function GeneratePage() {
   const [generatedResume, setGeneratedResume] = useState<GeneratedResume | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'docx'>('pdf');
+  const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'traditional' | 'ats'>('modern');
   const [isDownloading, setIsDownloading] = useState(false);
 
   // Load subscription info
@@ -308,9 +311,11 @@ export default function GeneratePage() {
   };
 
   // Handle download based on selected format
-  const handleDownload = (content: string, type: 'full' | 'ats') => {
+  const handleDownload = (content: string, type: 'full' | 'ats' | 'cover') => {
     const timestamp = new Date().toISOString().split('T')[0];
-    const baseName = type === 'full' ? 'Tailored_Resume' : 'ATS_Optimized_Resume';
+    const baseName = type === 'full' ? 'Tailored_Resume' :
+                      type === 'ats' ? 'ATS_Optimized_Resume' :
+                      'Cover_Letter';
 
     if (downloadFormat === 'pdf') {
       downloadAsPDF(content, `${baseName}_${timestamp}.pdf`);
@@ -678,9 +683,46 @@ export default function GeneratePage() {
               </p>
             </div>
 
-            {/* Format Selection */}
+            {/* Template Selection */}
             <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Select Download Format</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Choose Resume Template</h3>
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <button
+                  onClick={() => setSelectedTemplate('modern')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    selectedTemplate === 'modern'
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300'
+                  }`}
+                >
+                  <div className="font-semibold text-gray-900 mb-1">Modern</div>
+                  <div className="text-xs text-gray-600">Two-column with blue accents</div>
+                </button>
+                <button
+                  onClick={() => setSelectedTemplate('traditional')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    selectedTemplate === 'traditional'
+                      ? 'border-gray-600 bg-gray-50'
+                      : 'border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  <div className="font-semibold text-gray-900 mb-1">Traditional</div>
+                  <div className="text-xs text-gray-600">Classic single-column</div>
+                </button>
+                <button
+                  onClick={() => setSelectedTemplate('ats')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    selectedTemplate === 'ats'
+                      ? 'border-green-600 bg-green-50'
+                      : 'border-gray-200 hover:border-green-300'
+                  }`}
+                >
+                  <div className="font-semibold text-gray-900 mb-1">ATS-Optimized</div>
+                  <div className="text-xs text-gray-600">Machine-readable format</div>
+                </button>
+              </div>
+
+              <h3 className="text-xl font-bold text-gray-900 mb-4 mt-6">Select Download Format</h3>
               <div className="flex gap-4">
                 <button
                   onClick={() => setDownloadFormat('pdf')}
@@ -705,7 +747,7 @@ export default function GeneratePage() {
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-8">
+            <div className="grid lg:grid-cols-3 gap-8">
               {/* Full Resume */}
               <div className="bg-white rounded-2xl shadow-lg p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -751,6 +793,36 @@ export default function GeneratePage() {
                   onClick={() => handleDownload(generatedResume.atsOptimizedResume, 'ats')}
                   disabled={isDownloading}
                   className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Download as {downloadFormat.toUpperCase()}
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Cover Letter */}
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <FileText className="w-6 h-6 text-purple-600" />
+                  Cover Letter
+                </h3>
+                <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
+                  <div className="text-gray-800 whitespace-pre-wrap font-serif text-sm leading-relaxed">
+                    {generatedResume.coverLetter}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDownload(generatedResume.coverLetter, 'cover')}
+                  disabled={isDownloading}
+                  className="mt-4 w-full px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   {isDownloading ? (
                     <>

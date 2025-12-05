@@ -15,6 +15,7 @@ interface GenerateRequest {
 interface GenerateResponse {
   fullResume: string;
   atsOptimizedResume: string;
+  coverLetter: string;
   matchScore: number;
 }
 
@@ -97,7 +98,17 @@ Create a second version of the resume specifically optimized for Applicant Track
 - Include a skills section with exact keyword matches
 - Make it highly scannable by ATS software
 
-TASK 3 - MATCH SCORE:
+TASK 3 - COVER LETTER:
+Write a compelling, personalized cover letter (250-350 words) that:
+- Opens with genuine enthusiasm for the specific role and company
+- Directly addresses 2-3 key requirements from the job description
+- Tells a brief story connecting the candidate's experience to the role's challenges
+- Highlights 1-2 specific accomplishments that prove capability
+- Shows personality while maintaining professionalism
+- Closes with a clear call to action and availability for interview
+- Uses a warm, confident, and professional tone
+
+TASK 4 - MATCH SCORE:
 Calculate a realistic match score (0-100) based on:
 - Skills alignment
 - Experience relevance
@@ -110,6 +121,7 @@ Response format:
 {
   "fullResume": "Complete full tailored resume text here with proper formatting and line breaks...",
   "atsOptimizedResume": "Complete ATS-optimized resume text here with simple formatting...",
+  "coverLetter": "Complete personalized cover letter text here (250-350 words)...",
   "matchScore": 85
 }`;
 
@@ -150,14 +162,18 @@ Response format:
         /"fullResume":\s*"([\s\S]*?)",?\s*"atsOptimizedResume"/
       );
       const atsResumeMatch = responseText.match(
-        /"atsOptimizedResume":\s*"([\s\S]*?)",?\s*"matchScore"/
+        /"atsOptimizedResume":\s*"([\s\S]*?)",?\s*"coverLetter"/
+      );
+      const coverLetterMatch = responseText.match(
+        /"coverLetter":\s*"([\s\S]*?)",?\s*"matchScore"/
       );
       const scoreMatch = responseText.match(/"matchScore":\s*(\d+)/);
 
-      if (fullResumeMatch && atsResumeMatch) {
+      if (fullResumeMatch && atsResumeMatch && coverLetterMatch) {
         parsedResponse = {
           fullResume: fullResumeMatch[1].replace(/\\n/g, "\n"),
           atsOptimizedResume: atsResumeMatch[1].replace(/\\n/g, "\n"),
+          coverLetter: coverLetterMatch[1].replace(/\\n/g, "\n"),
           matchScore: scoreMatch ? parseInt(scoreMatch[1]) : 85,
         };
       } else {
@@ -176,6 +192,7 @@ Response format:
     if (
       !parsedResponse.fullResume ||
       !parsedResponse.atsOptimizedResume ||
+      !parsedResponse.coverLetter ||
       typeof parsedResponse.matchScore !== "number"
     ) {
       console.error("Invalid response structure:", parsedResponse);
@@ -198,6 +215,12 @@ Response format:
     if (parsedResponse.atsOptimizedResume.length < 200) {
       throw new Error(
         "Generated ATS-optimized resume is too short. Please try again."
+      );
+    }
+
+    if (parsedResponse.coverLetter.length < 100) {
+      throw new Error(
+        "Generated cover letter is too short. Please try again."
       );
     }
 
