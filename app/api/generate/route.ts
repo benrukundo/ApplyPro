@@ -13,8 +13,8 @@ interface GenerateRequest {
 }
 
 interface GenerateResponse {
-  tailoredResume: string;
-  coverLetter: string;
+  fullResume: string;
+  atsOptimizedResume: string;
   matchScore: number;
 }
 
@@ -71,11 +71,11 @@ ${resumeText}
 JOB DESCRIPTION:
 ${jobDescription}
 
-TASK 1 - TAILORED RESUME:
-Rewrite the resume to perfectly match this job description. Follow these guidelines:
+TASK 1 - FULL TAILORED RESUME:
+Create a comprehensive, well-formatted resume that perfectly matches this job description. Follow these guidelines:
 - Keep ALL truthful information from the original resume - never fabricate experience
 - Strategically highlight relevant experience that directly matches job requirements
-- Incorporate keywords and phrases from the job description for ATS (Applicant Tracking System) optimization
+- Incorporate keywords and phrases from the job description naturally
 - Quantify achievements with specific numbers, percentages, and metrics wherever possible
 - Use strong action verbs (e.g., "Led," "Increased," "Implemented," "Designed," "Optimized")
 - Maintain professional formatting with clear sections (Summary, Experience, Skills, Education)
@@ -83,17 +83,19 @@ Rewrite the resume to perfectly match this job description. Follow these guideli
 - Prioritize the most relevant experience first
 - Remove or de-emphasize less relevant experience
 - Ensure the summary/objective directly addresses the target role
+- Use professional formatting with proper spacing and structure
 
-TASK 2 - COVER LETTER:
-Write a compelling, personalized cover letter (250-350 words) that:
-- Opens with genuine enthusiasm for the specific role and company
-- Directly addresses 2-3 key requirements from the job description
-- Tells a brief story connecting the candidate's experience to the role's challenges
-- Demonstrates understanding of the company's mission, values, or recent achievements
-- Highlights 1-2 specific accomplishments that prove capability
-- Shows personality while maintaining professionalism
-- Closes with a clear call to action and availability for interview
-- Uses a warm, confident, and professional tone
+TASK 2 - ATS-OPTIMIZED RESUME:
+Create a second version of the resume specifically optimized for Applicant Tracking Systems (ATS):
+- Use simple, clean formatting without tables, columns, or graphics
+- Place all keywords from the job description strategically throughout
+- Use standard section headings (Professional Summary, Work Experience, Skills, Education)
+- Avoid special characters, headers, footers, or text boxes
+- List skills exactly as they appear in the job description
+- Use standard bullet points (no fancy symbols)
+- Ensure all dates are in a consistent format (MM/YYYY)
+- Include a skills section with exact keyword matches
+- Make it highly scannable by ATS software
 
 TASK 3 - MATCH SCORE:
 Calculate a realistic match score (0-100) based on:
@@ -106,8 +108,8 @@ IMPORTANT: Return your response in valid JSON format with no markdown formatting
 
 Response format:
 {
-  "tailoredResume": "Complete tailored resume text here with proper formatting and line breaks...",
-  "coverLetter": "Complete cover letter text here with proper formatting...",
+  "fullResume": "Complete full tailored resume text here with proper formatting and line breaks...",
+  "atsOptimizedResume": "Complete ATS-optimized resume text here with simple formatting...",
   "matchScore": 85
 }`;
 
@@ -144,18 +146,18 @@ Response format:
       console.error("Parse error:", parseError);
 
       // Fallback: Try to extract content manually if JSON parsing fails
-      const resumeMatch = responseText.match(
-        /"tailoredResume":\s*"([\s\S]*?)",?\s*"coverLetter"/
+      const fullResumeMatch = responseText.match(
+        /"fullResume":\s*"([\s\S]*?)",?\s*"atsOptimizedResume"/
       );
-      const coverLetterMatch = responseText.match(
-        /"coverLetter":\s*"([\s\S]*?)",?\s*"matchScore"/
+      const atsResumeMatch = responseText.match(
+        /"atsOptimizedResume":\s*"([\s\S]*?)",?\s*"matchScore"/
       );
       const scoreMatch = responseText.match(/"matchScore":\s*(\d+)/);
 
-      if (resumeMatch && coverLetterMatch) {
+      if (fullResumeMatch && atsResumeMatch) {
         parsedResponse = {
-          tailoredResume: resumeMatch[1].replace(/\\n/g, "\n"),
-          coverLetter: coverLetterMatch[1].replace(/\\n/g, "\n"),
+          fullResume: fullResumeMatch[1].replace(/\\n/g, "\n"),
+          atsOptimizedResume: atsResumeMatch[1].replace(/\\n/g, "\n"),
           matchScore: scoreMatch ? parseInt(scoreMatch[1]) : 85,
         };
       } else {
@@ -172,8 +174,8 @@ Response format:
 
     // Validate parsed response structure
     if (
-      !parsedResponse.tailoredResume ||
-      !parsedResponse.coverLetter ||
+      !parsedResponse.fullResume ||
+      !parsedResponse.atsOptimizedResume ||
       typeof parsedResponse.matchScore !== "number"
     ) {
       console.error("Invalid response structure:", parsedResponse);
@@ -187,15 +189,15 @@ Response format:
     );
 
     // Validate content quality (basic checks)
-    if (parsedResponse.tailoredResume.length < 200) {
+    if (parsedResponse.fullResume.length < 200) {
       throw new Error(
         "Generated resume is too short. Please try again with more details."
       );
     }
 
-    if (parsedResponse.coverLetter.length < 200) {
+    if (parsedResponse.atsOptimizedResume.length < 200) {
       throw new Error(
-        "Generated cover letter is too short. Please try again."
+        "Generated ATS-optimized resume is too short. Please try again."
       );
     }
 

@@ -84,6 +84,8 @@ export default function GeneratePage() {
   const [apiError, setApiError] = useState<string>('');
   const [generatedResume, setGeneratedResume] = useState<GeneratedResume | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'docx'>('pdf');
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Load subscription info
   useEffect(() => {
@@ -228,6 +230,92 @@ export default function GeneratePage() {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Download resume as PDF
+  const downloadAsPDF = async (content: string, filename: string) => {
+    setIsDownloading(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+
+      // Set font and margins
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const maxWidth = pageWidth - (margin * 2);
+
+      // Add title/header
+      doc.setFontSize(12);
+      doc.setTextColor(40, 40, 40);
+
+      // Split content into lines and add to PDF
+      const lines = doc.splitTextToSize(content, maxWidth);
+      let y = margin;
+
+      lines.forEach((line: string) => {
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, margin, y);
+        y += 7;
+      });
+
+      // Save the PDF
+      doc.save(filename);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      setError('Failed to download PDF. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Download resume as DOCX
+  const downloadAsDOCX = async (content: string, filename: string) => {
+    setIsDownloading(true);
+    try {
+      const { Document, Packer, Paragraph, TextRun } = await import('docx');
+      const { saveAs } = await import('file-saver');
+
+      // Split content into paragraphs
+      const paragraphs = content.split('\n').map(line =>
+        new Paragraph({
+          children: [new TextRun(line || ' ')],
+          spacing: { after: 100 },
+        })
+      );
+
+      // Create document
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: paragraphs,
+        }],
+      });
+
+      // Generate and save DOCX
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, filename);
+    } catch (err) {
+      console.error('Error generating DOCX:', err);
+      setError('Failed to download DOCX. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle download based on selected format
+  const handleDownload = (content: string, type: 'full' | 'ats') => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const baseName = type === 'full' ? 'Tailored_Resume' : 'ATS_Optimized_Resume';
+
+    if (downloadFormat === 'pdf') {
+      downloadAsPDF(content, `${baseName}_${timestamp}.pdf`);
+    } else {
+      downloadAsDOCX(content, `${baseName}_${timestamp}.docx`);
     }
   };
 
@@ -590,6 +678,33 @@ export default function GeneratePage() {
               </p>
             </div>
 
+            {/* Format Selection */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Select Download Format</h3>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setDownloadFormat('pdf')}
+                  className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
+                    downloadFormat === 'pdf'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  PDF Format
+                </button>
+                <button
+                  onClick={() => setDownloadFormat('docx')}
+                  className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
+                    downloadFormat === 'docx'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  DOCX Format
+                </button>
+              </div>
+            </div>
+
             <div className="grid lg:grid-cols-2 gap-8">
               {/* Full Resume */}
               <div className="bg-white rounded-2xl shadow-lg p-8">
@@ -603,19 +718,21 @@ export default function GeneratePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    const element = document.createElement('a');
-                    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(generatedResume.fullResume));
-                    element.setAttribute('download', 'tailored-resume.txt');
-                    element.style.display = 'none';
-                    document.body.appendChild(element);
-                    element.click();
-                    document.body.removeChild(element);
-                  }}
-                  className="mt-4 w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                  onClick={() => handleDownload(generatedResume.fullResume, 'full')}
+                  disabled={isDownloading}
+                  className="mt-4 w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
-                  <Download className="w-4 h-4" />
-                  Download Resume
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Download as {downloadFormat.toUpperCase()}
+                    </>
+                  )}
                 </button>
               </div>
 
@@ -631,19 +748,21 @@ export default function GeneratePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    const element = document.createElement('a');
-                    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(generatedResume.atsOptimizedResume));
-                    element.setAttribute('download', 'ats-optimized-resume.txt');
-                    element.style.display = 'none';
-                    document.body.appendChild(element);
-                    element.click();
-                    document.body.removeChild(element);
-                  }}
-                  className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                  onClick={() => handleDownload(generatedResume.atsOptimizedResume, 'ats')}
+                  disabled={isDownloading}
+                  className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
-                  <Download className="w-4 h-4" />
-                  Download ATS Version
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Download as {downloadFormat.toUpperCase()}
+                    </>
+                  )}
                 </button>
               </div>
             </div>
