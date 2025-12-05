@@ -1,0 +1,32 @@
+# Build artifacts and dependencies
+node_modules/
+.next/
+.vercel/
+dist/
+build/
+out/
+
+# Environment files (handled separately)
+.env
+.env.local
+.env.production
+.env.production.local
+
+# Version control
+.git/
+.gitignore
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+
+# OS files
+Thumbs.db
