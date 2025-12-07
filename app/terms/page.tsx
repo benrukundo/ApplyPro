@@ -201,7 +201,7 @@ export default function TermsPage() {
               </ul>
             </section>
 
-            <section>
+            <section id="refund-policy">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                 6. Refund Policy
               </h2>
@@ -227,7 +227,7 @@ export default function TermsPage() {
                   </p>
                   <p className="text-gray-700 leading-relaxed">
                     <strong>Before First Use:</strong> If you have purchased a license key but have not yet used
-                    any of your 3 credits, you may request a full refund within 7
+                    any of your 3 credits, you may request a full refund within 14
                     days of purchase by contacting support@applypro.org. Completely unused
                     license keys will receive a full refund, no questions asked.
                   </p>
