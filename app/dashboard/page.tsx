@@ -216,8 +216,7 @@ export default function DashboardPage() {
               </div>
 
               <Link
-                href={subscription?.isActive ? 'https://gumroad.com/library' : '/pricing'}
-                target={subscription?.isActive ? '_blank' : undefined}
+                href={subscription?.isActive ? '/coming-soon' : '/pricing'}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
                 {subscription?.isActive ? 'Manage Subscription' : 'Upgrade Plan'}

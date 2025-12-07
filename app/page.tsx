@@ -459,10 +459,6 @@ export default function Home() {
                   <TrendingUp className="w-5 h-5 text-green-600" />
                   <span>85%+ match score average</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-600 fill-yellow-600" />
-                  <span>100+ satisfied users</span>
-                </div>
               </div>
             </div>
           </div>
