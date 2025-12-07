@@ -57,13 +57,6 @@ export default function Home() {
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5"></div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center max-w-5xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-full mb-6 animate-fadeIn">
-              <Star className="w-4 h-4 text-blue-600 fill-blue-600" />
-              <span className="text-sm font-semibold text-blue-800">
-                Join 100+ successful job seekers
-              </span>
-            </div>
-
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 animate-fadeInUp leading-tight">
               Land Your Dream Job with{" "}
               <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">

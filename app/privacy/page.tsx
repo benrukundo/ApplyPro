@@ -52,6 +52,10 @@ export default function PrivacyPage() {
                   </h3>
                   <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                     <li>
+                      <strong>Account Information:</strong> Name, email address, and profile picture
+                      when you sign in with Google OAuth
+                    </li>
+                    <li>
                       <strong>Resume Content:</strong> Your resume text,
                       including work experience, education, and skills
                     </li>
@@ -60,13 +64,14 @@ export default function PrivacyPage() {
                       provide for tailoring
                     </li>
                     <li>
-                      <strong>Payment Information:</strong> Email address
-                      associated with your Gumroad purchase (collected by
-                      Gumroad, not stored by us)
+                      <strong>Payment Information:</strong> Billing information and transaction details
+                      (collected and stored by Paddle, not directly by us)
                     </li>
                     <li>
-                      <strong>License Keys:</strong> Gumroad-generated license
-                      keys for service access verification
+                      <strong>Subscription Data:</strong> Your subscription plan, status, and usage limits
+                    </li>
+                    <li>
+                      <strong>License Keys:</strong> License keys for Pay-Per-Use plan access verification
                     </li>
                   </ul>
                 </div>
@@ -92,6 +97,9 @@ export default function PrivacyPage() {
               </h2>
               <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                 <li>
+                  <strong>Authentication:</strong> To create and manage your account using Google OAuth
+                </li>
+                <li>
                   <strong>AI Processing:</strong> Your resume and job
                   description are sent to Anthropic's Claude API for real-time
                   processing and tailoring
@@ -101,12 +109,16 @@ export default function PrivacyPage() {
                   resumes and cover letters based on your input
                 </li>
                 <li>
-                  <strong>Payment Verification:</strong> To verify license key
-                  validity through Gumroad's API
+                  <strong>Payment Processing:</strong> To process payments and manage subscriptions
+                  through Paddle
                 </li>
                 <li>
-                  <strong>License Tracking:</strong> To prevent duplicate use of
-                  single-use license keys
+                  <strong>Subscription Management:</strong> To track your subscription plan, usage limits,
+                  and generation history
+                </li>
+                <li>
+                  <strong>License Tracking:</strong> To manage Pay-Per-Use license keys and prevent
+                  unauthorized use
                 </li>
                 <li>
                   <strong>Service Improvement:</strong> To monitor performance
@@ -125,26 +137,33 @@ export default function PrivacyPage() {
               </p>
               <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                 <li>
-                  <strong>No Permanent Storage:</strong> Your resume text and
-                  job descriptions are NOT stored in any database
+                  <strong>Account Data:</strong> Your name, email, profile picture, and subscription
+                  information are stored in our secure PostgreSQL database
+                </li>
+                <li>
+                  <strong>Resume Content:</strong> Your resume text and job descriptions are
+                  NOT permanently stored. They are processed in real-time and may be cached
+                  temporarily in your browser's localStorage for convenience
                 </li>
                 <li>
                   <strong>Real-Time Processing:</strong> All AI processing
-                  happens in real-time during your session
+                  happens in real-time during your session through Anthropic's Claude API
                 </li>
                 <li>
-                  <strong>License Keys:</strong> Used license keys are stored
-                  temporarily in server memory to prevent reuse (cleared on
-                  server restart)
+                  <strong>License Keys and Usage:</strong> Pay-Per-Use license keys and usage counts
+                  are stored in our database to manage subscriptions and prevent unauthorized use
                 </li>
                 <li>
-                  <strong>Server Logs:</strong> Basic error logs may be
-                  retained for up to 30 days for debugging purposes
+                  <strong>Generation History:</strong> We track the number of resumes you've generated
+                  to enforce subscription limits, but do not store the actual resume content
                 </li>
                 <li>
-                  <strong>No Long-Term Data:</strong> Once you close your
-                  browser or complete the session, your personal content is not
-                  retained
+                  <strong>Data Retention:</strong> Account data is retained while your account is active.
+                  You may request account deletion at any time
+                </li>
+                <li>
+                  <strong>Server Logs:</strong> Basic error and access logs may be
+                  retained for up to 30 days for security and debugging purposes
                 </li>
               </ul>
             </section>
@@ -212,30 +231,65 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                7. Cookies and Tracking
+                7. Third-Party Services
+              </h2>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                We use the following trusted third-party services to provide our service:
+              </p>
+              <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                <li>
+                  <strong>Google OAuth:</strong> For secure authentication. Google's Privacy Policy
+                  applies to data collected during sign-in
+                </li>
+                <li>
+                  <strong>Anthropic (Claude API):</strong> For AI-powered resume generation.
+                  Your resume content is processed by Anthropic's API. See Anthropic's Privacy Policy
+                  for details on their data handling
+                </li>
+                <li>
+                  <strong>Paddle:</strong> For payment processing and subscription management.
+                  Paddle handles all payment information. See Paddle's Privacy Policy for details
+                </li>
+                <li>
+                  <strong>Vercel:</strong> Our hosting provider. Server infrastructure and deployment
+                </li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed mt-4">
+                These third parties have their own privacy policies and we encourage you to review them.
+                We only share the minimum necessary information with these services to provide our functionality.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                8. Cookies and Tracking
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 We use minimal cookies and browser storage:
               </p>
               <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4 mt-2">
                 <li>
-                  <strong>sessionStorage:</strong> Temporary storage during your
-                  browsing session (cleared when you close the browser)
+                  <strong>Authentication Cookies:</strong> NextAuth.js session cookies to keep
+                  you logged in (essential for service functionality)
+                </li>
+                <li>
+                  <strong>localStorage:</strong> May temporarily cache your resume text and job
+                  description for convenience while you're actively using the service
                 </li>
                 <li>
                   <strong>Essential Cookies:</strong> Required for basic site
-                  functionality
+                  functionality and security
                 </li>
                 <li>
                   <strong>No Third-Party Tracking:</strong> We do not use
-                  advertising or analytics cookies
+                  advertising, marketing, or analytics cookies
                 </li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                8. International Data Transfers
+                9. International Data Transfers
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 Our services are hosted in the United States. By using ApplyPro,
@@ -248,7 +302,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                9. Children's Privacy
+                10. Children's Privacy
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 ApplyPro is not intended for users under the age of 18. We do
@@ -260,7 +314,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                10. Changes to This Privacy Policy
+                11. Changes to This Privacy Policy
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 We may update this Privacy Policy from time to time. Changes
@@ -273,7 +327,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                11. Contact Us
+                12. Contact Us
               </h2>
               <div className="bg-blue-50 p-6 rounded-lg">
                 <p className="text-gray-700 leading-relaxed mb-4">

@@ -55,55 +55,104 @@ export default function TermsPage() {
                 specific job applications. Our Service includes:
               </p>
               <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
-                <li>AI-powered resume analysis and optimization</li>
+                <li>Google OAuth authentication for secure account access</li>
+                <li>AI-powered resume analysis and optimization using Claude by Anthropic</li>
                 <li>Job description matching and keyword optimization</li>
-                <li>Tailored resume generation based on user input</li>
+                <li>Tailored resume generation in multiple templates (Modern, Traditional, ATS-Optimized)</li>
                 <li>Professional cover letter generation</li>
-                <li>ATS (Applicant Tracking System) optimization</li>
-                <li>Match scoring and improvement suggestions</li>
+                <li>ATS (Applicant Tracking System) compatibility scoring and optimization</li>
+                <li>Match scoring and detailed improvement suggestions</li>
+                <li>PDF and DOCX download formats</li>
+                <li>Free ATS Resume Checker for all users</li>
+                <li>Job Application Tracker (up to 25 applications on Free plan, unlimited on Pro)</li>
+                <li>Subscription management with usage tracking</li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                3. Payment Terms
+                3. Account Registration and Authentication
+              </h2>
+              <div className="space-y-4">
+                <p className="text-gray-700 leading-relaxed">
+                  To access paid features of ApplyPro (resume generation), you must create
+                  an account by signing in with Google OAuth. By creating an account, you agree to:
+                </p>
+                <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                  <li>Provide accurate and current information during registration</li>
+                  <li>Maintain the security of your Google account credentials</li>
+                  <li>Be responsible for all activities that occur under your account</li>
+                  <li>Notify us immediately of any unauthorized use of your account</li>
+                  <li>Comply with Google's Terms of Service for authentication</li>
+                </ul>
+                <p className="text-gray-700 leading-relaxed">
+                  We reserve the right to suspend or terminate accounts that violate these Terms
+                  or engage in fraudulent, abusive, or illegal activities.
+                </p>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                4. Payment Terms
               </h2>
               <div className="space-y-4">
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    3.1 Pricing
+                    4.1 Pricing
                   </h3>
-                  <p className="text-gray-700 leading-relaxed">
-                    ApplyPro is offered as a one-time payment service. The
-                    current price is <strong>$4.99 USD per resume
-                    generation</strong>. Prices are subject to change at our
-                    discretion, but any price changes will not affect purchases
-                    already made.
+                  <p className="text-gray-700 leading-relaxed mb-4">
+                    ApplyPro offers flexible pricing options to suit your needs:
+                  </p>
+                  <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                    <li>
+                      <strong>Free Plan:</strong> Access to ATS Resume Checker,
+                      Resume Score Dashboard, and Job Application Tracker (up to 25 applications)
+                    </li>
+                    <li>
+                      <strong>Pay-Per-Use:</strong> $4.99 USD for 3 AI-tailored resume generations
+                      with all professional templates, PDF & DOCX downloads, and ATS optimization
+                    </li>
+                    <li>
+                      <strong>Pro Monthly:</strong> $19.99 USD per month for unlimited
+                      AI-tailored resumes (100/month fair use limit), all templates,
+                      unlimited job tracking, and priority support
+                    </li>
+                    <li>
+                      <strong>Pro Yearly:</strong> $199 USD per year (17% savings compared to monthly)
+                      with all Pro Monthly benefits
+                    </li>
+                  </ul>
+                  <p className="text-gray-700 leading-relaxed mt-4">
+                    Prices are subject to change at our discretion, but any price
+                    changes will not affect purchases or subscriptions already made.
                   </p>
                 </div>
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    3.2 Payment Processing
+                    4.2 Payment Processing
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
-                    All payments are processed securely through Gumroad, a
+                    All payments are processed securely through Paddle, a
                     third-party payment processor. We do not store or have
                     access to your payment card information. By making a
-                    purchase, you agree to Gumroad's terms of service and
-                    privacy policy.
+                    purchase or subscribing, you agree to Paddle's terms of service and
+                    privacy policy. Paddle handles all payment transactions, refunds,
+                    and billing inquiries.
                   </p>
                 </div>
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    3.3 License Keys
+                    4.3 License Keys (Pay-Per-Use Only)
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
-                    Upon successful payment, you will receive a unique license
-                    key via email from Gumroad. This license key grants you
-                    access to generate one tailored resume and cover letter
-                    using our Service.
+                    If you purchase a Pay-Per-Use plan, you will receive a unique license
+                    key via email upon successful payment. This license key grants you
+                    access to generate 3 tailored resumes and cover letters
+                    using our Service. Pro Monthly and Pro Yearly subscribers do not require
+                    license keys and have automatic access through their account login.
                   </p>
                 </div>
               </div>
@@ -111,17 +160,17 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                4. License Key Usage and Restrictions
+                5. License Key Usage and Restrictions
               </h2>
               <div className="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-r-lg mb-4">
                 <p className="font-semibold text-amber-900 mb-2">
                   Important Restrictions:
                 </p>
                 <ul className="list-disc list-inside text-amber-900 space-y-1 ml-2 text-sm">
-                  <li>Each license key is valid for ONE-TIME USE ONLY</li>
-                  <li>Once used, the license key cannot be reused</li>
+                  <li>Each license key grants 3 resume generation credits</li>
+                  <li>Once all 3 credits are used, the license key cannot generate additional resumes</li>
                   <li>License keys are non-transferable and non-shareable</li>
-                  <li>License keys are non-refundable after use</li>
+                  <li>License keys are non-refundable after first use</li>
                 </ul>
               </div>
               <p className="text-gray-700 leading-relaxed">
@@ -129,12 +178,12 @@ export default function TermsPage() {
               </p>
               <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4 mt-2">
                 <li>
-                  You may only generate ONE resume and cover letter per license
-                  key purchased
+                  You may generate up to THREE tailored resumes and cover letters per license
+                  key purchased ($4.99 for 3 generations)
                 </li>
                 <li>
-                  To tailor resumes for multiple job applications, you must
-                  purchase separate license keys for each
+                  To generate more than 3 resumes, you must purchase additional
+                  license keys or upgrade to a Pro subscription for unlimited access
                 </li>
                 <li>
                   License keys cannot be shared, sold, or transferred to other
@@ -154,39 +203,58 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                5. Refund Policy
+                6. Refund Policy
               </h2>
               <div className="space-y-4">
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    5.1 No Refunds After Generation
+                    6.1 Pay-Per-Use Refunds
                   </h3>
+                  <p className="text-gray-700 leading-relaxed mb-3">
+                    <strong>After First Use:</strong> Due to the instant, digital nature of our Service,
+                    all sales are final once you have successfully used your license key to generate
+                    any tailored resume (even 1 out of 3 credits). We cannot offer refunds after the
+                    Service has been delivered.
+                  </p>
+                  <p className="text-gray-700 leading-relaxed text-sm mb-3">
+                    <strong>Important:</strong> Before purchasing, we encourage you to use our free
+                    preview feature to evaluate the quality, formatting, and style of AI-generated content.
+                    This allows you to assess whether our Service meets your needs before making a purchase.
+                  </p>
+                  <p className="text-gray-700 leading-relaxed text-sm">
+                    For technical issues (server errors, failed generation, formatting problems unrelated
+                    to AI output), please contact support@applypro.org for resolution or replacement credits.
+                  </p>
                   <p className="text-gray-700 leading-relaxed">
-                    Due to the instant, digital nature of our Service,{" "}
-                    <strong>
-                      all sales are final once you have successfully used your
-                      license key to generate a tailored resume
-                    </strong>
-                    . We cannot offer refunds after the Service has been
-                    delivered.
+                    <strong>Before First Use:</strong> If you have purchased a license key but have not yet used
+                    any of your 3 credits, you may request a full refund within 7
+                    days of purchase by contacting support@applypro.org. Completely unused
+                    license keys will receive a full refund, no questions asked.
                   </p>
                 </div>
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    5.2 Pre-Generation Refunds
+                    6.2 Pro Subscription Refunds
                   </h3>
+                  <p className="text-gray-700 leading-relaxed mb-3">
+                    <strong>Monthly Subscriptions:</strong> You may cancel your Pro Monthly subscription
+                    at any time. Cancellation will take effect at the end of your current billing period.
+                    You will retain access until the end of the paid period. We do not offer prorated
+                    refunds for partial months, except where required by law.
+                  </p>
                   <p className="text-gray-700 leading-relaxed">
-                    If you have purchased a license key but have not yet used it
-                    to generate a resume, you may request a refund within 24
-                    hours of purchase by contacting support@applypro.org. Unused
-                    license keys are eligible for refund at our discretion.
+                    <strong>Yearly Subscriptions:</strong> You may request a full refund for Pro Yearly subscriptions
+                    within 14 days of initial purchase if you have generated fewer than 10 resumes.
+                    We will process the refund within 5-7 business days.
+                    After 14 days or 10+ resume generations, yearly subscription fees are non-refundable,
+                    though you may cancel at any time to prevent future renewals.
                   </p>
                 </div>
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    5.3 Technical Issues
+                    6.3 Technical Issues
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
                     If you experience technical issues that prevent you from
@@ -200,14 +268,22 @@ export default function TermsPage() {
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    5.4 Chargebacks
+                    6.4 Chargebacks and Disputes
                   </h3>
+                  <p className="text-gray-700 leading-relaxed mb-3">
+                    We are committed to resolving any issues you may have with our Service.
+                    Before initiating a chargeback or payment dispute with your bank or
+                    payment provider, we strongly encourage you to contact us first at
+                    support@applypro.org. Most issues can be resolved quickly and amicably
+                    through direct communication.
+                  </p>
                   <p className="text-gray-700 leading-relaxed">
-                    Initiating a chargeback or payment dispute without first
-                    contacting us to resolve the issue is considered a violation
-                    of these Terms. Chargebacks will result in immediate
-                    termination of service access and permanent ban from future
-                    purchases.
+                    <strong>Unauthorized Chargebacks:</strong> Initiating a chargeback or payment
+                    dispute without first attempting to resolve the issue with us is considered
+                    a violation of these Terms and may result in immediate termination of service
+                    access, invalidation of license keys, and restriction from future purchases.
+                    Fraudulent chargebacks may be reported to the appropriate authorities and
+                    pursued legally.
                   </p>
                 </div>
               </div>
@@ -215,7 +291,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                6. User Responsibilities
+                7. User Responsibilities
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
                 As a user of ApplyPro, you agree to:
@@ -251,7 +327,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                7. Prohibited Uses
+                8. Prohibited Uses
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
                 You may not use ApplyPro to:
@@ -291,7 +367,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                8. AI-Generated Content Disclaimer
+                9. AI-Generated Content Disclaimer
               </h2>
               <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-r-lg">
                 <p className="font-semibold text-yellow-900 mb-3">
@@ -334,12 +410,12 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                9. Intellectual Property Rights
+                10. Intellectual Property Rights
               </h2>
               <div className="space-y-4">
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    9.1 Your Content
+                    10.1 Your Content
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
                     You retain all rights to the resume information, work
@@ -353,7 +429,7 @@ export default function TermsPage() {
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    9.2 Generated Content
+                    10.2 Generated Content
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
                     The tailored resumes and cover letters generated by our AI
@@ -364,7 +440,7 @@ export default function TermsPage() {
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    9.3 ApplyPro Platform
+                    10.3 ApplyPro Platform
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
                     The ApplyPro website, software, algorithms, design, and all
@@ -379,7 +455,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                10. Limitation of Liability
+                11. Limitation of Liability
               </h2>
               <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
                 <p className="text-gray-700 leading-relaxed mb-3">
@@ -406,7 +482,7 @@ export default function TermsPage() {
                     Service interruptions, technical failures, or downtime
                   </li>
                   <li>
-                    Third-party actions or content (including Anthropic, Gumroad, Vercel)
+                    Third-party actions or content (including Anthropic, Paddle, Google, Vercel)
                   </li>
                   <li>
                     Any damages arising from your use or inability to use the
@@ -415,14 +491,15 @@ export default function TermsPage() {
                 </ul>
                 <p className="text-gray-700 leading-relaxed mt-4">
                   IN ANY EVENT, OUR TOTAL LIABILITY TO YOU SHALL NOT EXCEED THE
-                  AMOUNT YOU PAID FOR THE SERVICE ($4.99 USD).
+                  AMOUNT YOU PAID FOR THE SERVICE IN THE TWELVE (12) MONTHS PRECEDING
+                  THE CLAIM (e.g., $4.99 for Pay-Per-Use, up to $239.88 for Pro Yearly).
                 </p>
               </div>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                11. Disclaimer of Warranties
+                12. Disclaimer of Warranties
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
                 THE SERVICE IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS
@@ -440,7 +517,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                12. Indemnification
+                13. Indemnification
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 You agree to indemnify, defend, and hold harmless ApplyPro and
@@ -465,7 +542,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                13. Privacy and Data Protection
+                14. Privacy and Data Protection
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 Your privacy is important to us. Our collection, use, and
@@ -483,12 +560,12 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                14. Termination
+                15. Termination
               </h2>
               <div className="space-y-4">
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    14.1 Termination by You
+                    15.1 Termination by You
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
                     You may stop using the Service at any time. However, license
@@ -498,7 +575,7 @@ export default function TermsPage() {
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    14.2 Termination by Us
+                    15.2 Termination by Us
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
                     We reserve the right to suspend or terminate your access to
@@ -515,7 +592,7 @@ export default function TermsPage() {
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    14.3 Effect of Termination
+                    15.3 Effect of Termination
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
                     Upon termination, your right to use the Service ceases
@@ -530,7 +607,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                15. Changes to Terms
+                16. Changes to Terms
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 We reserve the right to modify these Terms at any time. When we
@@ -544,12 +621,12 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                16. Governing Law and Dispute Resolution
+                17. Governing Law and Dispute Resolution
               </h2>
               <div className="space-y-4">
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    16.1 Governing Law
+                    17.1 Governing Law
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
                     These Terms are governed by and construed in accordance with
@@ -560,7 +637,7 @@ export default function TermsPage() {
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    16.2 Dispute Resolution
+                    17.2 Dispute Resolution
                   </h3>
                   <p className="text-gray-700 leading-relaxed mb-3">
                     If you have any disputes or issues with the Service, please
@@ -579,7 +656,7 @@ export default function TermsPage() {
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    16.3 Class Action Waiver
+                    17.3 Class Action Waiver
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
                     You agree that any dispute resolution proceedings will be
@@ -592,7 +669,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                17. Severability
+                18. Severability
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 If any provision of these Terms is found to be invalid,
@@ -605,7 +682,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                18. Entire Agreement
+                19. Entire Agreement
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 These Terms, together with our Privacy Policy, constitute the
@@ -617,7 +694,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                19. Contact Information
+                20. Contact Information
               </h2>
               <div className="bg-blue-50 p-6 rounded-lg">
                 <p className="text-gray-700 leading-relaxed mb-4">
