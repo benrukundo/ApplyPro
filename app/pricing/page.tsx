@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { Check, X } from 'lucide-react';
 
 export default function PricingPage() {
-  // Use PERMALINK (short URLs) not PRODUCT_ID (long encoded strings)
-  const payPerUseLink = process.env.NEXT_PUBLIC_GUMROAD_PRODUCT_PERMALINK || 'ykchtv';
-  const monthlyLink = process.env.NEXT_PUBLIC_GUMROAD_MONTHLY_PERMALINK || 'pro-monthly';
-  const yearlyLink = process.env.NEXT_PUBLIC_GUMROAD_YEARLY_PERMALINK || 'pro-yearly';
+  // Payment links - redirecting to coming soon page
+  const payPerUseLink = '/coming-soon';
+  const monthlyLink = '/coming-soon';
+  const yearlyLink = '/coming-soon';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-20">
@@ -96,12 +96,12 @@ export default function PricingPage() {
               </li>
             </ul>
 
-            <a
-              href={`https://laurabi.gumroad.com/l/${payPerUseLink}`}
+            <Link
+              href={payPerUseLink}
               className="block w-full text-center bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
             >
               Buy Now
-            </a>
+            </Link>
           </div>
 
           {/* PRO PLAN */}
@@ -149,19 +149,19 @@ export default function PricingPage() {
               </li>
             </ul>
 
-            <a
-              href={`https://laurabi.gumroad.com/l/${monthlyLink}`}
+            <Link
+              href={monthlyLink}
               className="block w-full text-center bg-white text-blue-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition mb-3"
             >
               Subscribe Monthly
-            </a>
+            </Link>
 
-            <a
-              href={`https://laurabi.gumroad.com/l/${yearlyLink}`}
+            <Link
+              href={yearlyLink}
               className="block w-full text-center bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-400 transition"
             >
               Save 17% - Pay Yearly ($199/yr)
-            </a>
+            </Link>
 
             <p className="text-xs text-blue-200 mt-4 text-center">
               *Fair use policy: 100 resumes/month for personal job search
@@ -276,7 +276,7 @@ export default function PricingPage() {
                 Can I cancel my Pro subscription anytime?
               </summary>
               <p className="mt-3 text-gray-600">
-                Yes, you can cancel anytime via Gumroad. You'll retain access until the end of your current billing period.
+                Yes, you can cancel anytime. You'll retain access until the end of your current billing period.
               </p>
             </details>
 

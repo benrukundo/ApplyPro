@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix download functionality with PDF/DOCX format selection\n\n- Fix API response structure mismatch (tailoredResume -> fullResume, coverLetter -> atsOptimizedResume)\n- Update API to generate both full resume and ATS-optimized version\n- Add format selection UI (PDF/DOCX toggle buttons)\n- Implement PDF download using jsPDF with proper formatting\n- Implement DOCX download using docx library with proper structure\n- Add download state management and loading indicators\n- Fix \"undefined\" content issue in downloads\n- Downloads now properly named with timestamps (e.g., Tailored_Resume_2025-12-05.pdf)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

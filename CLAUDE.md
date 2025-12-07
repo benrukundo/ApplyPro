@@ -9,7 +9,8 @@ ApplyPro is an AI-powered resume tailoring service that helps users customize th
 **Tech Stack:**
 - Next.js 16 (App Router)
 - Anthropic Claude API for AI generation
-- Gumroad for payments
+- NextAuth.js for authentication (Google OAuth)
+- Prisma ORM with PostgreSQL database
 - react-dropzone for file uploads (generate page only)
 - mammoth for DOCX parsing (generate page only)
 - pdf-parse for PDF parsing (generate page only)
@@ -60,6 +61,8 @@ This project uses the Next.js App Router (not Pages Router). All routes are defi
 - `app/layout.tsx` - Root layout component that wraps all pages, defines HTML structure and metadata
 - `app/page.tsx` - Homepage with hero, how it works, and pricing sections
 - `app/generate/page.tsx` - Resume generation page with file upload and job description input
+- `app/coming-soon/page.tsx` - Coming soon page for payment system (redirects all purchase/subscribe buttons here)
+- `app/pricing/page.tsx` - Detailed pricing page with plan comparison
 - `app/globals.css` - Global styles with Tailwind CSS imports and CSS variables
 
 ### Key Features
@@ -67,50 +70,50 @@ This project uses the Next.js App Router (not Pages Router). All routes are defi
 **Homepage (`/`)**
 - Hero section with gradient text
 - "How It Works" - 3-step process explanation
-- Pricing section ($4.99 per resume)
+- Pricing section with three tiers: Free, Pay-Per-Use ($4.99 for 3 resumes), Pro ($19.99/month)
+- All purchase/subscribe buttons redirect to `/coming-soon` page
 - CTA buttons linking to `/generate`
 
+**Coming Soon Page (`/coming-soon`)**
+- Displays when users click on any purchase or subscribe buttons
+- Email notification signup form for launch updates
+- Links to free features (ATS Checker, Templates)
+- Professional waiting page explaining payment system is in development
+
 **Generate Page (`/generate`)**
+- Requires authentication with Google OAuth (NextAuth.js)
+- Checks user subscription status before allowing generation
 - Client-side component with file upload
 - Drag & drop support for PDF and DOCX files
 - Text extraction from uploaded resumes
 - Job description textarea with character counter (min 100 chars)
 - Two-column responsive layout
-- Loading states and validation
-- Calls `/api/preview` for free analysis
-- Displays results with:
-  - Match score with progress bar (color-coded: green >70%, yellow 50-70%, red <50%)
-  - Top 5 improvements list
-  - Missing ATS keywords as badges
-  - Preview text of tailored resume
-  - Gumroad purchase CTA for full resume (https://laurabi.gumroad.com/l/ykchtv)
-- Saves resume text and job description to localStorage before Gumroad redirect
-- "Try Another Resume" button to reset form
-
-**Success Page (`/success`)**
-- Verifies `?payment=true` URL parameter, redirects to home if missing
-- Loads saved resume text and job description from localStorage
-- Simple textareas for resume text and job description (no file upload)
-- "Generate Full Resume" button calls `/api/generate`
-- Shows loading state: "Generating your tailored resume..."
-- Displays results:
+- Two buttons:
+  - "Analyze Resume" - Calls `/api/preview` for free analysis preview
+  - "Generate Full Resume" - Requires active subscription, generates full tailored resume
+- Displays analysis results with match scores, keywords, and improvements
+- Displays generated resume results with three versions:
   - Full tailored resume
-  - Full cover letter
-  - **PDF Download** (using jsPDF):
-    - Professional formatting with blue header
-    - Resume and cover letter on separate pages
-    - Proper text wrapping and page breaks
-    - Filename: `Resume_Tailored_YYYY-MM-DD.pdf`
-  - **DOCX Download** (using docx library):
-    - Word document with professional styling
-    - Bold section headers
-    - Proper paragraph spacing
-    - Page break between resume and cover letter
-    - Filename: `Resume_Tailored_YYYY-MM-DD.docx`
-  - Loading states on download buttons
-  - Error handling for download failures
-  - "Generate Another Resume" button to reset
-- Payment success banner with celebration emoji
+  - ATS-optimized version
+  - Cover letter
+- Download options in PDF or DOCX format
+- Template selection (Modern, Traditional, ATS-Optimized)
+- Tracks usage count for subscription limits
+- "Generate Another Resume" button to reset form
+
+**Pricing Page (`/pricing`)**
+- Detailed pricing comparison table
+- Three pricing tiers:
+  - Free: ATS Checker, Resume Score Dashboard, Job Application Tracker (up to 25 apps)
+  - Pay-Per-Use: $4.99 for 3 AI-tailored resumes
+  - Pro: $19.99/month for unlimited resumes (100/month fair use limit)
+- All purchase/subscribe buttons redirect to `/coming-soon` page
+- FAQ section with common questions
+- Fair use policy explanation
+
+**Success Page (`/success`)** (Legacy - may be deprecated)
+- Previously used for Gumroad payment success redirects
+- Now that payment is moved to coming soon page, this may not be actively used
 
 ### API Routes
 
@@ -127,7 +130,9 @@ This project uses the Next.js App Router (not Pages Router). All routes are defi
 - Includes comprehensive error handling and input validation
 
 **Full Resume Generation (`POST /api/generate`)**
-- Generates complete tailored resume and cover letter after payment
+- Generates complete tailored resume and cover letter for authenticated users with active subscriptions
+- Requires authentication via NextAuth.js
+- Checks subscription status and usage limits before generation
 - Input: `resumeText` and `jobDescription`
 - Uses `claude-sonnet-4-20250514` for high quality
 - Max 4000 tokens for complete content
@@ -139,10 +144,12 @@ This project uses the Next.js App Router (not Pages Router). All routes are defi
   - Professional formatting
   - Tailored cover letter (250-350 words)
 - Returns:
-  - `tailoredResume` (complete formatted resume)
+  - `fullResume` (complete formatted resume)
+  - `atsOptimizedResume` (ATS-friendly version)
   - `coverLetter` (personalized cover letter)
   - `matchScore` (0-100)
-- Cost: ~$0.035 per generation (~99% profit margin at $4.99)
+- Tracks generation in database for usage limits
+- Cost: ~$0.035 per generation
 - Advanced error handling with fallback parsing
 - Content quality validation
 
@@ -169,22 +176,39 @@ import Component from "@/components/Component"
 The project requires the following environment variables in `.env.local`:
 
 ```bash
+# Anthropic API
 ANTHROPIC_API_KEY=your_api_key_here
+
+# NextAuth Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_secret_key_here
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Database
+DATABASE_URL=your_postgresql_connection_string
 ```
 
-**Note:** Get your API key from [Anthropic Console](https://console.anthropic.com/). The preview API uses Claude 3 Haiku model for cost-effective analysis (~$0.005 per preview).
+**Note:**
+- Get your Anthropic API key from [Anthropic Console](https://console.anthropic.com/)
+- Set up Google OAuth credentials at [Google Cloud Console](https://console.cloud.google.com/)
+- Use a PostgreSQL database (can use services like Neon, Supabase, or Railway)
 
 ## Important Notes
 
 ### Pricing & Economics
 - Free preview uses Claude 3 Haiku (~$0.005 per analysis)
 - Full resume generation uses Claude Sonnet 4 (~$0.035 per generation)
-- Pricing: $4.99 per resume via Gumroad
-- Profit margin: ~99% per paid generation
-- Cost breakdown:
+- Pricing (when payment system launches):
+  - Free: ATS Checker, Job Tracker (up to 25 applications)
+  - Pay-Per-Use: $4.99 for 3 resume generations
+  - Pro Monthly: $19.99/month for unlimited (100/month fair use)
+  - Pro Yearly: $199/year (17% savings)
+- Cost breakdown per generation:
   - Input tokens: ~1500 × $3/M = $0.0045
   - Output tokens: ~2000 × $15/M = $0.03
   - Total: ~$0.035 per generation
+- **Note:** Payment system is currently in development. All purchase buttons redirect to `/coming-soon` page.
 
 ### File Upload Constraints
 - Maximum file size: 5MB
@@ -207,7 +231,8 @@ Uses next/font for automatic font optimization with Geist font family. Font vari
 
 ### Prerequisites
 - Anthropic API key from [Anthropic Console](https://console.anthropic.com/)
-- Gumroad account with product set up
+- Google Cloud Platform account for OAuth setup
+- PostgreSQL database (Neon, Supabase, Railway, etc.)
 - Vercel account (recommended) or other Next.js hosting
 
 ### Environment Variables Required
@@ -215,15 +240,21 @@ Uses next/font for automatic font optimization with Geist font family. Font vari
 **Production (.env.production):**
 ```bash
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
-NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
-NEXT_PUBLIC_GUMROAD_URL=https://laurabi.gumroad.com/l/ykchtv
+NEXTAUTH_URL=https://your-domain.vercel.app
+NEXTAUTH_SECRET=your_production_secret_key
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+DATABASE_URL=your_postgresql_connection_string
 ```
 
 **Local Development (.env.local):**
 ```bash
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_GUMROAD_URL=https://laurabi.gumroad.com/l/ykchtv
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_dev_secret_key
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+DATABASE_URL=your_postgresql_connection_string
 ```
 
 ### Vercel Deployment Steps
@@ -246,27 +277,33 @@ NEXT_PUBLIC_GUMROAD_URL=https://laurabi.gumroad.com/l/ykchtv
 3. **Configure Environment Variables:**
    - In Vercel project settings → Environment Variables
    - Add `ANTHROPIC_API_KEY` (keep secret, don't expose to browser)
-   - Add `NEXT_PUBLIC_APP_URL` with your Vercel domain
-   - Add `NEXT_PUBLIC_GUMROAD_URL` with Gumroad product URL
+   - Add `NEXTAUTH_URL` with your Vercel domain
+   - Add `NEXTAUTH_SECRET` (generate with `openssl rand -base64 32`)
+   - Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+   - Add `DATABASE_URL` with PostgreSQL connection string
 
-4. **Deploy:**
+4. **Set up Database:**
+   - Run Prisma migrations: `npx prisma migrate deploy`
+   - Generate Prisma client: `npx prisma generate`
+
+5. **Deploy:**
    - Vercel will automatically deploy on push to main branch
    - First deployment may take 2-3 minutes
    - Check deployment logs for any errors
 
 ### Post-Deployment Configuration
 
-1. **Update Gumroad Settings:**
-   - Go to Gumroad product settings
-   - Set redirect URL to: `https://your-domain.vercel.app/success?payment=true`
-   - Test payment flow to ensure redirect works
+1. **Configure Google OAuth:**
+   - Add production URL to authorized redirect URIs in Google Cloud Console
+   - Format: `https://your-domain.vercel.app/api/auth/callback/google`
 
 2. **Test All Features:**
    - [ ] Homepage loads correctly
-   - [ ] Generate page file upload works
+   - [ ] Google OAuth login works
+   - [ ] Generate page requires authentication
    - [ ] Preview API returns results
-   - [ ] Gumroad payment flow works
-   - [ ] Success page generates resume
+   - [ ] Full resume generation works for authenticated users
+   - [ ] Coming soon page displays for payment buttons
    - [ ] PDF download works
    - [ ] DOCX download works
 
@@ -277,13 +314,15 @@ NEXT_PUBLIC_GUMROAD_URL=https://laurabi.gumroad.com/l/ykchtv
 
 4. **Set up Domain (Optional):**
    - Add custom domain in Vercel settings
-   - Update `NEXT_PUBLIC_APP_URL` environment variable
-   - Update Gumroad redirect URL
+   - Update `NEXTAUTH_URL` environment variable
+   - Update Google OAuth authorized redirect URIs
 
 ### Security Checklist
 - [ ] `.env.local` is in `.gitignore`
 - [ ] `ANTHROPIC_API_KEY` is never exposed in client-side code
-- [ ] API routes validate all inputs
+- [ ] `NEXTAUTH_SECRET` is secure and unique
+- [ ] Database connection string is secure
+- [ ] API routes validate all inputs and check authentication
 - [ ] Rate limiting considered for production (can add middleware)
 - [ ] CORS headers configured if needed
 
@@ -299,21 +338,34 @@ NEXT_PUBLIC_GUMROAD_URL=https://laurabi.gumroad.com/l/ykchtv
 - Check API key has sufficient credits
 - Review API error logs in browser console
 
-**Gumroad redirect not working:**
-- Ensure redirect URL matches exactly (including `?payment=true`)
-- Check Gumroad product settings
-- Test in incognito mode to avoid cached redirects
+**Authentication issues:**
+- Verify Google OAuth credentials are correct
+- Check authorized redirect URIs in Google Cloud Console
+- Ensure `NEXTAUTH_URL` matches your domain
+- Verify `NEXTAUTH_SECRET` is set
+
+**Database connection errors:**
+- Verify `DATABASE_URL` is correct
+- Check database service is running
+- Ensure Prisma migrations are applied
 
 ### Cost Management
 
-**Expected Costs (per month):**
+**Expected Costs (per month) - Once Payment System Launches:**
 - 100 free previews: ~$0.50
-- 20 paid generations: ~$0.70
-- **Total API cost: ~$1.20/month**
-- Revenue (20 sales): ~$99.80
-- **Profit: ~$98.60 (98.8% margin)**
+- 50 full generations: ~$1.75
+- Database hosting: ~$0-5 (depends on provider)
+- **Total API cost: ~$2.25-7.25/month**
+- Revenue estimate (10 Pro subscribers): ~$199.90/month
+- **Profit: ~$192-197/month**
+
+**Current Status:**
+- Payment system is in development
+- All purchase/subscribe buttons redirect to `/coming-soon` page
+- Users can still use free preview features
 
 **To reduce costs:**
 - Cache common job descriptions (if applicable)
 - Implement rate limiting per user
 - Monitor for abuse/spam usage
+- Track usage metrics in database

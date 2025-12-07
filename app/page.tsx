@@ -18,9 +18,9 @@ import { useState } from "react";
 export default function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  // Gumroad product permalinks
-  const payPerUseLink = process.env.NEXT_PUBLIC_GUMROAD_PRODUCT_PERMALINK || 'ykchtv';
-  const monthlyLink = process.env.NEXT_PUBLIC_GUMROAD_MONTHLY_PERMALINK || 'pro-monthly';
+  // Payment links - redirecting to coming soon page
+  const payPerUseLink = '/coming-soon';
+  const monthlyLink = '/coming-soon';
 
   const faqs = [
     {
@@ -390,12 +390,12 @@ export default function Home() {
                   </li>
                 </ul>
 
-                <a
-                  href={`https://laurabi.gumroad.com/l/${payPerUseLink}`}
+                <Link
+                  href={payPerUseLink}
                   className="block w-full text-center bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
                 >
                   Buy Now
-                </a>
+                </Link>
               </div>
 
               {/* PRO PLAN */}
@@ -443,12 +443,12 @@ export default function Home() {
                   </li>
                 </ul>
 
-                <a
-                  href={`https://laurabi.gumroad.com/l/${monthlyLink}`}
+                <Link
+                  href={monthlyLink}
                   className="block w-full text-center bg-white text-blue-600 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
                 >
                   Subscribe Now
-                </a>
+                </Link>
 
                 <p className="text-xs text-blue-200 mt-4 text-center">
                   *Fair use: 100 resumes/month for personal job search
@@ -460,7 +460,7 @@ export default function Home() {
               <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600">
                 <div className="flex items-center gap-2">
                   <Shield className="w-5 h-5 text-blue-600" />
-                  <span>Secure payment via Gumroad</span>
+                  <span>Secure payment processing</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-green-600" />
