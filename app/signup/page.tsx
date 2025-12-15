@@ -44,9 +44,11 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [resendMessage, setResendMessage] = useState("");
 
   const passwordStrength = getPasswordStrength(formData.password);
 
@@ -119,6 +121,35 @@ export default function SignupPage() {
     }
   };
 
+  const handleResendEmail = async () => {
+    setIsResending(true);
+    setResendMessage("");
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResendMessage("Verification email sent! Please check your inbox.");
+      } else {
+        setResendMessage(data.error || "Failed to resend email. Please try again.");
+      }
+    } catch (err) {
+      setResendMessage("Failed to resend email. Please try again.");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   const getPasswordStrengthColor = () => {
     if (passwordStrength.strength === "weak") return "bg-red-500";
     if (passwordStrength.strength === "medium") return "bg-yellow-500";
@@ -162,18 +193,23 @@ export default function SignupPage() {
                     Click the link in the email to verify your account.
                   </p>
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                  Didn&apos;t receive the email? Check your spam folder or{" "}
+                <div className="mb-6">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                    Didn&apos;t receive the email? Check your spam folder or
+                  </p>
                   <button
-                    onClick={() => {
-                      setSuccess(false);
-                      setError("");
-                    }}
-                    className="text-blue-600 hover:underline font-medium"
+                    onClick={handleResendEmail}
+                    disabled={isResending}
+                    className="text-blue-600 hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    try again
+                    {isResending ? "Sending..." : "Resend verification email"}
                   </button>
-                </p>
+                  {resendMessage && (
+                    <p className={`text-sm mt-2 ${resendMessage.includes("sent") ? "text-green-600" : "text-red-600"}`}>
+                      {resendMessage}
+                    </p>
+                  )}
+                </div>
                 <Link
                   href="/login"
                   className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
