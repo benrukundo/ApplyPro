@@ -131,13 +131,23 @@ async function sendVerificationEmail(userId: string, email: string, name: string
   // Send email
   const emailHtml = generateVerificationEmail(verificationUrl, name);
 
-  await resend.emails.send({
+  console.log("Attempting to send verification email to:", email);
+  console.log("RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY);
+
+  const { data, error } = await resend.emails.send({
     from: "ApplyPro <noreply@send.applypro.org>",
     to: [email],
     replyTo: "support@applypro.org",
     subject: "Verify your email - ApplyPro",
     html: emailHtml,
   });
+
+  if (error) {
+    console.error("Resend API error:", error);
+    throw new Error(`Failed to send verification email: ${error.message}`);
+  }
+
+  console.log("Verification email sent successfully:", data?.id);
 }
 
 function isValidEmail(email: string): boolean {
