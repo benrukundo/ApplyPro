@@ -135,9 +135,8 @@ async function sendVerificationEmail(userId: string, email: string, name: string
   console.log("RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY);
 
   const { data, error } = await resend.emails.send({
-    from: "ApplyPro <noreply@send.applypro.org>",
+    from: "ApplyPro <support@applypro.org>",
     to: [email],
-    replyTo: "support@applypro.org",
     subject: "Verify your email - ApplyPro",
     html: emailHtml,
   });
