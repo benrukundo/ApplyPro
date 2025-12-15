@@ -1,4 +1,147 @@
 /**
+ * Email template for email verification
+ */
+export function generateVerificationEmail(
+  verificationUrl: string,
+  userName: string
+): string {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email - ApplyPro</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      background-color: #f7f7f7;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%);
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      color: #ffffff;
+      margin: 0;
+    }
+    .content {
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .greeting {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1f2937;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      font-size: 16px;
+      color: #6b7280;
+      margin-bottom: 30px;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%);
+      color: #ffffff;
+      text-decoration: none;
+      padding: 16px 40px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      margin: 20px 0;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    .info-box {
+      background-color: #F3F4F6;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 30px 0;
+      text-align: left;
+    }
+    .info-text {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0;
+    }
+    .link-text {
+      font-size: 12px;
+      color: #9ca3af;
+      word-break: break-all;
+      margin-top: 20px;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer-text {
+      color: #6b7280;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1 class="logo">ApplyPro</h1>
+    </div>
+    <div class="content">
+      <h2 class="greeting">Welcome to ApplyPro, ${userName}!</h2>
+      <p class="subtitle">Please verify your email address to complete your registration and start creating AI-powered resumes.</p>
+
+      <a href="${verificationUrl}" class="cta-button">
+        Verify Email Address
+      </a>
+
+      <div class="info-box">
+        <p class="info-text">
+          <strong>Why verify?</strong><br>
+          Email verification helps us ensure your account is secure and allows us to send you important updates about your resume generations.
+        </p>
+      </div>
+
+      <p class="link-text">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        ${verificationUrl}
+      </p>
+
+      <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+        This link will expire in 24 hours. If you didn't create an account with ApplyPro, you can safely ignore this email.
+      </p>
+    </div>
+    <div class="footer">
+      <p class="footer-text">
+        Need help? Contact us at <a href="mailto:support@applypro.org" style="color: #3B82F6; text-decoration: none;">support@applypro.org</a>
+      </p>
+      <p class="footer-text" style="font-size: 12px; color: #9ca3af;">
+        &copy; ${new Date().getFullYear()} ApplyPro. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+/**
  * Email template for license key delivery
  */
 export function generateLicenseKeyEmail(

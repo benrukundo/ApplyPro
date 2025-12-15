@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import {
   CheckCircle2,
   Eye,
@@ -14,6 +13,7 @@ import {
   TrendingUp,
   Bell,
   CreditCard,
+  Mail,
 } from "lucide-react";
 
 // Password strength calculator
@@ -45,12 +45,15 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const passwordStrength = getPasswordStrength(formData.password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess(false);
 
     // Validation
     if (!formData.name.trim()) {
@@ -81,7 +84,6 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // Step 1: Register the user via API
       const registerResponse = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,20 +102,15 @@ export default function SignupPage() {
         return;
       }
 
-      // Step 2: Auto-login with NextAuth credentials
-      const signInResult = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
-
-      if (signInResult?.error) {
-        // Account created but auto-login failed - redirect to login
-        setError("Account created! Please login with your credentials.");
-        setTimeout(() => router.push("/login"), 2000);
+      // Check if user is already verified (Google OAuth user adding password)
+      if (registerData.verified) {
+        setSuccessMessage(registerData.message);
+        setSuccess(true);
+        setTimeout(() => router.push("/login"), 3000);
       } else {
-        // Success - redirect to dashboard
-        router.push("/dashboard");
+        // New user or unverified user - show verification message
+        setSuccessMessage(registerData.message || "Please check your email to verify your account.");
+        setSuccess(true);
       }
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");
@@ -147,6 +144,45 @@ export default function SignupPage() {
         {/* Left Side - Form */}
         <div className="flex w-full items-center justify-center px-4 py-12 lg:w-1/2">
           <div className="w-full max-w-md">
+            {/* Success State - Email Verification Sent */}
+            {success ? (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Mail className="w-8 h-8 text-green-600" />
+                </div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                  Check Your Email
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  {successMessage}
+                </p>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    We sent a verification link to <strong>{formData.email}</strong>.
+                    Click the link in the email to verify your account.
+                  </p>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  Didn&apos;t receive the email? Check your spam folder or{" "}
+                  <button
+                    onClick={() => {
+                      setSuccess(false);
+                      setError("");
+                    }}
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    try again
+                  </button>
+                </p>
+                <Link
+                  href="/login"
+                  className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Go to Login
+                </Link>
+              </div>
+            ) : (
+              <>
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 Start Tracking Your Job Search
@@ -371,6 +407,8 @@ export default function SignupPage() {
                 Login
               </Link>
             </p>
+              </>
+            )}
           </div>
         </div>
 
