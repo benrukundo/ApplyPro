@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signup, getPasswordStrength } from "@/lib/auth";
+import { signIn } from "next-auth/react";
 import {
   CheckCircle2,
   Eye,
@@ -15,6 +15,21 @@ import {
   Bell,
   CreditCard,
 } from "lucide-react";
+
+// Password strength calculator
+function getPasswordStrength(password: string): { strength: 'weak' | 'medium' | 'strong'; score: number } {
+  let score = 0;
+  if (password.length >= 8) score += 25;
+  if (password.length >= 12) score += 25;
+  if (/[a-z]/.test(password)) score += 10;
+  if (/[A-Z]/.test(password)) score += 15;
+  if (/[0-9]/.test(password)) score += 15;
+  if (/[^a-zA-Z0-9]/.test(password)) score += 10;
+
+  if (score < 40) return { strength: 'weak', score };
+  if (score < 70) return { strength: 'medium', score };
+  return { strength: 'strong', score };
+}
 
 export default function SignupPage() {
   const router = useRouter();
@@ -66,13 +81,39 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const result = signup(formData.name, formData.email, formData.password);
+      // Step 1: Register the user via API
+      const registerResponse = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-      if (result.success) {
-        // Redirect to dashboard
-        router.push("/dashboard");
+      const registerData = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        setError(registerData.error || "Failed to create account");
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: Auto-login with NextAuth credentials
+      const signInResult = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (signInResult?.error) {
+        // Account created but auto-login failed - redirect to login
+        setError("Account created! Please login with your credentials.");
+        setTimeout(() => router.push("/login"), 2000);
       } else {
-        setError(result.error || "Failed to create account");
+        // Success - redirect to dashboard
+        router.push("/dashboard");
       }
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");

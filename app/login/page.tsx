@@ -5,19 +5,23 @@ import { signIn, useSession } from 'next-auth/react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
   const handleGoogleSignIn = async () => {
     setError('');
-    setIsLoading(true);
+    setIsGoogleLoading(true);
 
     try {
       const result = await signIn('google', {
@@ -30,6 +34,43 @@ function LoginContent() {
       } else if (result?.ok) {
         // Redirect to callback URL or dashboard
         router.push(result.url || callbackUrl);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleCredentialsSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim()) {
+      setError('Please enter your email');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await signIn('credentials', {
+        email: email.trim(),
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError(result.error === 'CredentialsSignin'
+          ? 'Invalid email or password'
+          : result.error);
+      } else if (result?.ok) {
+        router.push(callbackUrl);
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -60,13 +101,80 @@ function LoginContent() {
             </div>
           )}
 
+          {/* Email/Password Form */}
+          <form onSubmit={handleCredentialsSignIn} className="space-y-4 mb-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="john@example.com"
+                disabled={isLoading || isGoogleLoading}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your password"
+                  disabled={isLoading || isGoogleLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading || isGoogleLoading}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Signing in...</span>
+                </>
+              ) : (
+                <span>Sign In</span>
+              )}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-600">or continue with</span>
+            </div>
+          </div>
+
           {/* Google Sign In Button */}
           <button
             onClick={handleGoogleSignIn}
-            disabled={isLoading}
+            disabled={isLoading || isGoogleLoading}
             className="w-full mb-6 px-6 py-3 bg-white text-gray-900 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? (
+            {isGoogleLoading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span>Signing in...</span>
@@ -95,23 +203,6 @@ function LoginContent() {
               </>
             )}
           </button>
-
-          {/* Divider */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-600">or</span>
-            </div>
-          </div>
-
-          {/* Info Text */}
-          <div className="bg-blue-50 p-4 rounded-lg mb-6">
-            <p className="text-sm text-blue-900">
-              <strong>First time here?</strong> Sign in with Google to create an account. Your subscription will be automatically linked to your email.
-            </p>
-          </div>
 
           {/* Sign Up Link */}
           <div className="text-center">
