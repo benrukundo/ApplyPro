@@ -220,7 +220,7 @@ function LoginContent() {
           {/* Additional Info */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-center text-xs text-gray-600 leading-relaxed">
-              If you previously purchased a subscription via Gumroad with this email,
+              If you previously purchased a subscription with this email,
               it will be automatically linked when you sign in.
             </p>
           </div>

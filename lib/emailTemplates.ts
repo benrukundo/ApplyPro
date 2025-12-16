@@ -408,7 +408,7 @@ export function generateLicenseKeyEmail(
         © ${new Date().getFullYear()} ApplyPro. All rights reserved.
       </p>
       <p class="footer-text" style="font-size: 12px; color: #9ca3af; margin-top: 10px;">
-        You're receiving this email because you purchased ApplyPro from Gumroad.<br>
+        You're receiving this email because you purchased ApplyPro.<br>
         License sent to: ${purchaserEmail}
       </p>
     </div>
@@ -518,7 +518,7 @@ export function generateReminderEmail(
       <p class="message">${message}</p>
       <div style="text-align: center;">
         ${isLastUse
-          ? `<a href="https://laurabi.gumroad.com/l/ykchtv" class="cta-button">Buy More Resumes - $4.99</a>`
+          ? `<a href="https://applypro.org/pricing" class="cta-button">Buy More Resumes - $4.99</a>`
           : `<a href="https://applypro.org/generate" class="cta-button">Generate Another Resume</a>`
         }
       </div>
