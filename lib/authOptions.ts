@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { sendWelcomeEmail } from '@/lib/emailTemplates';
 
 declare module "next-auth" {
   interface Session {
@@ -74,10 +75,23 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: true,
-        domain: '.applypro.org',
+        secure: process.env.NODE_ENV === 'production',
+        domain: process.env.NODE_ENV === 'production' ? '.applypro.org' : undefined,
       }
     }
+  },
+  events: {
+    // Send welcome email when a new user is created via OAuth
+    async createUser({ user }) {
+      if (user.email) {
+        try {
+          await sendWelcomeEmail(user.email, user.name || '');
+          console.log(`Welcome email sent to ${user.email}`);
+        } catch (error) {
+          console.error('Failed to send welcome email:', error);
+        }
+      }
+    },
   },
   callbacks: {
     async signIn() {

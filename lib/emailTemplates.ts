@@ -1,535 +1,563 @@
-/**
- * Email template for email verification
- */
-export function generateVerificationEmail(
-  verificationUrl: string,
-  userName: string
-): string {
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const FROM_EMAIL = 'ApplyPro <support@applypro.org>';
+const SUPPORT_EMAIL = 'support@applypro.org';
+
+// Base email wrapper for consistent styling
+function emailWrapper(content: string): string {
   return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify Your Email - ApplyPro</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333333;
-      background-color: #f7f7f7;
-    }
-    .email-container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #ffffff;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%);
-      padding: 40px 30px;
-      text-align: center;
-    }
-    .logo {
-      font-size: 32px;
-      font-weight: bold;
-      color: #ffffff;
-      margin: 0;
-    }
-    .content {
-      padding: 40px 30px;
-      text-align: center;
-    }
-    .greeting {
-      font-size: 24px;
-      font-weight: bold;
-      color: #1f2937;
-      margin-bottom: 10px;
-    }
-    .subtitle {
-      font-size: 16px;
-      color: #6b7280;
-      margin-bottom: 30px;
-    }
-    .cta-button {
-      display: inline-block;
-      background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%);
-      color: #ffffff;
-      text-decoration: none;
-      padding: 16px 40px;
-      border-radius: 8px;
-      font-size: 18px;
-      font-weight: 600;
-      margin: 20px 0;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    }
-    .info-box {
-      background-color: #F3F4F6;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 30px 0;
-      text-align: left;
-    }
-    .info-text {
-      font-size: 14px;
-      color: #6b7280;
-      margin: 0;
-    }
-    .link-text {
-      font-size: 12px;
-      color: #9ca3af;
-      word-break: break-all;
-      margin-top: 20px;
-    }
-    .footer {
-      background-color: #f9fafb;
-      padding: 30px;
-      text-align: center;
-      border-top: 1px solid #e5e7eb;
-    }
-    .footer-text {
-      color: #6b7280;
-      font-size: 14px;
-      margin-bottom: 15px;
-    }
-  </style>
-</head>
-<body>
-  <div class="email-container">
-    <div class="header">
-      <h1 class="logo">ApplyPro</h1>
-    </div>
-    <div class="content">
-      <h2 class="greeting">Welcome to ApplyPro, ${userName}!</h2>
-      <p class="subtitle">Please verify your email address to complete your registration and start creating AI-powered resumes.</p>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>ApplyPro</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fb;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f7fb; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); padding: 32px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">ApplyPro</h1>
+                  <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">AI-Powered Resume Tailoring</p>
+                </td>
+              </tr>
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px 32px;">
+                  ${content}
+                </td>
+              </tr>
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f9fafb; padding: 24px 32px; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">
+                    Questions? Contact us at <a href="mailto:${SUPPORT_EMAIL}" style="color: #2563eb; text-decoration: none;">${SUPPORT_EMAIL}</a>
+                  </p>
+                  <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                    © ${new Date().getFullYear()} ApplyPro. All rights reserved.
+                  </p>
+                  <p style="margin: 12px 0 0 0;">
+                    <a href="https://applypro.org/privacy" style="color: #9ca3af; font-size: 12px; text-decoration: none; margin-right: 16px;">Privacy Policy</a>
+                    <a href="https://applypro.org/terms" style="color: #9ca3af; font-size: 12px; text-decoration: none;">Terms of Service</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
 
-      <a href="${verificationUrl}" class="cta-button">
-        Verify Email Address
-      </a>
+// Button component
+function emailButton(text: string, url: string, color: string = '#2563eb'): string {
+  return `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+      <tr>
+        <td align="center">
+          <a href="${url}" style="display: inline-block; background-color: ${color}; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 8px;">
+            ${text}
+          </a>
+        </td>
+      </tr>
+    </table>
+  `;
+}
 
-      <div class="info-box">
-        <p class="info-text">
-          <strong>Why verify?</strong><br>
-          Email verification helps us ensure your account is secure and allows us to send you important updates about your resume generations.
-        </p>
-      </div>
-
-      <p class="link-text">
-        If the button doesn't work, copy and paste this link into your browser:<br>
-        ${verificationUrl}
+// ============================================
+// EMAIL VERIFICATION
+// ============================================
+export async function sendVerificationEmail(
+  email: string,
+  name: string,
+  verificationUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const content = `
+      <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 24px; font-weight: 600;">
+        Verify Your Email Address
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Hi ${name || 'there'},
       </p>
-
-      <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+      <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Thanks for signing up for ApplyPro! Please verify your email address by clicking the button below:
+      </p>
+      ${emailButton('Verify Email Address', verificationUrl)}
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
         This link will expire in 24 hours. If you didn't create an account with ApplyPro, you can safely ignore this email.
       </p>
-    </div>
-    <div class="footer">
-      <p class="footer-text">
-        Need help? Contact us at <a href="mailto:support@applypro.org" style="color: #3B82F6; text-decoration: none;">support@applypro.org</a>
+      <p style="margin: 16px 0 0 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${verificationUrl}" style="color: #2563eb; word-break: break-all;">${verificationUrl}</a>
       </p>
-      <p class="footer-text" style="font-size: 12px; color: #9ca3af;">
-        &copy; ${new Date().getFullYear()} ApplyPro. All rights reserved.
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-  `.trim();
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Verify your email address - ApplyPro',
+      html: emailWrapper(content),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send verification email:', error);
+    return { success: false, error: 'Failed to send verification email' };
+  }
 }
 
-/**
- * Email template for license key delivery
- */
-export function generateLicenseKeyEmail(
-  licenseKey: string,
-  remainingUses: number,
-  purchaserName: string,
-  purchaserEmail: string
-): string {
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your ApplyPro License Key</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333333;
-      background-color: #f7f7f7;
-    }
-    .email-container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #ffffff;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%);
-      padding: 40px 30px;
-      text-align: center;
-    }
-    .logo {
-      font-size: 32px;
-      font-weight: bold;
-      color: #ffffff;
-      margin: 0;
-    }
-    .content {
-      padding: 40px 30px;
-    }
-    .greeting {
-      font-size: 24px;
-      font-weight: bold;
-      color: #1f2937;
-      margin-bottom: 10px;
-    }
-    .subtitle {
-      font-size: 16px;
-      color: #6b7280;
-      margin-bottom: 30px;
-    }
-    .license-box {
-      background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-      border: 2px solid #3B82F6;
-      border-radius: 12px;
-      padding: 30px;
-      margin: 30px 0;
-      text-align: center;
-    }
-    .license-label {
-      font-size: 14px;
-      font-weight: 600;
-      color: #3B82F6;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-    }
-    .license-key {
-      font-size: 28px;
-      font-weight: bold;
-      color: #1f2937;
-      font-family: 'Courier New', monospace;
-      letter-spacing: 2px;
-      word-break: break-all;
-      margin: 15px 0;
-      padding: 15px;
-      background-color: #ffffff;
-      border-radius: 8px;
-      border: 1px dashed #3B82F6;
-    }
-    .usage-badge {
-      display: inline-block;
-      background-color: #10B981;
-      color: #ffffff;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 600;
-      margin-top: 10px;
-    }
-    .cta-button {
-      display: inline-block;
-      background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%);
-      color: #ffffff;
-      text-decoration: none;
-      padding: 16px 40px;
-      border-radius: 8px;
-      font-size: 18px;
-      font-weight: 600;
-      margin: 30px 0;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-      transition: transform 0.2s;
-    }
-    .cta-button:hover {
-      transform: scale(1.05);
-    }
-    .info-box {
-      background-color: #FEF3C7;
-      border-left: 4px solid #F59E0B;
-      padding: 20px;
-      margin: 30px 0;
-      border-radius: 4px;
-    }
-    .info-title {
-      font-weight: 600;
-      color: #92400E;
-      margin-bottom: 10px;
-      font-size: 16px;
-    }
-    .steps {
-      margin: 30px 0;
-    }
-    .step {
-      display: flex;
-      align-items: start;
-      margin-bottom: 20px;
-    }
-    .step-number {
-      background-color: #3B82F6;
-      color: #ffffff;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      margin-right: 15px;
-      flex-shrink: 0;
-    }
-    .step-content {
-      flex: 1;
-    }
-    .step-title {
-      font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 5px;
-    }
-    .step-description {
-      color: #6b7280;
-      font-size: 14px;
-    }
-    .footer {
-      background-color: #f9fafb;
-      padding: 30px;
-      text-align: center;
-      border-top: 1px solid #e5e7eb;
-    }
-    .footer-text {
-      color: #6b7280;
-      font-size: 14px;
-      margin-bottom: 15px;
-    }
-    .support-link {
-      color: #3B82F6;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .divider {
-      height: 1px;
-      background-color: #e5e7eb;
-      margin: 30px 0;
-    }
-  </style>
-</head>
-<body>
-  <div class="email-container">
-    <!-- Header -->
-    <div class="header">
-      <h1 class="logo">ApplyPro</h1>
-    </div>
-
-    <!-- Content -->
-    <div class="content">
-      <h2 class="greeting">Thank you for your purchase, ${purchaserName}! 🎉</h2>
-      <p class="subtitle">Your license key is ready to use. Let's help you land your dream job!</p>
-
-      <!-- License Key Box -->
-      <div class="license-box">
-        <div class="license-label">Your License Key</div>
-        <div class="license-key">${licenseKey}</div>
-        <div class="usage-badge">✓ ${remainingUses} Resume Generations Included</div>
+// ============================================
+// WELCOME EMAIL
+// ============================================
+export async function sendWelcomeEmail(
+  email: string,
+  name: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const content = `
+      <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 24px; font-weight: 600;">
+        Welcome to ApplyPro! 🎉
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        We're thrilled to have you on board! ApplyPro uses advanced AI to help you create perfectly tailored resumes and cover letters for every job application.
+      </p>
+      
+      <div style="background-color: #f0f9ff; border-radius: 12px; padding: 24px; margin: 24px 0;">
+        <h3 style="margin: 0 0 16px 0; color: #1e40af; font-size: 18px; font-weight: 600;">
+          Here's what you can do:
+        </h3>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 8px 0;">
+              <span style="color: #2563eb; font-size: 18px; margin-right: 12px;">✓</span>
+              <span style="color: #374151; font-size: 15px;">Get a free resume analysis and match score</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;">
+              <span style="color: #2563eb; font-size: 18px; margin-right: 12px;">✓</span>
+              <span style="color: #374151; font-size: 15px;">Generate AI-tailored resumes for specific jobs</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;">
+              <span style="color: #2563eb; font-size: 18px; margin-right: 12px;">✓</span>
+              <span style="color: #374151; font-size: 15px;">Create ATS-optimized versions that pass screening</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;">
+              <span style="color: #2563eb; font-size: 18px; margin-right: 12px;">✓</span>
+              <span style="color: #374151; font-size: 15px;">Get personalized cover letters in seconds</span>
+            </td>
+          </tr>
+        </table>
       </div>
 
-      <!-- CTA Button -->
-      <div style="text-align: center;">
-        <a href="https://applypro.org/generate" class="cta-button">
-          Generate Your Resume →
-        </a>
+      ${emailButton('Start Tailoring Your Resume', 'https://applypro.org/generate')}
+      
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        Need help getting started? Check out our <a href="https://applypro.org/pricing" style="color: #2563eb; text-decoration: none;">pricing plans</a> or reply to this email with any questions.
+      </p>
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Welcome to ApplyPro - Let\'s land your dream job! 🚀',
+      html: emailWrapper(content),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send welcome email:', error);
+    return { success: false, error: 'Failed to send welcome email' };
+  }
+}
+
+// ============================================
+// SUBSCRIPTION CONFIRMATION
+// ============================================
+export async function sendSubscriptionConfirmationEmail(
+  email: string,
+  name: string,
+  plan: 'monthly' | 'yearly' | 'pay-per-use',
+  amount: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const planDetails = {
+      'monthly': {
+        name: 'Pro Monthly',
+        limit: '100 resumes per month',
+        renewal: 'Renews monthly',
+      },
+      'yearly': {
+        name: 'Pro Yearly',
+        limit: '100 resumes per month',
+        renewal: 'Renews annually',
+      },
+      'pay-per-use': {
+        name: 'Resume Pack',
+        limit: '3 resume credits',
+        renewal: 'One-time purchase',
+      },
+    };
+
+    const details = planDetails[plan];
+
+    const content = `
+      <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 24px; font-weight: 600;">
+        Payment Confirmed! 🎉
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Thank you for your purchase! Your subscription is now active and you're ready to create amazing, tailored resumes.
+      </p>
+      
+      <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 24px; margin: 24px 0;">
+        <h3 style="margin: 0 0 16px 0; color: #166534; font-size: 18px; font-weight: 600;">
+          Order Summary
+        </h3>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 8px 0; color: #374151; font-size: 15px;">Plan:</td>
+            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 600; text-align: right;">${details.name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #374151; font-size: 15px;">Amount:</td>
+            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 600; text-align: right;">${amount}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #374151; font-size: 15px;">Includes:</td>
+            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 600; text-align: right;">${details.limit}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #374151; font-size: 15px;">Billing:</td>
+            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 600; text-align: right;">${details.renewal}</td>
+          </tr>
+        </table>
       </div>
 
-      <!-- Important Note -->
-      <div class="info-box">
-        <div class="info-title">💡 Important: Save This Email!</div>
-        <p style="margin: 0; color: #92400E; font-size: 14px;">
-          You can use your license key anytime to generate tailored resumes. Each key includes 3 resume generations - perfect for applying to multiple positions!
+      ${emailButton('Start Creating Resumes', 'https://applypro.org/generate', '#16a34a')}
+      
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        You can manage your subscription anytime from your <a href="https://applypro.org/dashboard" style="color: #2563eb; text-decoration: none;">dashboard</a>.
+      </p>
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Payment Confirmed - ${details.name} Activated`,
+      html: emailWrapper(content),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send subscription confirmation email:', error);
+    return { success: false, error: 'Failed to send subscription confirmation email' };
+  }
+}
+
+// ============================================
+// USAGE ALERT
+// ============================================
+export async function sendUsageAlertEmail(
+  email: string,
+  name: string,
+  used: number,
+  limit: number,
+  plan: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const percentage = Math.round((used / limit) * 100);
+    const remaining = limit - used;
+
+    const content = `
+      <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 24px; font-weight: 600;">
+        Usage Alert: ${percentage}% Used
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Just a heads up - you've used ${used} of your ${limit} resume generations this month.
+      </p>
+      
+      <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 24px; margin: 24px 0;">
+        <div style="margin-bottom: 16px;">
+          <div style="background-color: #fef3c7; border-radius: 8px; height: 12px; overflow: hidden;">
+            <div style="background-color: #f59e0b; height: 100%; width: ${percentage}%; border-radius: 8px;"></div>
+          </div>
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="color: #92400e; font-size: 15px;">Used:</td>
+            <td style="color: #92400e; font-size: 15px; font-weight: 600; text-align: right;">${used} resumes</td>
+          </tr>
+          <tr>
+            <td style="color: #92400e; font-size: 15px;">Remaining:</td>
+            <td style="color: #92400e; font-size: 15px; font-weight: 600; text-align: right;">${remaining} resumes</td>
+          </tr>
+        </table>
+      </div>
+
+      ${plan === 'pay-per-use' 
+        ? emailButton('Get More Credits', 'https://applypro.org/pricing', '#f59e0b')
+        : `<p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+            Your limit resets at the beginning of your next billing cycle. Keep up the great work on your job search!
+          </p>`
+      }
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Usage Alert: ${remaining} resumes remaining`,
+      html: emailWrapper(content),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send usage alert email:', error);
+    return { success: false, error: 'Failed to send usage alert email' };
+  }
+}
+
+// ============================================
+// SUBSCRIPTION CANCELLED
+// ============================================
+export async function sendSubscriptionCancelledEmail(
+  email: string,
+  name: string,
+  endDate: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const content = `
+      <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 24px; font-weight: 600;">
+        Subscription Cancelled
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        We're sorry to see you go. Your ApplyPro subscription has been cancelled.
+      </p>
+      
+      <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 24px; margin: 24px 0;">
+        <p style="margin: 0; color: #991b1b; font-size: 15px;">
+          <strong>Important:</strong> You'll continue to have access to your Pro features until <strong>${endDate}</strong>.
         </p>
       </div>
 
-      <div class="divider"></div>
-
-      <!-- How to Use -->
-      <h3 style="color: #1f2937; margin-bottom: 20px;">How to Use Your License Key:</h3>
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <div class="step-title">Go to ApplyPro</div>
-            <div class="step-description">Visit <a href="https://applypro.org/generate" style="color: #3B82F6;">applypro.org/generate</a></div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <div class="step-title">Upload & Enter Details</div>
-            <div class="step-description">Paste your resume and the job description you're applying for</div>
-          </div>
-        </div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <div class="step-title">Enter Your License Key</div>
-            <div class="step-description">Use the license key above and click "Verify & Generate" to instantly create your tailored resume</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <!-- Features Included -->
-      <h3 style="color: #1f2937; margin-bottom: 15px;">What's Included:</h3>
-      <ul style="color: #6b7280; line-height: 1.8;">
-        <li>✅ <strong>3 Resume Generations</strong> - Perfect for multiple job applications</li>
-        <li>✅ <strong>AI-Powered Optimization</strong> - Claude AI tailors your resume</li>
-        <li>✅ <strong>ATS-Friendly Format</strong> - Beat applicant tracking systems</li>
-        <li>✅ <strong>Custom Cover Letters</strong> - Personalized for each position</li>
-        <li>✅ <strong>Match Score Analysis</strong> - See how well you fit the role</li>
-        <li>✅ <strong>Instant Delivery</strong> - Get results in minutes</li>
-      </ul>
-    </div>
-
-    <!-- Footer -->
-    <div class="footer">
-      <p class="footer-text">
-        Need help? Contact us at <a href="mailto:support@applypro.org" class="support-link">support@applypro.org</a>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        We'd love to know why you decided to cancel. Your feedback helps us improve. Simply reply to this email with your thoughts.
       </p>
-      <p class="footer-text" style="font-size: 12px; color: #9ca3af;">
-        © ${new Date().getFullYear()} ApplyPro. All rights reserved.
+
+      <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Changed your mind? You can resubscribe anytime:
       </p>
-      <p class="footer-text" style="font-size: 12px; color: #9ca3af; margin-top: 10px;">
-        You're receiving this email because you purchased ApplyPro.<br>
-        License sent to: ${purchaserEmail}
+
+      ${emailButton('Resubscribe', 'https://applypro.org/pricing')}
+      
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        Thank you for being a part of ApplyPro. We wish you the best in your job search!
       </p>
-    </div>
-  </div>
-</body>
-</html>
-  `.trim();
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Your ApplyPro subscription has been cancelled',
+      html: emailWrapper(content),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send subscription cancelled email:', error);
+    return { success: false, error: 'Failed to send subscription cancelled email' };
+  }
 }
 
-/**
- * Email template for reminder about remaining uses
- */
-export function generateReminderEmail(
-  licenseKey: string,
-  remainingUses: number,
-  purchaserEmail: string
-): string {
-  const isLastUse = remainingUses === 0;
-  const title = isLastUse
-    ? "You've Used All Your Resume Generations"
-    : `You Have ${remainingUses} Resume Generation${remainingUses === 1 ? "" : "s"} Left`;
-
-  const message = isLastUse
-    ? "Thanks for using ApplyPro! You've successfully generated all 3 tailored resumes. Ready to apply to more positions? Purchase another license to continue."
-    : `You have ${remainingUses} more resume generation${remainingUses === 1 ? "" : "s"} available with your license key.`;
-
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApplyPro Usage Reminder</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333333;
-      background-color: #f7f7f7;
-    }
-    .email-container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #ffffff;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      background: ${isLastUse ? "linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)" : "linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%)"};
-      padding: 40px 30px;
-      text-align: center;
-    }
-    .logo {
-      font-size: 32px;
-      font-weight: bold;
-      color: #ffffff;
-      margin: 0;
-    }
-    .content {
-      padding: 40px 30px;
-    }
-    .title {
-      font-size: 24px;
-      font-weight: bold;
-      color: #1f2937;
-      margin-bottom: 15px;
-      text-align: center;
-    }
-    .message {
-      font-size: 16px;
-      color: #6b7280;
-      margin-bottom: 30px;
-      text-align: center;
-    }
-    .cta-button {
-      display: inline-block;
-      background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%);
-      color: #ffffff;
-      text-decoration: none;
-      padding: 16px 40px;
-      border-radius: 8px;
-      font-size: 18px;
-      font-weight: 600;
-      margin: 20px 0;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    }
-    .footer {
-      background-color: #f9fafb;
-      padding: 20px 30px;
-      text-align: center;
-      border-top: 1px solid #e5e7eb;
-      font-size: 12px;
-      color: #6b7280;
-    }
-  </style>
-</head>
-<body>
-  <div class="email-container">
-    <div class="header">
-      <h1 class="logo">ApplyPro</h1>
-    </div>
-    <div class="content">
-      <h2 class="title">${title}</h2>
-      <p class="message">${message}</p>
-      <div style="text-align: center;">
-        ${isLastUse
-          ? `<a href="https://applypro.org/pricing" class="cta-button">Buy More Resumes - $4.99</a>`
-          : `<a href="https://applypro.org/generate" class="cta-button">Generate Another Resume</a>`
-        }
+// ============================================
+// PAYMENT FAILED
+// ============================================
+export async function sendPaymentFailedEmail(
+  email: string,
+  name: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const content = `
+      <h2 style="margin: 0 0 16px 0; color: #dc2626; font-size: 24px; font-weight: 600;">
+        Payment Failed
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        We were unable to process your payment for your ApplyPro subscription. This could be due to insufficient funds, an expired card, or a temporary issue with your bank.
+      </p>
+      
+      <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 24px; margin: 24px 0;">
+        <p style="margin: 0; color: #991b1b; font-size: 15px;">
+          <strong>Action Required:</strong> Please update your payment method to avoid any interruption to your service.
+        </p>
       </div>
-      ${!isLastUse ? `<p style="text-align: center; color: #6b7280; margin-top: 20px;">Your license key: <code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">${licenseKey}</code></p>` : ""}
-    </div>
-    <div class="footer">
-      <p>Need help? Contact <a href="mailto:support@applypro.org" style="color: #3B82F6;">support@applypro.org</a></p>
-      <p style="margin-top: 10px;">© ${new Date().getFullYear()} ApplyPro. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>
-  `.trim();
+
+      ${emailButton('Update Payment Method', 'https://applypro.org/dashboard', '#dc2626')}
+      
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        If you believe this is an error or need assistance, please contact us at <a href="mailto:${SUPPORT_EMAIL}" style="color: #2563eb; text-decoration: none;">${SUPPORT_EMAIL}</a>.
+      </p>
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Action Required: Payment Failed for ApplyPro',
+      html: emailWrapper(content),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send payment failed email:', error);
+    return { success: false, error: 'Failed to send payment failed email' };
+  }
+}
+
+// ============================================
+// LIMIT REACHED
+// ============================================
+export async function sendLimitReachedEmail(
+  email: string,
+  name: string,
+  plan: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const isPPU = plan === 'pay-per-use';
+    
+    const content = `
+      <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 24px; font-weight: 600;">
+        ${isPPU ? 'All Credits Used' : 'Monthly Limit Reached'}
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        ${isPPU 
+          ? "You've used all 3 resume credits from your Resume Pack. Great progress on your job search!"
+          : "You've reached your monthly limit of 100 resume generations. That's impressive dedication to your job search!"
+        }
+      </p>
+      
+      <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 24px; margin: 24px 0;">
+        <h3 style="margin: 0 0 12px 0; color: #0369a1; font-size: 16px; font-weight: 600;">
+          ${isPPU ? 'Want to continue?' : 'Need more this month?'}
+        </h3>
+        <p style="margin: 0; color: #374151; font-size: 15px;">
+          ${isPPU 
+            ? 'Purchase another Resume Pack for 3 more credits, or upgrade to Pro for unlimited access.'
+            : 'Your limit will reset at the start of your next billing cycle. If you need more resumes now, contact support for options.'
+          }
+        </p>
+      </div>
+
+      ${isPPU 
+        ? emailButton('Get More Credits', 'https://applypro.org/pricing', '#0369a1')
+        : ''
+      }
+      
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        Keep up the great work! We're rooting for you to land that dream job. 🎯
+      </p>
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: isPPU ? 'All Resume Credits Used - Get More' : 'Monthly Limit Reached',
+      html: emailWrapper(content),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send limit reached email:', error);
+    return { success: false, error: 'Failed to send limit reached email' };
+  }
+}
+
+// ============================================
+// RENEWAL REMINDER
+// ============================================
+export async function sendRenewalReminderEmail(
+  email: string,
+  name: string,
+  plan: string,
+  amount: string,
+  renewalDate: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const content = `
+      <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 24px; font-weight: 600;">
+        Subscription Renewal Reminder
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Hi ${name || 'there'},
+      </p>
+      <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        Just a friendly reminder that your ApplyPro subscription will automatically renew in 3 days.
+      </p>
+      
+      <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 24px; margin: 24px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 8px 0; color: #374151; font-size: 15px;">Plan:</td>
+            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 600; text-align: right;">${plan}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #374151; font-size: 15px;">Amount:</td>
+            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 600; text-align: right;">${amount}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #374151; font-size: 15px;">Renewal Date:</td>
+            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 600; text-align: right;">${renewalDate}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="margin: 0 0 16px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+        No action is needed if you want to continue enjoying ApplyPro. Your subscription will renew automatically.
+      </p>
+
+      <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        Need to make changes? Manage your subscription from your <a href="https://applypro.org/dashboard" style="color: #2563eb; text-decoration: none;">dashboard</a>.
+      </p>
+    `;
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `Renewal Reminder: Your ${plan} renews on ${renewalDate}`,
+      html: emailWrapper(content),
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send renewal reminder email:', error);
+    return { success: false, error: 'Failed to send renewal reminder email' };
+  }
 }

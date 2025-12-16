@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import { sendUsageAlertEmail, sendLimitReachedEmail } from '@/lib/emailTemplates';
 
 /**
  * PAID GENERATION ENDPOINT
@@ -61,6 +62,10 @@ interface GenerateResponse {
   matchScore: number;
 }
 
+// Track which users have already received usage alerts this billing period
+// to avoid sending multiple emails
+const usageAlertsSent = new Map<string, number>();
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -113,6 +118,9 @@ export async function POST(request: NextRequest) {
           data: { monthlyUsageCount: 0, lastResetDate: now },
         });
         subscription.monthlyUsageCount = 0;
+        
+        // Clear usage alerts tracking for this user's new billing period
+        usageAlertsSent.delete(session.user.id);
       }
 
       if (subscription.monthlyUsageCount >= MONTHLY_LIMIT) {
@@ -292,18 +300,40 @@ Create:
       },
     });
 
-    // Save generated resume to history (optional - uncomment if GeneratedResume model exists)
-    /*
-    await prisma.generatedResume.create({
-      data: {
-        userId: session.user.id,
-        fullResume: parsedResponse.fullResume,
-        atsResume: parsedResponse.atsOptimizedResume,
-        coverLetter: parsedResponse.coverLetter,
-        matchScore: parsedResponse.matchScore,
-      },
-    });
-    */
+    // Check usage and send email alerts (async, don't wait)
+    const newUsageCount = subscription.monthlyUsageCount + 1;
+    const usagePercentage = (newUsageCount / subscription.monthlyLimit) * 100;
+    const lastAlertSent = usageAlertsSent.get(session.user.id) || 0;
+
+    // Send usage alerts asynchronously
+    (async () => {
+      try {
+        const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+        if (!user?.email) return;
+
+        // Send alert at 80% usage (only once per billing period)
+        if (usagePercentage >= 80 && usagePercentage < 100 && lastAlertSent < 80) {
+          await sendUsageAlertEmail(
+            user.email,
+            user.name || '',
+            newUsageCount,
+            subscription.monthlyLimit,
+            subscription.plan
+          );
+          usageAlertsSent.set(session.user.id, 80);
+          console.log(`Usage alert (80%) email sent to ${user.email}`);
+        }
+
+        // Send limit reached email when hitting 100%
+        if (newUsageCount >= subscription.monthlyLimit && lastAlertSent < 100) {
+          await sendLimitReachedEmail(user.email, user.name || '', subscription.plan);
+          usageAlertsSent.set(session.user.id, 100);
+          console.log(`Limit reached email sent to ${user.email}`);
+        }
+      } catch (emailError) {
+        console.error('Failed to send usage alert email:', emailError);
+      }
+    })();
 
     return NextResponse.json(parsedResponse, { status: 200 });
     

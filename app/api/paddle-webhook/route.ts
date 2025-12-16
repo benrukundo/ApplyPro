@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
+import { 
+  sendSubscriptionConfirmationEmail, 
+  sendSubscriptionCancelledEmail,
+  sendPaymentFailedEmail 
+} from '@/lib/emailTemplates';
 
 // Paddle webhook events we care about
 type PaddleEventType =
@@ -25,6 +30,10 @@ interface PaddleWebhookEvent {
       price: {
         id: string;
         product_id: string;
+        unit_price?: {
+          amount: string;
+          currency_code: string;
+        };
       };
       quantity: number;
     }>;
@@ -169,6 +178,22 @@ export async function POST(request: NextRequest) {
           },
         });
 
+        // Send confirmation email for new subscriptions
+        if (event_type === 'subscription.created') {
+          try {
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            if (user?.email) {
+              const priceAmount = data.items?.[0]?.price?.unit_price?.amount;
+              const amount = priceAmount ? `$${(parseInt(priceAmount) / 100).toFixed(2)}` : '';
+              await sendSubscriptionConfirmationEmail(user.email, user.name || '', plan, amount);
+              console.log(`Subscription confirmation email sent to ${user.email}`);
+            }
+          } catch (emailError) {
+            console.error('Failed to send subscription confirmation email:', emailError);
+            // Don't fail the webhook if email fails
+          }
+        }
+
         console.log(`Subscription ${event_type} for user ${userId}, plan: ${plan}`);
         break;
       }
@@ -184,6 +209,20 @@ export async function POST(request: NextRequest) {
             cancelledAt: new Date(),
           },
         });
+
+        // Send cancellation email
+        try {
+          const user = await prisma.user.findUnique({ where: { id: userId } });
+          if (user?.email) {
+            const endDate = effectiveAt 
+              ? new Date(effectiveAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+              : 'immediately';
+            await sendSubscriptionCancelledEmail(user.email, user.name || '', endDate);
+            console.log(`Subscription cancelled email sent to ${user.email}`);
+          }
+        } catch (emailError) {
+          console.error('Failed to send subscription cancelled email:', emailError);
+        }
 
         console.log(`Subscription canceled for user ${userId}`);
         break;
@@ -231,6 +270,19 @@ export async function POST(request: NextRequest) {
               },
             });
 
+            // Send confirmation email for pay-per-use purchase
+            try {
+              const user = await prisma.user.findUnique({ where: { id: userId } });
+              if (user?.email) {
+                const priceAmount = data.items?.[0]?.price?.unit_price?.amount;
+                const amount = priceAmount ? `$${(parseInt(priceAmount) / 100).toFixed(2)}` : '$9.00';
+                await sendSubscriptionConfirmationEmail(user.email, user.name || '', 'pay-per-use', amount);
+                console.log(`Pay-per-use confirmation email sent to ${user.email}`);
+              }
+            } catch (emailError) {
+              console.error('Failed to send pay-per-use confirmation email:', emailError);
+            }
+
             console.log(`Pay-per-use pack created for user ${userId}`);
           }
         }
@@ -242,6 +294,17 @@ export async function POST(request: NextRequest) {
           where: { paddleId: data.id },
           data: { status: 'failed' },
         });
+
+        // Send payment failed email
+        try {
+          const user = await prisma.user.findUnique({ where: { id: userId } });
+          if (user?.email) {
+            await sendPaymentFailedEmail(user.email, user.name || '');
+            console.log(`Payment failed email sent to ${user.email}`);
+          }
+        } catch (emailError) {
+          console.error('Failed to send payment failed email:', emailError);
+        }
 
         console.log(`Payment failed for user ${userId}`);
         break;
