@@ -302,23 +302,41 @@ export async function createSubscription(data: {
 }
 
 /**
- * Cancel a subscription
+ * Cancel a subscription by userId or gumroadId
+ * Auto-detects if identifier is a gumroadId by checking the database
  */
-export async function cancelSubscription(userId: string, plan?: string): Promise<boolean> {
+export async function cancelSubscription(
+  identifier: string,
+  plan?: string
+): Promise<boolean> {
   try {
-    const whereClause: { userId: string; status: string; plan?: string } = {
-      userId,
-      status: 'active',
-    };
-    
-    if (plan) {
-      whereClause.plan = plan;
-    }
-
-    await prisma.subscription.updateMany({
-      where: whereClause,
-      data: { status: 'cancelled' },
+    // First, check if this is a gumroadId
+    const byGumroad = await prisma.subscription.findFirst({
+      where: { gumroadId: identifier },
     });
+
+    if (byGumroad) {
+      // Cancel by Gumroad ID
+      await prisma.subscription.updateMany({
+        where: { gumroadId: identifier },
+        data: { status: 'cancelled' },
+      });
+    } else {
+      // Cancel by user ID
+      const whereClause: { userId: string; status: string; plan?: string } = {
+        userId: identifier,
+        status: 'active',
+      };
+      
+      if (plan) {
+        whereClause.plan = plan;
+      }
+
+      await prisma.subscription.updateMany({
+        where: whereClause,
+        data: { status: 'cancelled' },
+      });
+    }
 
     return true;
   } catch (error) {
@@ -376,5 +394,82 @@ export async function getUsageStats(userId: string): Promise<{
       totalAllTime: 0,
       lastGeneration: null,
     };
+  }
+}
+
+/**
+ * Create or update subscription (for Gumroad webhook compatibility)
+ * This is an alias that works with email instead of userId
+ */
+export async function createOrUpdateSubscription(
+  email: string,
+  plan: 'monthly' | 'yearly' | 'pay-per-use',
+  gumroadId?: string
+): Promise<boolean> {
+  try {
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    if (!user) {
+      console.error('User not found for email:', email);
+      // Create a placeholder - user will be linked when they sign up
+      return false;
+    }
+
+    // Check for existing active subscription
+    const existing = await prisma.subscription.findFirst({
+      where: {
+        userId: user.id,
+        plan,
+        status: 'active',
+      },
+    });
+
+    if (existing) {
+      // Update existing
+      await prisma.subscription.update({
+        where: { id: existing.id },
+        data: {
+          status: 'active',
+          gumroadId: gumroadId || existing.gumroadId,
+          lastResetDate: new Date(),
+        },
+      });
+    } else {
+      // Create new
+      await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          email: email.toLowerCase().trim(),
+          plan,
+          status: 'active',
+          gumroadId,
+          monthlyUsageCount: 0,
+        },
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in createOrUpdateSubscription:', error);
+    return false;
+  }
+}
+
+/**
+ * Mark subscription payment as failed (for Gumroad webhook)
+ */
+export async function markPaymentFailed(gumroadId: string): Promise<boolean> {
+  try {
+    await prisma.subscription.updateMany({
+      where: { gumroadId },
+      data: { status: 'failed' },
+    });
+    return true;
+  } catch (error) {
+    console.error('Error marking payment failed:', error);
+    return false;
   }
 }
