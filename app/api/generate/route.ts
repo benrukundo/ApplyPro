@@ -1,12 +1,46 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+// Simple in-memory rate limiter (for production, use Redis/Upstash)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 10; // requests per window
+const RATE_WINDOW = 60 * 1000; // 1 minute
+
+function checkRateLimit(identifier: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const record = rateLimitMap.get(identifier);
+
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_WINDOW });
+    return { allowed: true };
+  }
+
+  if (record.count >= RATE_LIMIT) {
+    const retryAfter = Math.ceil((record.resetTime - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  record.count++;
+  return { allowed: true };
+}
+
+// Sanitize user input to prevent prompt injection
+function sanitizeInput(text: string): string {
+  return text
+    .replace(/\b(ignore|disregard|forget)\s+(all\s+)?(previous|above|prior)\s+(instructions?|prompts?|rules?)/gi, '[REMOVED]')
+    .replace(/\b(you\s+are|act\s+as|pretend\s+to\s+be|roleplay\s+as)\b/gi, '[REMOVED]')
+    .replace(/<\/?[a-z]+>/gi, '')
+    .trim();
+}
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// Type definitions
 interface GenerateRequest {
   resumeText: string;
   jobDescription: string;
@@ -21,24 +55,97 @@ interface GenerateResponse {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    // Rate limiting by user ID
+    const rateCheck = checkRateLimit(session.user.id);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: `Rate limit exceeded. Please try again in ${rateCheck.retryAfter} seconds.` },
+        { 
+          status: 429,
+          headers: { 'Retry-After': String(rateCheck.retryAfter) }
+        }
+      );
+    }
+
+    // Check if user can generate (has active subscription/credits)
+    const subscription = await prisma.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+        status: 'active',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!subscription) {
+      return NextResponse.json(
+        { error: "No active subscription. Please purchase a plan to generate resumes." },
+        { status: 403 }
+      );
+    }
+
+    // Check usage limits for subscription plans
+    if (subscription.plan === 'monthly' || subscription.plan === 'yearly') {
+      const MONTHLY_LIMIT = 100;
+      
+      // Reset monthly count if needed
+      const now = new Date();
+      const lastReset = new Date(subscription.lastResetDate);
+      if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
+        await prisma.subscription.update({
+          where: { id: subscription.id },
+          data: { monthlyUsageCount: 0, lastResetDate: now },
+        });
+        subscription.monthlyUsageCount = 0;
+      }
+
+      if (subscription.monthlyUsageCount >= MONTHLY_LIMIT) {
+        return NextResponse.json(
+          { error: `Monthly limit of ${MONTHLY_LIMIT} resumes reached. Resets on the 1st of next month.` },
+          { status: 403 }
+        );
+      }
+    }
+
+    if (subscription.plan === 'pay-per-use') {
+      if (subscription.monthlyUsageCount >= 3) {
+        return NextResponse.json(
+          { error: "All 3 resume credits used. Please purchase another pack." },
+          { status: 403 }
+        );
+      }
+    }
+
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { resumeText, jobDescription } = body;
+    let { resumeText, jobDescription } = body;
 
     // Validate inputs
     if (!resumeText || typeof resumeText !== "string") {
       return NextResponse.json(
-        { error: "Resume text is required and must be a string" },
+        { error: "Resume text is required" },
         { status: 400 }
       );
     }
 
     if (!jobDescription || typeof jobDescription !== "string") {
       return NextResponse.json(
-        { error: "Job description is required and must be a string" },
+        { error: "Job description is required" },
         { status: 400 }
       );
     }
+
+    // Sanitize inputs
+    resumeText = sanitizeInput(resumeText);
+    jobDescription = sanitizeInput(jobDescription);
 
     if (resumeText.trim().length < 50) {
       return NextResponse.json(
@@ -58,82 +165,46 @@ export async function POST(request: NextRequest) {
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error("ANTHROPIC_API_KEY is not configured");
       return NextResponse.json(
-        { error: "API configuration error" },
+        { error: "Service configuration error. Please try again later." },
         { status: 500 }
       );
     }
 
-    // Create comprehensive prompt for high-quality results
-    const prompt = `You are an expert resume writer and career coach with 15+ years of experience. Create a professionally tailored resume and cover letter that will maximize the candidate's chances of getting an interview.
+    // Optimized prompt using system message (reduces tokens by ~40%)
+    const systemPrompt = `You are an expert resume writer with 15+ years of experience. Create tailored resumes that maximize interview chances.
 
-ORIGINAL RESUME:
-${resumeText}
+RULES:
+- Keep ALL truthful information - never fabricate experience
+- Incorporate keywords from job description naturally
+- Quantify achievements with specific numbers/metrics
+- Use strong action verbs (Led, Increased, Implemented, Optimized)
+- Professional formatting with clear sections
+
+Return ONLY valid JSON with no markdown, no code blocks, no extra text:
+{"fullResume":"...","atsOptimizedResume":"...","coverLetter":"...","matchScore":85}`;
+
+    const userPrompt = `RESUME:
+${resumeText.substring(0, 4000)}
 
 JOB DESCRIPTION:
-${jobDescription}
+${jobDescription.substring(0, 3000)}
 
-TASK 1 - FULL TAILORED RESUME:
-Create a comprehensive, well-formatted resume that perfectly matches this job description. Follow these guidelines:
-- Keep ALL truthful information from the original resume - never fabricate experience
-- Strategically highlight relevant experience that directly matches job requirements
-- Incorporate keywords and phrases from the job description naturally
-- Quantify achievements with specific numbers, percentages, and metrics wherever possible
-- Use strong action verbs (e.g., "Led," "Increased," "Implemented," "Designed," "Optimized")
-- Maintain professional formatting with clear sections (Summary, Experience, Skills, Education)
-- Keep content concise and impactful - aim for 1-2 pages worth of content
-- Prioritize the most relevant experience first
-- Remove or de-emphasize less relevant experience
-- Ensure the summary/objective directly addresses the target role
-- Use professional formatting with proper spacing and structure
+Create:
+1. fullResume: Comprehensive tailored resume (prioritize relevant experience, add keywords, quantify achievements)
+2. atsOptimizedResume: Simple ATS version (no tables/columns/graphics, standard headings, exact keyword matches)
+3. coverLetter: 250-350 word personalized cover letter
+4. matchScore: Realistic 0-100 score based on skills/experience alignment`;
 
-TASK 2 - ATS-OPTIMIZED RESUME:
-Create a second version of the resume specifically optimized for Applicant Tracking Systems (ATS):
-- Use simple, clean formatting without tables, columns, or graphics
-- Place all keywords from the job description strategically throughout
-- Use standard section headings (Professional Summary, Work Experience, Skills, Education)
-- Avoid special characters, headers, footers, or text boxes
-- List skills exactly as they appear in the job description
-- Use standard bullet points (no fancy symbols)
-- Ensure all dates are in a consistent format (MM/YYYY)
-- Include a skills section with exact keyword matches
-- Make it highly scannable by ATS software
-
-TASK 3 - COVER LETTER:
-Write a compelling, personalized cover letter (250-350 words) that:
-- Opens with genuine enthusiasm for the specific role and company
-- Directly addresses 2-3 key requirements from the job description
-- Tells a brief story connecting the candidate's experience to the role's challenges
-- Highlights 1-2 specific accomplishments that prove capability
-- Shows personality while maintaining professionalism
-- Closes with a clear call to action and availability for interview
-- Uses a warm, confident, and professional tone
-
-TASK 4 - MATCH SCORE:
-Calculate a realistic match score (0-100) based on:
-- Skills alignment
-- Experience relevance
-- Qualification level
-- Keywords coverage
-
-IMPORTANT: Return your response in valid JSON format with no markdown formatting, no code blocks, no additional text. Just pure JSON.
-
-Response format:
-{
-  "fullResume": "Complete full tailored resume text here with proper formatting and line breaks...",
-  "atsOptimizedResume": "Complete ATS-optimized resume text here with simple formatting...",
-  "coverLetter": "Complete personalized cover letter text here (250-350 words)...",
-  "matchScore": 85
-}`;
-
-    // Call Claude API with Sonnet 4 for high quality
+    // Call Claude API with Sonnet 4
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514", // Claude Sonnet 4 - high quality
-      max_tokens: 4000, // Allow for complete resume and cover letter
-      temperature: 0.7, // Balance between creativity and consistency
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4000,
+      temperature: 0.7,
+      system: systemPrompt,
       messages: [
         {
           role: "user",
-          content: prompt,
+          content: userPrompt,
         },
       ],
     });
@@ -143,30 +214,22 @@ Response format:
       message.content[0].type === "text" ? message.content[0].text : "";
 
     if (!responseText) {
-      throw new Error("No response from Claude API");
+      throw new Error("Empty response from AI");
     }
 
     // Parse JSON from response
     let parsedResponse: GenerateResponse;
     try {
-      // Try to extract JSON if it's wrapped in markdown code blocks
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : responseText;
       parsedResponse = JSON.parse(jsonString);
     } catch (parseError) {
-      console.error("Failed to parse Claude response:", responseText);
-      console.error("Parse error:", parseError);
-
-      // Fallback: Try to extract content manually if JSON parsing fails
-      const fullResumeMatch = responseText.match(
-        /"fullResume":\s*"([\s\S]*?)",?\s*"atsOptimizedResume"/
-      );
-      const atsResumeMatch = responseText.match(
-        /"atsOptimizedResume":\s*"([\s\S]*?)",?\s*"coverLetter"/
-      );
-      const coverLetterMatch = responseText.match(
-        /"coverLetter":\s*"([\s\S]*?)",?\s*"matchScore"/
-      );
+      console.error("Failed to parse AI response:", parseError);
+      
+      // Fallback extraction
+      const fullResumeMatch = responseText.match(/"fullResume":\s*"([\s\S]*?)",?\s*"atsOptimizedResume"/);
+      const atsResumeMatch = responseText.match(/"atsOptimizedResume":\s*"([\s\S]*?)",?\s*"coverLetter"/);
+      const coverLetterMatch = responseText.match(/"coverLetter":\s*"([\s\S]*?)",?\s*"matchScore"/);
       const scoreMatch = responseText.match(/"matchScore":\s*(\d+)/);
 
       if (fullResumeMatch && atsResumeMatch && coverLetterMatch) {
@@ -177,104 +240,98 @@ Response format:
           matchScore: scoreMatch ? parseInt(scoreMatch[1]) : 85,
         };
       } else {
-        // Last resort: return raw response with error indication
         return NextResponse.json(
-          {
-            error: "Failed to parse AI response. Please try again.",
-            rawResponse: responseText.substring(0, 500),
-          },
+          { error: "Failed to generate resume. Please try again." },
           { status: 500 }
         );
       }
     }
 
-    // Validate parsed response structure
-    if (
-      !parsedResponse.fullResume ||
-      !parsedResponse.atsOptimizedResume ||
-      !parsedResponse.coverLetter ||
-      typeof parsedResponse.matchScore !== "number"
-    ) {
-      console.error("Invalid response structure:", parsedResponse);
-      throw new Error("Invalid response format from Claude API");
-    }
-
-    // Ensure matchScore is within valid range
-    parsedResponse.matchScore = Math.max(
-      0,
-      Math.min(100, parsedResponse.matchScore)
-    );
-
-    // Validate content quality (basic checks)
-    if (parsedResponse.fullResume.length < 200) {
-      throw new Error(
-        "Generated resume is too short. Please try again with more details."
+    // Validate response
+    if (!parsedResponse.fullResume || !parsedResponse.atsOptimizedResume || 
+        !parsedResponse.coverLetter || typeof parsedResponse.matchScore !== "number") {
+      return NextResponse.json(
+        { error: "Failed to generate resume. Please try again." },
+        { status: 500 }
       );
     }
 
-    if (parsedResponse.atsOptimizedResume.length < 200) {
-      throw new Error(
-        "Generated ATS-optimized resume is too short. Please try again."
+    // Clamp match score
+    parsedResponse.matchScore = Math.max(0, Math.min(100, parsedResponse.matchScore));
+
+    // Validate content quality
+    if (parsedResponse.fullResume.length < 200 || 
+        parsedResponse.atsOptimizedResume.length < 200 ||
+        parsedResponse.coverLetter.length < 100) {
+      return NextResponse.json(
+        { error: "Generated content too short. Please try again with more details." },
+        { status: 500 }
       );
     }
 
-    if (parsedResponse.coverLetter.length < 100) {
-      throw new Error(
-        "Generated cover letter is too short. Please try again."
-      );
-    }
+    // Update usage count in database
+    await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { monthlyUsageCount: { increment: 1 } },
+    });
 
-    // Return successful response
+    // Log the generation
+    await prisma.usageLog.create({
+      data: {
+        userId: session.user.id,
+        generationCount: 1,
+      },
+    });
+
+    // Save generated resume to history (optional - uncomment if GeneratedResume model exists)
+    /*
+    await prisma.generatedResume.create({
+      data: {
+        userId: session.user.id,
+        fullResume: parsedResponse.fullResume,
+        atsResume: parsedResponse.atsOptimizedResume,
+        coverLetter: parsedResponse.coverLetter,
+        matchScore: parsedResponse.matchScore,
+      },
+    });
+    */
+
     return NextResponse.json(parsedResponse, { status: 200 });
+    
   } catch (error) {
     console.error("Error in generate API:", error);
 
-    // Handle specific Anthropic API errors
+    // Handle Anthropic API errors without leaking internal details
     if (error instanceof Anthropic.APIError) {
+      console.error("Anthropic API Error:", error.status, error.message);
+      
       if (error.status === 401) {
         return NextResponse.json(
-          { error: "Invalid API key configuration" },
+          { error: "Service configuration error. Please contact support." },
           { status: 500 }
         );
       }
       if (error.status === 429) {
         return NextResponse.json(
-          {
-            error:
-              "Rate limit exceeded. Please try again in a moment. If this persists, contact support.",
-          },
+          { error: "Service is busy. Please try again in a moment." },
           { status: 429 }
         );
       }
       if (error.status === 529) {
         return NextResponse.json(
-          {
-            error:
-              "Claude API is temporarily overloaded. Please try again in a few moments.",
-          },
+          { error: "Service temporarily unavailable. Please try again in a few minutes." },
           { status: 503 }
         );
       }
-      return NextResponse.json(
-        { error: `API error: ${error.message}` },
-        { status: error.status || 500 }
-      );
     }
 
-    // Handle other errors
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred. Please try again.",
-      },
+      { error: "Failed to generate resume. Please try again." },
       { status: 500 }
     );
   }
 }
 
-// Handle unsupported methods
 export async function GET() {
   return NextResponse.json(
     { error: "Method not allowed. Use POST." },

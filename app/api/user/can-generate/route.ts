@@ -1,37 +1,34 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { canGenerateResume } from "@/lib/subscription-db";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { canUserGenerate } from "@/lib/subscription-db";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-
+    
     if (!session?.user?.id) {
       return NextResponse.json(
-        {
-          allowed: false,
-          reason: "Please sign in to generate resumes",
+        { 
+          allowed: false, 
+          reason: "Authentication required" 
         },
-        { status: 200 }
+        { status: 401 }
       );
     }
 
-    const result = await canGenerateResume(session.user.id);
+    const result = await canUserGenerate(session.user.id);
 
-    return NextResponse.json({
-      allowed: result.allowed,
-      reason: result.reason,
-      subscriptionInfo: result.subscriptionInfo,
-    });
+    return NextResponse.json(result, { status: 200 });
+    
   } catch (error) {
-    console.error("[Can Generate API] Error:", error);
+    console.error("Error in can-generate API:", error);
     return NextResponse.json(
-      {
-        allowed: false,
-        reason: "Error checking subscription status",
+      { 
+        allowed: false, 
+        reason: "Unable to verify subscription" 
       },
-      { status: 200 }
+      { status: 500 }
     );
   }
 }

@@ -1,44 +1,34 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { trackGeneration, canGenerateResume } from "@/lib/subscription-db";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { trackGeneration } from "@/lib/subscription-db";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const session = await getServerSession(authOptions);
-
+    
     if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Not authenticated" },
+        { error: "Authentication required" },
         { status: 401 }
       );
     }
 
-    // Check if user can generate before tracking
-    const canGenerate = await canGenerateResume(session.user.id);
-    if (!canGenerate.allowed) {
+    const success = await trackGeneration(session.user.id);
+
+    if (!success) {
       return NextResponse.json(
-        {
-          error: "Cannot generate resume",
-          reason: canGenerate.reason,
-          subscriptionInfo: canGenerate.subscriptionInfo,
-        },
-        { status: 403 }
+        { error: "Failed to track generation" },
+        { status: 500 }
       );
     }
 
-    // Track the generation
-    await trackGeneration(session.user.id);
-
-    return NextResponse.json({
-      success: true,
-      message: "Generation tracked successfully",
-    });
+    return NextResponse.json({ success: true }, { status: 200 });
+    
   } catch (error) {
-    console.error("[Track Generation API] Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error in track-generation API:", error);
     return NextResponse.json(
-      { error: "Failed to track generation", details: errorMessage },
+      { error: "Failed to track generation" },
       { status: 500 }
     );
   }

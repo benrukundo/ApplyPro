@@ -21,10 +21,11 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  subscriptions Subscription[]
-  usageLogs     UsageLog[]
+  accounts         Account[]
+  sessions         Session[]
+  subscriptions    Subscription[]
+  usageLogs        UsageLog[]
+  generatedResumes GeneratedResume[]
 }
 
 model Account {
@@ -65,30 +66,86 @@ model VerificationToken {
 model Subscription {
   id            String   @id @default(cuid())
   userId        String
-  email         String   // Email from Gumroad (for webhook matching)
+  email         String   // Email from payment provider (for webhook matching)
   plan          String   // 'monthly', 'yearly', 'pay-per-use'
   status        String   // 'active', 'cancelled', 'failed'
-  gumroadId     String?  // Gumroad subscription ID
+  paddleId      String?  // Paddle subscription/transaction ID
+  gumroadId     String?  // Legacy Gumroad ID (for migration)
   startDate     DateTime @default(now())
   endDate       DateTime? // For tracking expiration
 
   // Usage tracking
   monthlyUsageCount   Int      @default(0)
-  lastResetDate      DateTime @default(now())
+  lastResetDate       DateTime @default(now())
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, plan]) // One active subscription per plan type per user
+  @@index([userId, status])
+  @@index([email])
 }
 
 model UsageLog {
-  id           String   @id @default(cuid())
-  userId       String
-  generationCount Int
-  generatedAt  DateTime @default(now())
+  id              String   @id @default(cuid())
+  userId          String
+  generationCount Int      @default(1)
+  generatedAt     DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, generatedAt])
+}
+
+// NEW: Store generated resumes for history
+model GeneratedResume {
+  id            String   @id @default(cuid())
+  userId        String
+  
+  // Job info (optional, extracted if possible)
+  jobTitle      String?
+  company       String?
+  jobUrl        String?
+  
+  // Generated content
+  fullResume    String   @db.Text
+  atsResume     String   @db.Text
+  coverLetter   String   @db.Text
+  matchScore    Int
+  
+  // Original inputs (truncated for storage)
+  originalResumeSnippet    String?  @db.Text  // First 500 chars
+  jobDescriptionSnippet    String?  @db.Text  // First 500 chars
+  
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// Optional: Store job applications from tracker
+model JobApplication {
+  id            String   @id @default(cuid())
+  userId        String
+  
+  jobTitle      String
+  company       String
+  jobUrl        String?
+  location      String?
+  salary        String?
+  
+  status        String   @default("applied") // applied, interview, offer, rejected, saved
+  appliedAt     DateTime @default(now())
+  notes         String?  @db.Text
+  
+  // Link to generated resume if used
+  generatedResumeId String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
 }

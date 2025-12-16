@@ -1,7 +1,30 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
-// Type definitions for ATS analysis response
+// Simple in-memory rate limiter
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 10; // requests per window
+const RATE_WINDOW = 60 * 1000; // 1 minute
+
+function checkRateLimit(identifier: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const record = rateLimitMap.get(identifier);
+
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_WINDOW });
+    return { allowed: true };
+  }
+
+  if (record.count >= RATE_LIMIT) {
+    const retryAfter = Math.ceil((record.resetTime - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  record.count++;
+  return { allowed: true };
+}
+
+// Type definitions
 interface ATSCheckResponse {
   overallScore: number;
   formatScore: number;
@@ -10,22 +33,15 @@ interface ATSCheckResponse {
   keywordScore: number;
   typographyScore: number;
   structureScore: number;
-
-  // Detailed findings
   formatIssues: string[];
   formatFixes: string[];
-
   extractedText: string;
   parsingIssues: string[];
-
   sectionsFound: Array<{ name: string; status: "found" | "missing" | "unclear" }>;
-
   keywordsFound: string[];
   keywordRecommendations: string[];
   actionVerbCount: number;
-
   typographyIssues: string[];
-
   structureDetails: {
     pageCount: number;
     fileSize: number;
@@ -33,13 +49,11 @@ interface ATSCheckResponse {
     hasGraphics: boolean;
     hasTables: boolean;
   };
-
   criticalIssues: Array<{
     issue: string;
     why: string;
     severity: "high" | "medium" | "low";
   }>;
-
   checklist: Array<{
     item: string;
     completed: boolean;
@@ -48,6 +62,22 @@ interface ATSCheckResponse {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting by IP
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || 
+               request.headers.get("x-real-ip") || 
+               "unknown";
+    
+    const rateCheck = checkRateLimit(ip);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: `Too many requests. Please try again in ${rateCheck.retryAfter} seconds.` },
+        { 
+          status: 429,
+          headers: { 'Retry-After': String(rateCheck.retryAfter) }
+        }
+      );
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
     // Parse form data
@@ -100,17 +130,17 @@ export async function POST(request: NextRequest) {
     // Validate extracted text
     if (!extractedText || extractedText.trim().length < 100) {
       return NextResponse.json(
-        { error: "Could not extract enough text from the file. Please ensure your resume contains readable text." },
+        { error: "Could not extract enough text. Please ensure your resume contains readable text." },
         { status: 400 }
       );
     }
 
     // Basic structure analysis
-    const pageCount = Math.ceil(extractedText.length / 3000); // Rough estimate
+    const pageCount = Math.ceil(extractedText.length / 3000);
     const fileSize = file.size;
     const hasMultiColumn = detectMultiColumn(extractedText);
     const hasTables = detectTables(extractedText);
-    const hasGraphics = false; // Hard to detect in text extraction
+    const hasGraphics = false;
 
     // Section detection
     const sectionsFound = detectSections(extractedText);
@@ -119,7 +149,7 @@ export async function POST(request: NextRequest) {
     if (!apiKey) {
       console.error("ANTHROPIC_API_KEY is not configured");
       return NextResponse.json(
-        { error: "API configuration error - API key is missing" },
+        { error: "Service configuration error" },
         { status: 500 }
       );
     }
@@ -129,14 +159,10 @@ export async function POST(request: NextRequest) {
       apiKey: apiKey,
     });
 
-    // Create ATS analysis prompt
-    const prompt = `Analyze this resume for ATS (Applicant Tracking System) compatibility.
+    // Optimized prompt with system message
+    const systemPrompt = `You are an ATS (Applicant Tracking System) expert. Analyze resumes for ATS compatibility.
 
-Resume text:
-${extractedText.substring(0, 3000)}
-
-Provide a detailed ATS compatibility analysis in JSON format:
-
+Return ONLY valid JSON:
 {
   "formatScore": <0-100>,
   "textExtractionScore": <0-100>,
@@ -144,37 +170,30 @@ Provide a detailed ATS compatibility analysis in JSON format:
   "typographyScore": <0-100>,
   "formatIssues": ["issue1", "issue2"],
   "formatFixes": ["fix1", "fix2"],
-  "parsingIssues": ["issue1", "issue2"],
-  "keywordsFound": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
-  "keywordRecommendations": ["keyword1", "keyword2", "keyword3"],
+  "parsingIssues": ["issue1"],
+  "keywordsFound": ["keyword1", "keyword2"],
+  "keywordRecommendations": ["keyword1"],
   "actionVerbCount": <number>,
-  "typographyIssues": ["issue1", "issue2"],
-  "criticalIssues": [
-    {
-      "issue": "description",
-      "why": "explanation",
-      "severity": "high|medium|low"
-    }
-  ]
-}
+  "typographyIssues": ["issue1"],
+  "criticalIssues": [{"issue": "x", "why": "y", "severity": "high|medium|low"}]
+}`;
 
-Scoring criteria:
-- formatScore: File format and layout compatibility (PDF/DOCX, single column, no graphics)
-- textExtractionScore: How cleanly text can be extracted and parsed
-- keywordScore: Presence of industry keywords, action verbs, relevant terms
-- typographyScore: Use of standard fonts and formatting
+    const userPrompt = `Analyze this resume for ATS compatibility:
 
-Focus on ATS-specific issues like multi-column layouts, tables, graphics, special characters, and parsing problems.`;
+${extractedText.substring(0, 3000)}
 
-    // Call Claude API
+Focus on: formatting issues, keyword presence, parsing problems, typography.`;
+
+    // Call Claude API with Haiku 3.5
     const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
+      model: "claude-3-5-haiku-20241022", // Upgraded to Haiku 3.5
       max_tokens: 800,
       temperature: 0.7,
+      system: systemPrompt,
       messages: [
         {
           role: "user",
-          content: prompt,
+          content: userPrompt,
         },
       ],
     });
@@ -184,18 +203,18 @@ Focus on ATS-specific issues like multi-column layouts, tables, graphics, specia
       message.content[0].type === "text" ? message.content[0].text : "";
 
     if (!responseText) {
-      throw new Error("No response from Claude API");
+      throw new Error("Empty response from AI");
     }
 
     // Parse JSON from response
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let aiAnalysis: any;
     try {
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : responseText;
       aiAnalysis = JSON.parse(jsonString);
     } catch (parseError) {
-      console.error("Failed to parse Claude response:", responseText);
-      // Use fallback analysis
+      console.error("Failed to parse AI response:", parseError);
       aiAnalysis = {
         formatScore: 70,
         textExtractionScore: 80,
@@ -212,12 +231,11 @@ Focus on ATS-specific issues like multi-column layouts, tables, graphics, specia
       };
     }
 
-    // Calculate section score
+    // Calculate scores
     const foundSections = sectionsFound.filter(s => s.status === "found").length;
     const totalSections = sectionsFound.length;
     const sectionScore = Math.round((foundSections / totalSections) * 100);
 
-    // Calculate structure score
     let structureScore = 100;
     if (hasMultiColumn) structureScore -= 30;
     if (hasTables) structureScore -= 20;
@@ -225,13 +243,12 @@ Focus on ATS-specific issues like multi-column layouts, tables, graphics, specia
     if (fileSize > 2 * 1024 * 1024) structureScore -= 10;
     structureScore = Math.max(0, structureScore);
 
-    // Calculate overall score (weighted average)
     const overallScore = Math.round(
-      aiAnalysis.formatScore * 0.25 +
-      aiAnalysis.textExtractionScore * 0.25 +
+      (aiAnalysis.formatScore || 70) * 0.25 +
+      (aiAnalysis.textExtractionScore || 80) * 0.25 +
       sectionScore * 0.20 +
-      aiAnalysis.keywordScore * 0.15 +
-      aiAnalysis.typographyScore * 0.10 +
+      (aiAnalysis.keywordScore || 60) * 0.15 +
+      (aiAnalysis.typographyScore || 75) * 0.10 +
       structureScore * 0.05
     );
 
@@ -252,21 +269,15 @@ Focus on ATS-specific issues like multi-column layouts, tables, graphics, specia
       keywordScore: aiAnalysis.keywordScore || 60,
       typographyScore: aiAnalysis.typographyScore || 75,
       structureScore,
-
       formatIssues: aiAnalysis.formatIssues || [],
       formatFixes: aiAnalysis.formatFixes || [],
-
-      extractedText: extractedText.substring(0, 1000), // Preview only
+      extractedText: extractedText.substring(0, 1000),
       parsingIssues: aiAnalysis.parsingIssues || [],
-
       sectionsFound,
-
       keywordsFound: aiAnalysis.keywordsFound || [],
       keywordRecommendations: aiAnalysis.keywordRecommendations || [],
       actionVerbCount: aiAnalysis.actionVerbCount || 0,
-
       typographyIssues: aiAnalysis.typographyIssues || [],
-
       structureDetails: {
         pageCount,
         fileSize,
@@ -274,70 +285,44 @@ Focus on ATS-specific issues like multi-column layouts, tables, graphics, specia
         hasGraphics,
         hasTables,
       },
-
       criticalIssues: aiAnalysis.criticalIssues || [],
-
       checklist,
     };
 
     return NextResponse.json(response, { status: 200 });
+    
   } catch (error) {
     console.error("Error in ATS check API:", error);
 
-    // Handle specific Anthropic API errors
     if (error instanceof Anthropic.APIError) {
-      console.error("Anthropic API Error:", {
-        status: error.status,
-        message: error.message,
-        name: error.name,
-      });
-
-      if (error.status === 401) {
-        return NextResponse.json(
-          { error: "API authentication error" },
-          { status: 500 }
-        );
-      }
+      console.error("Anthropic API Error:", error.status, error.message);
+      
       if (error.status === 429) {
         return NextResponse.json(
-          { error: "Too many requests. Please try again in a moment." },
+          { error: "Service is busy. Please try again in a moment." },
           { status: 429 }
         );
       }
-      return NextResponse.json(
-        { error: `API error: ${error.message}` },
-        { status: error.status || 500 }
-      );
     }
 
-    // Handle other errors
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      },
+      { error: "ATS check failed. Please try again." },
       { status: 500 }
     );
   }
 }
 
-// Helper function to detect multi-column layout
+// Helper functions
 function detectMultiColumn(text: string): boolean {
-  // Look for patterns that suggest multi-column (lots of short lines)
   const lines = text.split("\n");
   const shortLines = lines.filter(line => line.trim().length > 0 && line.trim().length < 40).length;
   return shortLines > lines.length * 0.4;
 }
 
-// Helper function to detect tables
 function detectTables(text: string): boolean {
-  // Look for tab characters or multiple spaces suggesting table structure
   return text.includes("\t\t") || /\s{5,}/.test(text);
 }
 
-// Helper function to detect resume sections
 function detectSections(text: string): Array<{ name: string; status: "found" | "missing" | "unclear" }> {
   const sections = [
     { name: "Contact Information", patterns: [/contact|email|phone|linkedin/i] },
@@ -351,12 +336,12 @@ function detectSections(text: string): Array<{ name: string; status: "found" | "
     const found = section.patterns.some(pattern => pattern.test(text));
     return {
       name: section.name,
-      status: found ? "found" : "missing",
+      status: found ? "found" as const : "missing" as const,
     };
   });
 }
 
-// Helper function to generate improvement checklist
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function generateChecklist(
   aiAnalysis: any,
   sections: Array<{ name: string; status: string }>,
@@ -366,17 +351,11 @@ function generateChecklist(
   const checklist = [];
 
   if (hasMultiColumn) {
-    checklist.push({
-      item: "Convert to single-column layout",
-      completed: false,
-    });
+    checklist.push({ item: "Convert to single-column layout", completed: false });
   }
 
   if (hasTables) {
-    checklist.push({
-      item: "Remove tables and use plain text formatting",
-      completed: false,
-    });
+    checklist.push({ item: "Remove tables and use plain text formatting", completed: false });
   }
 
   const missingSections = sections.filter(s => s.status === "missing");
@@ -388,27 +367,17 @@ function generateChecklist(
   }
 
   if (aiAnalysis.keywordScore < 70) {
-    checklist.push({
-      item: "Add more industry-specific keywords",
-      completed: false,
-    });
+    checklist.push({ item: "Add more industry-specific keywords", completed: false });
   }
 
   if (aiAnalysis.formatIssues && aiAnalysis.formatIssues.length > 0) {
-    checklist.push({
-      item: "Fix formatting issues identified",
-      completed: false,
-    });
+    checklist.push({ item: "Fix formatting issues identified", completed: false });
   }
 
   if (aiAnalysis.typographyIssues && aiAnalysis.typographyIssues.length > 0) {
-    checklist.push({
-      item: "Use standard, ATS-friendly fonts",
-      completed: false,
-    });
+    checklist.push({ item: "Use standard, ATS-friendly fonts", completed: false });
   }
 
-  // Always include these best practices
   checklist.push({
     item: "Use standard section headings (Experience, Education, Skills)",
     completed: sections.filter(s => s.status === "found").length >= 4,
@@ -422,7 +391,6 @@ function generateChecklist(
   return checklist;
 }
 
-// Handle unsupported methods
 export async function GET() {
   return NextResponse.json(
     { error: "Method not allowed. Use POST." },
