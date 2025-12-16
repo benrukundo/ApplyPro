@@ -242,6 +242,7 @@ export async function generatePDF(
   template: 'modern' | 'traditional' | 'ats' = 'modern',
   colorKey: ColorPreset = 'blue'
 ): Promise<void> {
+  console.log('generatePDF called with template:', template, 'color:', colorKey);
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -273,6 +274,7 @@ function generateModernPDF(
   pageHeight: number,
   margin: number
 ): void {
+  console.log('generateModernPDF is running - two column layout');
   const leftColWidth = 58;
   const leftColEnd = margin + leftColWidth;
   const rightColStart = leftColEnd + 6;

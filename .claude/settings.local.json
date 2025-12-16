@@ -9,7 +9,10 @@
       "Bash(git commit:*)",
       "Bash(timeout:*)",
       "Bash(cat:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(npx prisma migrate:*)",
+      "Bash(del nul)"
     ],
     "deny": [],
     "ask": []
