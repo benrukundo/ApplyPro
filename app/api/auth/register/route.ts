@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
-import { generateVerificationEmail } from "@/lib/emailTemplates";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { sendVerificationEmail } from "@/lib/emailTemplates";
 
 export async function POST(request: NextRequest) {
   try {
@@ -68,7 +65,7 @@ export async function POST(request: NextRequest) {
 
       // If user exists but not verified, resend verification email
       if (existingUser.password && !existingUser.emailVerified) {
-        await sendVerificationEmail(existingUser.id, normalizedEmail, existingUser.name || name.trim());
+        await createAndSendVerificationEmail(existingUser.id, normalizedEmail, existingUser.name || name.trim());
         return NextResponse.json(
           { success: true, verified: false, message: "A verification email has been sent. Please check your inbox." },
           { status: 200 }
@@ -90,7 +87,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Send verification email
-    await sendVerificationEmail(user.id, normalizedEmail, name.trim());
+    await createAndSendVerificationEmail(user.id, normalizedEmail, name.trim());
 
     return NextResponse.json(
       { success: true, verified: false, message: "Account created! Please check your email to verify your account." },
@@ -105,7 +102,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function sendVerificationEmail(userId: string, email: string, name: string) {
+async function createAndSendVerificationEmail(userId: string, email: string, name: string) {
   // Generate verification token
   const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -128,25 +125,18 @@ async function sendVerificationEmail(userId: string, email: string, name: string
   const baseUrl = process.env.NEXTAUTH_URL || "https://applypro.org";
   const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
 
-  // Send email
-  const emailHtml = generateVerificationEmail(verificationUrl, name);
-
+  // Send email using the emailTemplates function
   console.log("Attempting to send verification email to:", email);
   console.log("RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY);
 
-  const { data, error } = await resend.emails.send({
-    from: "ApplyPro <support@applypro.org>",
-    to: [email],
-    subject: "Verify your email - ApplyPro",
-    html: emailHtml,
-  });
+  const result = await sendVerificationEmail(email, name, verificationUrl);
 
-  if (error) {
-    console.error("Resend API error:", error);
-    throw new Error(`Failed to send verification email: ${error.message}`);
+  if (!result.success) {
+    console.error("Failed to send verification email:", result.error);
+    throw new Error(`Failed to send verification email: ${result.error}`);
   }
 
-  console.log("Verification email sent successfully:", data?.id);
+  console.log("Verification email sent successfully to:", email);
 }
 
 function isValidEmail(email: string): boolean {
