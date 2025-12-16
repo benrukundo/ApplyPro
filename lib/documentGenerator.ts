@@ -584,11 +584,25 @@ function generateSingleColumnPDF(
   pageHeight: number,
   margin: number
 ): void {
+  console.log('generateSingleColumnPDF - template:', template);
+  console.log('generateSingleColumnPDF - content length:', content.length);
+  console.log('generateSingleColumnPDF - first 300 chars:', content.substring(0, 300));
+
   const maxWidth = pageWidth - margin * 2;
   let y = margin;
   const lineHeight = 4;
 
   const parsed = parseResumeToStructure(content);
+
+  console.log('generateSingleColumnPDF - parsed data:', {
+    name: parsed.name,
+    title: parsed.title,
+    contactCount: parsed.contact.length,
+    summaryLength: parsed.summary.length,
+    skillsCount: parsed.skills.length,
+    educationCount: parsed.education.length,
+    experienceCount: parsed.experience.length,
+  });
 
   // Header
   if (template === 'traditional') {
