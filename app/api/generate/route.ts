@@ -4,6 +4,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * PAID GENERATION ENDPOINT
+ * - Requires active subscription
+ * - NO character limits on resume or job description (sends full content to AI)
+ * - Uses Claude Sonnet 4 for highest quality output
+ * - Free preview at /api/preview has 1500 char limits
+ */
+
 // Simple in-memory rate limiter (for production, use Redis/Upstash)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT = 10; // requests per window
@@ -183,11 +191,12 @@ RULES:
 Return ONLY valid JSON with no markdown, no code blocks, no extra text:
 {"fullResume":"...","atsOptimizedResume":"...","coverLetter":"...","matchScore":85}`;
 
+    // Paid users get much higher limits - no substring restriction needed
     const userPrompt = `RESUME:
-${resumeText.substring(0, 4000)}
+${resumeText}
 
 JOB DESCRIPTION:
-${jobDescription.substring(0, 3000)}
+${jobDescription}
 
 Create:
 1. fullResume: Comprehensive tailored resume (prioritize relevant experience, add keywords, quantify achievements)

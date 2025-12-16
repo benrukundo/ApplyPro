@@ -57,7 +57,8 @@ interface PreviewResponse {
   };
 }
 
-// Input limits (reduced for cost optimization)
+// Input limits (reduced for cost optimization - FREE PREVIEW)
+// Paid users in /api/generate have NO character limits
 const MAX_RESUME_CHARS = 1500;
 const MAX_JOB_DESC_CHARS = 1500;
 const MAX_OUTPUT_TOKENS = 800;
