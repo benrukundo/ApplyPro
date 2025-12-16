@@ -249,6 +249,19 @@ export default function GeneratePage() {
   };
 
   // Download handler using documentGenerator
+  const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 'docx') => {
+  // ADD THIS DEBUG BLOCK
+  console.log('=== DOWNLOAD DEBUG ===');
+  console.log('Type:', type);
+  console.log('Format:', format);
+  console.log('Selected Template:', selectedTemplate);
+  console.log('Generated Resume object:', generatedResume);
+  console.log('Full Resume length:', generatedResume?.fullResume?.length || 0);
+  console.log('Full Resume first 500 chars:', generatedResume?.fullResume?.substring(0, 500));
+  console.log('======================');
+  
+  // rest of your handleDownload code...
+
   const handleDownload = async (content: string, type: 'full' | 'ats' | 'cover') => {
     setIsDownloading(true);
     setError('');
