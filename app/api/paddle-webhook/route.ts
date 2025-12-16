@@ -1,223 +1,267 @@
-import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
-import { prisma } from "@/lib/prisma";
-import { createSubscription, cancelSubscription } from "@/lib/subscription-db";
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
 
-// Paddle webhook signature verification
-function verifyPaddleWebhook(
+// Paddle webhook events we care about
+type PaddleEventType =
+  | 'subscription.created'
+  | 'subscription.updated'
+  | 'subscription.canceled'
+  | 'subscription.paused'
+  | 'subscription.resumed'
+  | 'subscription.past_due'
+  | 'transaction.completed'
+  | 'transaction.payment_failed';
+
+interface PaddleWebhookEvent {
+  event_type: PaddleEventType;
+  event_id: string;
+  occurred_at: string;
+  data: {
+    id: string;
+    status: string;
+    customer_id: string;
+    items: Array<{
+      price: {
+        id: string;
+        product_id: string;
+      };
+      quantity: number;
+    }>;
+    custom_data?: {
+      user_id?: string;
+      plan_type?: string;
+    };
+    billing_cycle?: {
+      interval: string;
+      frequency: number;
+    };
+    current_billing_period?: {
+      starts_at: string;
+      ends_at: string;
+    };
+    scheduled_change?: {
+      action: string;
+      effective_at: string;
+    } | null;
+  };
+}
+
+// Verify Paddle webhook signature
+function verifyWebhookSignature(
   rawBody: string,
   signature: string | null,
   secret: string
 ): boolean {
-  if (!signature || !secret) return false;
-  
+  if (!signature) return false;
+
   try {
-    // Paddle uses ts;h1= format for signature
+    // Paddle sends signature as: ts=timestamp;h1=hash
     const parts = signature.split(';');
     const tsMatch = parts.find(p => p.startsWith('ts='));
     const h1Match = parts.find(p => p.startsWith('h1='));
-    
+
     if (!tsMatch || !h1Match) return false;
-    
+
     const timestamp = tsMatch.replace('ts=', '');
-    const hash = h1Match.replace('h1=', '');
-    
-    // Recreate the signed payload
+    const expectedHash = h1Match.replace('h1=', '');
+
+    // Build signed payload
     const signedPayload = `${timestamp}:${rawBody}`;
-    const expectedHash = crypto
-      .createHmac('sha256', secret)
-      .update(signedPayload)
-      .digest('hex');
-    
+
+    // Calculate HMAC
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(signedPayload);
+    const calculatedHash = hmac.digest('hex');
+
     return crypto.timingSafeEqual(
-      Buffer.from(hash),
+      Buffer.from(calculatedHash),
       Buffer.from(expectedHash)
     );
   } catch (error) {
-    console.error('Webhook verification error:', error);
+    console.error('Signature verification error:', error);
     return false;
   }
 }
 
-// Map Paddle product IDs to plans
-const PRODUCT_TO_PLAN: Record<string, 'monthly' | 'yearly' | 'pay-per-use'> = {
-  // Replace these with your actual Paddle product/price IDs
-  'pri_monthly_xxxxx': 'monthly',
-  'pri_yearly_xxxxx': 'yearly',
-  'pri_payperuse_xxxxx': 'pay-per-use',
-};
+// Map Paddle price ID to plan type
+function getPlanFromPriceId(priceId: string): 'monthly' | 'yearly' | 'pay-per-use' | null {
+  const priceMap: Record<string, 'monthly' | 'yearly' | 'pay-per-use'> = {
+    [process.env.NEXT_PUBLIC_PADDLE_PRICE_MONTHLY!]: 'monthly',
+    [process.env.NEXT_PUBLIC_PADDLE_PRICE_YEARLY!]: 'yearly',
+    [process.env.NEXT_PUBLIC_PADDLE_PRICE_PAY_PER_USE!]: 'pay-per-use',
+  };
+  return priceMap[priceId] || null;
+}
 
 export async function POST(request: NextRequest) {
+  console.log('=== PADDLE WEBHOOK RECEIVED ===');
+
   try {
     const rawBody = await request.text();
     const signature = request.headers.get('paddle-signature');
     const webhookSecret = process.env.PADDLE_WEBHOOK_SECRET;
 
-    // Verify webhook signature in production
-    if (process.env.NODE_ENV === 'production' && webhookSecret) {
-      if (!verifyPaddleWebhook(rawBody, signature, webhookSecret)) {
-        console.error('Invalid Paddle webhook signature');
-        return NextResponse.json(
-          { error: 'Invalid signature' },
-          { status: 401 }
-        );
+    // Verify signature in production (skip in development if secret not set)
+    if (webhookSecret && webhookSecret !== 'whsec_sandbox_will_be_created') {
+      const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
+      if (!isValid) {
+        console.error('Invalid webhook signature');
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
       }
     }
 
-    const event = JSON.parse(rawBody);
-    const eventType = event.event_type;
-    const data = event.data;
+    const event: PaddleWebhookEvent = JSON.parse(rawBody);
 
-    console.log('Paddle webhook received:', eventType);
+    console.log('Event Type:', event.event_type);
+    console.log('Event ID:', event.event_id);
+    console.log('Data:', JSON.stringify(event.data, null, 2));
 
-    switch (eventType) {
-      // One-time payment completed
-      case 'transaction.completed': {
-        const email = data.customer?.email;
-        const productId = data.items?.[0]?.price?.id;
-        const transactionId = data.id;
-        
-        if (!email || !productId) {
-          console.error('Missing email or product in transaction');
-          return NextResponse.json({ received: true }, { status: 200 });
-        }
+    const { event_type, data } = event;
 
-        // Find user by email
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
+    // Get user ID from custom_data (passed during checkout)
+    const userId = data.custom_data?.user_id;
 
-        if (!user) {
-          console.error('User not found for email:', email);
-          // Still return 200 to acknowledge receipt
-          return NextResponse.json({ received: true }, { status: 200 });
-        }
+    if (!userId) {
+      console.error('No user_id in custom_data');
+      // Still return 200 to acknowledge receipt
+      return NextResponse.json({ received: true, warning: 'No user_id' });
+    }
 
-        // Determine plan from product ID
-        const plan = PRODUCT_TO_PLAN[productId] || 'pay-per-use';
+    // Get price ID and plan type
+    const priceId = data.items?.[0]?.price?.id;
+    const plan = priceId ? getPlanFromPriceId(priceId) : null;
 
-        // Create subscription
-        await createSubscription({
-          userId: user.id,
-          email,
-          plan,
-          paymentId: transactionId,
-        });
-
-        console.log(`Subscription created: ${plan} for ${email}`);
-        break;
-      }
-
-      // Subscription started
+    switch (event_type) {
       case 'subscription.created':
-      case 'subscription.activated': {
-        const email = data.customer?.email;
-        const subscriptionId = data.id;
-        const priceId = data.items?.[0]?.price?.id;
-        
-        if (!email) {
-          console.error('Missing email in subscription event');
-          return NextResponse.json({ received: true }, { status: 200 });
+      case 'subscription.updated':
+      case 'subscription.resumed': {
+        if (!plan) {
+          console.error('Unknown price ID:', priceId);
+          break;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email },
+        // Determine limits based on plan
+        const monthlyLimit = plan === 'pay-per-use' ? 3 : 100;
+
+        // Create or update subscription
+        await prisma.subscription.upsert({
+          where: { paddleId: data.id },
+          create: {
+            userId,
+            paddleId: data.id,
+            plan,
+            status: 'active',
+            monthlyUsageCount: 0,
+            monthlyLimit,
+            lastResetDate: new Date(),
+            currentPeriodEnd: data.current_billing_period?.ends_at
+              ? new Date(data.current_billing_period.ends_at)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+          update: {
+            plan,
+            status: 'active',
+            monthlyLimit,
+            currentPeriodEnd: data.current_billing_period?.ends_at
+              ? new Date(data.current_billing_period.ends_at)
+              : undefined,
+          },
         });
 
-        if (!user) {
-          console.error('User not found for email:', email);
-          return NextResponse.json({ received: true }, { status: 200 });
-        }
-
-        const plan = PRODUCT_TO_PLAN[priceId] || 'monthly';
-
-        await createSubscription({
-          userId: user.id,
-          email,
-          plan,
-          paymentId: subscriptionId,
-        });
-
-        console.log(`Subscription activated: ${plan} for ${email}`);
+        console.log(`Subscription ${event_type} for user ${userId}, plan: ${plan}`);
         break;
       }
 
-      // Subscription renewed
-      case 'subscription.updated': {
-        const email = data.customer?.email;
-        const status = data.status;
-        
-        if (status === 'active' && email) {
-          const user = await prisma.user.findUnique({
-            where: { email },
-          });
-
-          if (user) {
-            // Reset monthly usage on renewal
-            await prisma.subscription.updateMany({
-              where: { userId: user.id, status: 'active' },
-              data: { monthlyUsageCount: 0, lastResetDate: new Date() },
-            });
-            console.log(`Subscription renewed for ${email}`);
-          }
-        }
-        break;
-      }
-
-      // Subscription cancelled
       case 'subscription.canceled': {
-        const email = data.customer?.email;
-        
-        if (!email) {
-          return NextResponse.json({ received: true }, { status: 200 });
-        }
+        // Check if cancellation is immediate or at end of period
+        const effectiveAt = data.scheduled_change?.effective_at;
 
-        const user = await prisma.user.findUnique({
-          where: { email },
+        await prisma.subscription.updateMany({
+          where: { paddleId: data.id },
+          data: {
+            status: effectiveAt ? 'active' : 'cancelled', // Keep active until period ends
+            cancelledAt: new Date(),
+          },
         });
 
-        if (user) {
-          await cancelSubscription(user.id);
-          console.log(`Subscription cancelled for ${email}`);
+        console.log(`Subscription canceled for user ${userId}`);
+        break;
+      }
+
+      case 'subscription.paused': {
+        await prisma.subscription.updateMany({
+          where: { paddleId: data.id },
+          data: { status: 'paused' },
+        });
+
+        console.log(`Subscription paused for user ${userId}`);
+        break;
+      }
+
+      case 'subscription.past_due': {
+        await prisma.subscription.updateMany({
+          where: { paddleId: data.id },
+          data: { status: 'past_due' },
+        });
+
+        console.log(`Subscription past due for user ${userId}`);
+        break;
+      }
+
+      case 'transaction.completed': {
+        // For pay-per-use, this creates a new "subscription" with 3 credits
+        if (plan === 'pay-per-use') {
+          // Check if this is a one-time purchase (not a subscription renewal)
+          const existingSub = await prisma.subscription.findFirst({
+            where: { paddleId: data.id },
+          });
+
+          if (!existingSub) {
+            await prisma.subscription.create({
+              data: {
+                userId,
+                paddleId: data.id,
+                plan: 'pay-per-use',
+                status: 'active',
+                monthlyUsageCount: 0,
+                monthlyLimit: 3,
+                lastResetDate: new Date(),
+                currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year expiry
+              },
+            });
+
+            console.log(`Pay-per-use pack created for user ${userId}`);
+          }
         }
         break;
       }
 
-      // Payment failed
-      case 'subscription.payment_failed':
       case 'transaction.payment_failed': {
-        const email = data.customer?.email;
-        
-        if (email) {
-          const user = await prisma.user.findUnique({
-            where: { email },
-          });
+        await prisma.subscription.updateMany({
+          where: { paddleId: data.id },
+          data: { status: 'failed' },
+        });
 
-          if (user) {
-            await prisma.subscription.updateMany({
-              where: { userId: user.id, status: 'active' },
-              data: { status: 'failed' },
-            });
-            console.log(`Payment failed for ${email}`);
-          }
-        }
+        console.log(`Payment failed for user ${userId}`);
         break;
       }
 
       default:
-        console.log(`Unhandled Paddle event: ${eventType}`);
+        console.log(`Unhandled event type: ${event_type}`);
     }
 
-    return NextResponse.json({ received: true }, { status: 200 });
-    
+    return NextResponse.json({ received: true });
+
   } catch (error) {
-    console.error('Paddle webhook error:', error);
-    // Return 200 to prevent Paddle from retrying
-    return NextResponse.json({ received: true }, { status: 200 });
+    console.error('Webhook processing error:', error);
+    return NextResponse.json(
+      { error: 'Webhook processing failed' },
+      { status: 500 }
+    );
   }
 }
 
-// Paddle may send GET requests for verification
 export async function GET() {
-  return NextResponse.json({ status: 'ok' }, { status: 200 });
+  return NextResponse.json({ status: 'Paddle webhook endpoint active' });
 }

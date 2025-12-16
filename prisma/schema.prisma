@@ -64,27 +64,24 @@ model VerificationToken {
 }
 
 model Subscription {
-  id            String   @id @default(cuid())
-  userId        String
-  email         String   // Email from payment provider (for webhook matching)
-  plan          String   // 'monthly', 'yearly', 'pay-per-use'
-  status        String   // 'active', 'cancelled', 'failed'
-  paddleId      String?  // Paddle subscription/transaction ID
-  gumroadId     String?  // Legacy Gumroad ID (for migration)
-  startDate     DateTime @default(now())
-  endDate       DateTime? // For tracking expiration
-
-  // Usage tracking
-  monthlyUsageCount   Int      @default(0)
-  lastResetDate       DateTime @default(now())
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String    @id @default(cuid())
+  userId            String
+  paddleId          String?   @unique
+  gumroadId         String?   @unique  // Keep for backward compatibility
+  plan              String    // 'monthly', 'yearly', 'pay-per-use'
+  status            String    @default("active") // 'active', 'cancelled', 'paused', 'past_due', 'failed'
+  monthlyUsageCount Int       @default(0)
+  monthlyLimit      Int       @default(100)
+  lastResetDate     DateTime  @default(now())
+  currentPeriodEnd  DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, status])
-  @@index([email])
+  @@index([userId])
+  @@index([paddleId])
 }
 
 model UsageLog {
