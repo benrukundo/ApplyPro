@@ -38,8 +38,17 @@ interface ParsedResume {
  * Parse resume text into structured data
  */
 function parseResumeToStructure(content: string): ParsedResume {
-  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
-  
+  // First, clean markdown formatting from the content
+  let cleanedContent = content
+    .replace(/^##\s*/gm, '')           // Remove ## headers
+    .replace(/^###\s*/gm, '')          // Remove ### headers
+    .replace(/\*\*(.*?)\*\*/g, '$1')   // Remove **bold** markers
+    .replace(/\*(.*?)\*/g, '$1')       // Remove *italic* markers
+    .replace(/^[-•]\s*/gm, '- ')       // Normalize bullets to "- "
+    .replace(/\n{3,}/g, '\n\n');       // Reduce multiple newlines
+
+  const lines = cleanedContent.split('\n').map(l => l.trim()).filter(l => l);
+
   const result: ParsedResume = {
     name: '',
     title: '',
@@ -402,7 +411,15 @@ function generateModernPDF(
 
     sections.skills.forEach(line => {
       if (!line.toLowerCase().includes('skill') && !line.toLowerCase().includes('competenc')) {
-        const cleanLine = line.replace(/^[-•]\s*/, '');
+        // Clean the skill text - remove any stray bullets, markdown, or line breaks
+        const cleanLine = line
+          .replace(/^[-•*]\s*/, '')
+          .replace(/\*\*/g, '')
+          .replace(/\n/g, ' ')
+          .trim();
+
+        if (!cleanLine) return;
+
         const wrapped = doc.splitTextToSize(cleanLine, sidebarWidth - 10);
         wrapped.forEach((wLine: string) => {
           if (leftY < pageHeight - 20) {
@@ -1165,6 +1182,13 @@ export async function generateCoverLetterPDF(
   filename: string,
   colorKey: ColorPreset = 'blue'
 ): Promise<void> {
+  // Clean markdown from content
+  const cleanContent = content
+    .replace(/^##\s*/gm, '')
+    .replace(/^###\s*/gm, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1');
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -1189,7 +1213,7 @@ export async function generateCoverLetterPDF(
   doc.setFont('times', 'normal');
   doc.setTextColor(40, 40, 40);
 
-  const paragraphs = content.split('\n\n');
+  const paragraphs = cleanContent.split('\n\n');
 
   for (const para of paragraphs) {
     const lines = doc.splitTextToSize(para.trim(), maxWidth);
@@ -1216,6 +1240,13 @@ export async function generateCoverLetterDOCX(
   filename: string,
   colorKey: ColorPreset = 'blue'
 ): Promise<void> {
+  // Clean markdown from content
+  const cleanContent = content
+    .replace(/^##\s*/gm, '')
+    .replace(/^###\s*/gm, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1');
+
   const selectedColor = colorPresets[colorKey] || colorPresets.blue;
   const colorHex = selectedColor.hex.replace('#', '');
 
@@ -1226,7 +1257,7 @@ export async function generateCoverLetterDOCX(
     }),
   ];
 
-  const contentParagraphs = content.split('\n\n').map(
+  const contentParagraphs = cleanContent.split('\n\n').map(
     (para) =>
       new Paragraph({
         children: [new TextRun({ text: para.trim().replace(/\n/g, ' '), size: 22, font: 'Times New Roman' })],
