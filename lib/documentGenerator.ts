@@ -284,81 +284,24 @@ function generateModernPDF(
   margin: number
 ): void {
   console.log('generateModernPDF - Input text length:', content.length);
+  console.log('generateModernPDF - First 500 chars:', content.substring(0, 500));
 
   const sidebarWidth = 65;
   const rightColumnX = sidebarWidth + 10;
   const rightColumnWidth = pageWidth - rightColumnX - margin;
 
-  // Parse resume into sections
-  const lines = content.split('\n').filter(line => line.trim());
+  // Use the same parser as other templates for consistency
+  const parsed = parseResumeToStructure(content);
 
-  // Extract name (first non-empty line)
-  const name = lines[0] || 'Name';
-  const title = lines[1] || '';
-
-  console.log('Parsed name:', name);
-  console.log('Parsed title:', title);
-
-  // Section detection
-  const sections: { [key: string]: string[] } = {
-    contact: [],
-    summary: [],
-    experience: [],
-    education: [],
-    skills: [],
-    certifications: [],
-    other: []
-  };
-
-  let currentSection = 'other';
-
-  for (let i = 2; i < lines.length; i++) {
-    const line = lines[i].trim();
-    const lineLower = line.toLowerCase();
-
-    // Detect section headers (lines that are all caps or end with ":")
-    if (
-      lineLower.includes('contact') ||
-      lineLower === 'email:' ||
-      line.match(/^(email|phone|linkedin|location|address)/i)
-    ) {
-      currentSection = 'contact';
-    } else if (
-      lineLower.includes('summary') ||
-      lineLower.includes('profile') ||
-      lineLower.includes('objective')
-    ) {
-      currentSection = 'summary';
-    } else if (
-      lineLower.includes('experience') ||
-      lineLower.includes('employment') ||
-      lineLower.includes('work history')
-    ) {
-      currentSection = 'experience';
-    } else if (
-      lineLower.includes('education') ||
-      lineLower.includes('academic')
-    ) {
-      currentSection = 'education';
-    } else if (
-      lineLower.includes('skill') ||
-      lineLower.includes('competenc') ||
-      lineLower.includes('technical expertise') ||
-      lineLower.includes('technologies')
-    ) {
-      currentSection = 'skills';
-    } else if (
-      lineLower.includes('certification') ||
-      lineLower.includes('certificate') ||
-      lineLower.includes('license')
-    ) {
-      currentSection = 'certifications';
-    }
-
-    sections[currentSection].push(line);
-  }
-
-  console.log('Parsed sections:', Object.keys(sections).map(k => `${k}: ${sections[k].length} lines`));
+  console.log('generateModernPDF - Parsed data:', {
+    name: parsed.name,
+    title: parsed.title,
+    contactCount: parsed.contact.length,
+    summaryLength: parsed.summary.length,
+    skillsCount: parsed.skills.length,
+    educationCount: parsed.education.length,
+    experienceCount: parsed.experience.length,
+  });
 
   // Draw colored sidebar
   doc.setFillColor(selectedColor.light[0], selectedColor.light[1], selectedColor.light[2]);
@@ -372,33 +315,32 @@ function generateModernPDF(
   let leftY = 20;
 
   // Contact section in sidebar
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
-  doc.text('CONTACT', 5, leftY);
-  leftY += 6;
+  if (parsed.contact.length > 0) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
+    doc.text('CONTACT', 5, leftY);
+    leftY += 6;
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
 
-  sections.contact.forEach(line => {
-    const cleanLine = line.replace(/^(email|phone|linkedin|location|address):\s*/i, '');
-    if (cleanLine && !line.toLowerCase().includes('contact information')) {
-      const wrapped = doc.splitTextToSize(cleanLine, sidebarWidth - 10);
+    parsed.contact.slice(0, 5).forEach(line => {
+      const wrapped = doc.splitTextToSize(line, sidebarWidth - 10);
       wrapped.forEach((wLine: string) => {
         if (leftY < pageHeight - 20) {
           doc.text(wLine, 5, leftY);
           leftY += 4;
         }
       });
-    }
-  });
+    });
 
-  leftY += 8;
+    leftY += 8;
+  }
 
   // Skills section in sidebar
-  if (sections.skills.length > 0) {
+  if (parsed.skills.length > 0) {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
@@ -409,21 +351,12 @@ function generateModernPDF(
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
 
-    sections.skills.forEach(line => {
-      if (!line.toLowerCase().includes('skill') && !line.toLowerCase().includes('competenc')) {
-        // Clean the skill text - remove any stray bullets, markdown, or line breaks
-        const cleanLine = line
-          .replace(/^[-•*]\s*/, '')
-          .replace(/\*\*/g, '')
-          .replace(/\n/g, ' ')
-          .trim();
-
-        if (!cleanLine) return;
-
-        const wrapped = doc.splitTextToSize(cleanLine, sidebarWidth - 10);
+    parsed.skills.slice(0, 15).forEach(skill => {
+      if (leftY < pageHeight - 20) {
+        const wrapped = doc.splitTextToSize('• ' + skill, sidebarWidth - 10);
         wrapped.forEach((wLine: string) => {
           if (leftY < pageHeight - 20) {
-            doc.text('• ' + wLine, 5, leftY);
+            doc.text(wLine, 5, leftY);
             leftY += 4;
           }
         });
@@ -434,7 +367,7 @@ function generateModernPDF(
   }
 
   // Education in sidebar
-  if (sections.education.length > 0) {
+  if (parsed.education.length > 0 && leftY < pageHeight - 20) {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
@@ -445,9 +378,9 @@ function generateModernPDF(
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
 
-    sections.education.forEach(line => {
-      if (!line.toLowerCase().includes('education')) {
-        const wrapped = doc.splitTextToSize(line, sidebarWidth - 10);
+    parsed.education.slice(0, 3).forEach(edu => {
+      if (leftY < pageHeight - 20) {
+        const wrapped = doc.splitTextToSize(edu, sidebarWidth - 10);
         wrapped.forEach((wLine: string) => {
           if (leftY < pageHeight - 20) {
             doc.text(wLine, 5, leftY);
@@ -461,7 +394,7 @@ function generateModernPDF(
   }
 
   // Certifications in sidebar
-  if (sections.certifications.length > 0) {
+  if (parsed.certifications.length > 0 && leftY < pageHeight - 20) {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
@@ -472,9 +405,9 @@ function generateModernPDF(
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
 
-    sections.certifications.forEach(line => {
-      if (!line.toLowerCase().includes('certification')) {
-        const wrapped = doc.splitTextToSize(line, sidebarWidth - 10);
+    parsed.certifications.slice(0, 4).forEach(cert => {
+      if (leftY < pageHeight - 20) {
+        const wrapped = doc.splitTextToSize('• ' + cert, sidebarWidth - 10);
         wrapped.forEach((wLine: string) => {
           if (leftY < pageHeight - 20) {
             doc.text(wLine, 5, leftY);
@@ -492,20 +425,20 @@ function generateModernPDF(
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
-  doc.text(name, rightColumnX, rightY);
+  doc.text(parsed.name, rightColumnX, rightY);
   rightY += 8;
 
   // Title
-  if (title) {
+  if (parsed.title) {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
-    doc.text(title, rightColumnX, rightY);
+    doc.text(parsed.title, rightColumnX, rightY);
     rightY += 10;
   }
 
   // Summary section
-  if (sections.summary.length > 0) {
+  if (parsed.summary) {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
@@ -516,11 +449,7 @@ function generateModernPDF(
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
 
-    const summaryText = sections.summary
-      .filter(line => !line.toLowerCase().includes('summary') && !line.toLowerCase().includes('profile'))
-      .join(' ');
-
-    const wrapped = doc.splitTextToSize(summaryText, rightColumnWidth);
+    const wrapped = doc.splitTextToSize(parsed.summary, rightColumnWidth);
     wrapped.forEach((line: string) => {
       if (rightY < pageHeight - 20) {
         doc.text(line, rightColumnX, rightY);
@@ -532,40 +461,53 @@ function generateModernPDF(
   }
 
   // Experience section
-  if (sections.experience.length > 0) {
+  if (parsed.experience.length > 0) {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
     doc.text('PROFESSIONAL EXPERIENCE', rightColumnX, rightY);
     rightY += 6;
 
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-
-    sections.experience.forEach(line => {
-      if (!line.toLowerCase().includes('experience') && !line.toLowerCase().includes('employment')) {
-        // Check if it's a job title/company (usually contains dates or is bold-worthy)
-        const isJobTitle = line.match(/\d{4}/) || line.includes('|') || line.includes(' - ');
-
-        if (isJobTitle) {
-          doc.setFont('helvetica', 'bold');
-          rightY += 2;
-        } else {
-          doc.setFont('helvetica', 'normal');
-        }
-
-        const wrapped = doc.splitTextToSize(line.replace(/^[-•]\s*/, ''), rightColumnWidth);
-        wrapped.forEach((wLine: string) => {
-          if (rightY < pageHeight - 20) {
-            const prefix = line.startsWith('-') || line.startsWith('•') ? '• ' : '';
-            doc.text(prefix + wLine, rightColumnX, rightY);
-            rightY += 4;
-          }
-        });
-
-        doc.setFont('helvetica', 'normal');
+    parsed.experience.forEach(exp => {
+      if (rightY > pageHeight - 25) {
+        doc.addPage();
+        rightY = margin;
+        // Redraw sidebar on new page
+        doc.setFillColor(selectedColor.light[0], selectedColor.light[1], selectedColor.light[2]);
+        doc.rect(0, 0, sidebarWidth, pageHeight, 'F');
+        doc.setFillColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
+        doc.rect(0, 0, pageWidth, 8, 'F');
       }
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 30, 30);
+      doc.text(exp.title, rightColumnX, rightY);
+      rightY += 4;
+
+      if (exp.company || exp.period) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(80, 80, 80);
+        doc.text([exp.company, exp.period].filter(Boolean).join(' | '), rightColumnX, rightY);
+        rightY += 4;
+      }
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 60);
+      exp.achievements.slice(0, 6).forEach(ach => {
+        if (rightY < pageHeight - 20) {
+          const wrapped = doc.splitTextToSize('• ' + ach, rightColumnWidth);
+          wrapped.forEach((wLine: string) => {
+            if (rightY < pageHeight - 20) {
+              doc.text(wLine, rightColumnX, rightY);
+              rightY += 3.5;
+            }
+          });
+        }
+      });
+      rightY += 4;
     });
   }
 
