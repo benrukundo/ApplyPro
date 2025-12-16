@@ -19,7 +19,7 @@ const plans = [
     id: 'pay-per-use',
     name: 'Resume Pack',
     description: 'Perfect for trying ApplyPro',
-    price: 9,
+    price: 4.99,
     priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_PAY_PER_USE!,
     period: 'one-time',
     features: [
