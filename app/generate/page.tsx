@@ -20,12 +20,31 @@ import {
   AlertTriangle,
   Lock,
   Download,
+  Palette,
+  Check,
 } from 'lucide-react';
+import { 
+  generatePDF, 
+  generateDOCX, 
+  generateCoverLetterPDF, 
+  generateCoverLetterDOCX,
+  type ColorPreset 
+} from '@/lib/documentGenerator';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MIN_JOB_DESC_LENGTH = 100;
+
+// Color presets for Modern template
+const colorPresets = [
+  { key: 'blue' as ColorPreset, name: 'Blue', hex: '#2563eb', bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-600', accent: 'bg-blue-600' },
+  { key: 'green' as ColorPreset, name: 'Green', hex: '#16a34a', bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-600', accent: 'bg-green-600' },
+  { key: 'purple' as ColorPreset, name: 'Purple', hex: '#9333ea', bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-600', accent: 'bg-purple-600' },
+  { key: 'red' as ColorPreset, name: 'Red', hex: '#dc2626', bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-600', accent: 'bg-red-600' },
+  { key: 'teal' as ColorPreset, name: 'Teal', hex: '#0d9488', bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-600', accent: 'bg-teal-600' },
+  { key: 'orange' as ColorPreset, name: 'Orange', hex: '#ea580c', bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-600', accent: 'bg-orange-600' },
+];
 
 interface PreviewData {
   overallScore: number;
@@ -83,6 +102,7 @@ export default function GeneratePage() {
   const [showResults, setShowResults] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'docx'>('pdf');
   const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'traditional' | 'ats'>('modern');
+  const [selectedColor, setSelectedColor] = useState(colorPresets[0]);
   const [isDownloading, setIsDownloading] = useState(false);
 
   // Load subscription info only when user is logged in
@@ -228,101 +248,48 @@ export default function GeneratePage() {
     }
   };
 
-  // Download resume as PDF
-  const downloadAsPDF = async (content: string, filename: string) => {
+  // Download handler using documentGenerator
+  const handleDownload = async (content: string, type: 'full' | 'ats' | 'cover') => {
     setIsDownloading(true);
+    setError('');
+
     try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
+      const timestamp = new Date().toISOString().split('T')[0];
 
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const maxWidth = pageWidth - margin * 2;
-
-      doc.setFontSize(12);
-      doc.setTextColor(40, 40, 40);
-
-      const lines = doc.splitTextToSize(content, maxWidth);
-      let y = margin;
-
-      lines.forEach((line: string) => {
-        if (y > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
+      if (type === 'cover') {
+        // Cover letter
+        if (downloadFormat === 'pdf') {
+          await generateCoverLetterPDF(content, `Cover_Letter_${timestamp}.pdf`, selectedColor.key);
+        } else {
+          await generateCoverLetterDOCX(content, `Cover_Letter_${timestamp}.docx`, selectedColor.key);
         }
-        doc.text(line, margin, y);
-        y += 7;
-      });
+      } else {
+        // Resume (full or ats)
+        const baseName = type === 'full' ? 'Tailored_Resume' : 'ATS_Optimized_Resume';
+        // ATS type always uses 'ats' template, full uses selected template
+        const template = type === 'ats' ? 'ats' : selectedTemplate;
 
-      doc.save(filename);
+        if (downloadFormat === 'pdf') {
+          await generatePDF(content, `${baseName}_${timestamp}.pdf`, template, selectedColor.key);
+        } else {
+          await generateDOCX(content, `${baseName}_${timestamp}.docx`, template, selectedColor.key);
+        }
+      }
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      setError('Failed to download PDF. Please try again.');
+      console.error('Error generating document:', err);
+      setError(`Failed to download ${downloadFormat.toUpperCase()}. Please try again.`);
     } finally {
       setIsDownloading(false);
-    }
-  };
-
-  // Download resume as DOCX
-  const downloadAsDOCX = async (content: string, filename: string) => {
-    setIsDownloading(true);
-    try {
-      const { Document, Packer, Paragraph, TextRun } = await import('docx');
-      const { saveAs } = await import('file-saver');
-
-      const paragraphs = content.split('\n').map(
-        (line) =>
-          new Paragraph({
-            children: [new TextRun(line || ' ')],
-            spacing: { after: 100 },
-          })
-      );
-
-      const doc = new Document({
-        sections: [
-          {
-            properties: {},
-            children: paragraphs,
-          },
-        ],
-      });
-
-      const blob = await Packer.toBlob(doc);
-      saveAs(blob, filename);
-    } catch (err) {
-      console.error('Error generating DOCX:', err);
-      setError('Failed to download DOCX. Please try again.');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const handleDownload = (content: string, type: 'full' | 'ats' | 'cover') => {
-    const timestamp = new Date().toISOString().split('T')[0];
-    const baseName =
-      type === 'full'
-        ? 'Tailored_Resume'
-        : type === 'ats'
-          ? 'ATS_Optimized_Resume'
-          : 'Cover_Letter';
-
-    if (downloadFormat === 'pdf') {
-      downloadAsPDF(content, `${baseName}_${timestamp}.pdf`);
-    } else {
-      downloadAsDOCX(content, `${baseName}_${timestamp}.docx`);
     }
   };
 
   // Paid generation - requires auth + subscription
   const handleGenerate = async () => {
-    // Check authentication
     if (!session?.user?.id) {
       window.location.href = '/login?callbackUrl=/generate';
       return;
     }
 
-    // Check subscription
     if (!subscription?.isActive) {
       setError('Please purchase a subscription to generate resumes.');
       return;
@@ -358,7 +325,6 @@ export default function GeneratePage() {
         throw new Error(generateData.error || 'Failed to generate resume');
       }
 
-      // Save to localStorage for backup
       try {
         localStorage.setItem('applypro_resume_text', resumeText);
         localStorage.setItem('applypro_job_description', jobDescription);
@@ -386,10 +352,8 @@ export default function GeneratePage() {
     }
   };
 
-  // Determine if user can generate (has active subscription)
   const canGenerate = session?.user?.id && subscription?.isActive;
 
-  // Show loading only during initial session check
   if (sessionStatus === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -414,7 +378,6 @@ export default function GeneratePage() {
             Back to Home
           </Link>
 
-          {/* Show subscription badge if logged in with subscription */}
           {session?.user && subscription?.isActive && (
             <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg shadow-md">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -433,7 +396,6 @@ export default function GeneratePage() {
             </div>
           )}
 
-          {/* Show login prompt if not logged in */}
           {!session?.user && (
             <Link
               href="/login?callbackUrl=/generate"
@@ -444,7 +406,6 @@ export default function GeneratePage() {
             </Link>
           )}
 
-          {/* Show upgrade prompt if logged in but no subscription */}
           {session?.user && !subscription?.isActive && !isLoadingSubscription && (
             <Link
               href="/pricing"
@@ -469,7 +430,6 @@ export default function GeneratePage() {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left: Upload & Input */}
           <div className="space-y-6">
-            {/* Resume Upload */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <FileText className="w-6 h-6 text-blue-600" />
@@ -508,7 +468,6 @@ export default function GeneratePage() {
               )}
             </div>
 
-            {/* Job Description */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <Briefcase className="w-6 h-6 text-blue-600" />
@@ -531,11 +490,9 @@ export default function GeneratePage() {
 
           {/* Right: Preview & Actions */}
           <div className="space-y-6">
-            {/* Action Buttons */}
             <div className="bg-white rounded-2xl shadow-lg p-8 space-y-4">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Ready?</h2>
 
-              {/* Free Analysis Button */}
               <button
                 onClick={handleAnalyze}
                 disabled={!resumeText || jobDescription.length < MIN_JOB_DESC_LENGTH || isAnalyzing}
@@ -554,14 +511,9 @@ export default function GeneratePage() {
                 )}
               </button>
 
-              {/* Paid Generation Button */}
               <button
                 onClick={handleGenerate}
-                disabled={
-                  !resumeText ||
-                  jobDescription.length < MIN_JOB_DESC_LENGTH ||
-                  isLoading
-                }
+                disabled={!resumeText || jobDescription.length < MIN_JOB_DESC_LENGTH || isLoading}
                 className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
                 {isLoading ? (
@@ -578,7 +530,6 @@ export default function GeneratePage() {
                 )}
               </button>
 
-              {/* Contextual message based on auth/subscription state */}
               {!session?.user ? (
                 <p className="text-xs text-gray-600 text-center">
                   <Link href="/login?callbackUrl=/generate" className="text-blue-600 hover:underline">
@@ -600,7 +551,6 @@ export default function GeneratePage() {
               )}
             </div>
 
-            {/* Error Messages */}
             {error && (
               <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
                 <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -632,7 +582,6 @@ export default function GeneratePage() {
               </div>
             )}
 
-            {/* Free Preview Results */}
             {previewData && (
               <div className="bg-white rounded-2xl shadow-lg p-8">
                 <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -671,7 +620,6 @@ export default function GeneratePage() {
                     </div>
                   </div>
 
-                  {/* CTA to upgrade after seeing preview */}
                   {!canGenerate && (
                     <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
                       <p className="text-sm font-medium text-gray-900 mb-2">
@@ -701,11 +649,11 @@ export default function GeneratePage() {
                 Your Tailored Resume is Ready!
               </h2>
               <p className="text-xl text-gray-600">
-                Here's your optimized resume tailored to the job description
+                Match Score: <span className="font-bold text-blue-600">{generatedResume.matchScore}%</span>
               </p>
             </div>
 
-            {/* Template Selection */}
+            {/* Template & Color Selection */}
             <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Choose Resume Template</h3>
               <div className="grid grid-cols-3 gap-4 mb-6">
@@ -713,12 +661,12 @@ export default function GeneratePage() {
                   onClick={() => setSelectedTemplate('modern')}
                   className={`p-4 rounded-lg border-2 transition-all ${
                     selectedTemplate === 'modern'
-                      ? 'border-blue-600 bg-blue-50'
+                      ? `${selectedColor.border} ${selectedColor.bg}`
                       : 'border-gray-200 hover:border-blue-300'
                   }`}
                 >
                   <div className="font-semibold text-gray-900 mb-1">Modern</div>
-                  <div className="text-xs text-gray-600">Two-column with blue accents</div>
+                  <div className="text-xs text-gray-600">Two-column with color accents</div>
                 </button>
                 <button
                   onClick={() => setSelectedTemplate('traditional')}
@@ -744,7 +692,46 @@ export default function GeneratePage() {
                 </button>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-4 mt-6">Select Download Format</h3>
+              {/* Color Picker - Only for Modern template */}
+              {selectedTemplate === 'modern' && (
+                <div className="mb-6 p-4 rounded-xl bg-gray-50 border border-gray-200">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Palette className="h-5 w-5 text-gray-600" />
+                    <span className="text-sm font-semibold text-gray-700">Customize Color</span>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {colorPresets.map((color) => (
+                      <button
+                        key={color.name}
+                        onClick={() => setSelectedColor(color)}
+                        className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                          selectedColor.name === color.name
+                            ? `${color.border} ${color.bg} shadow-md`
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                        title={color.name}
+                      >
+                        <div
+                          className="h-5 w-5 rounded-full shadow-inner"
+                          style={{ backgroundColor: color.hex }}
+                        />
+                        <span
+                          className={`text-sm font-medium ${
+                            selectedColor.name === color.name ? color.text : 'text-gray-600'
+                          }`}
+                        >
+                          {color.name}
+                        </span>
+                        {selectedColor.name === color.name && (
+                          <Check className={`h-4 w-4 ${color.text}`} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Select Download Format</h3>
               <div className="flex gap-4">
                 <button
                   onClick={() => setDownloadFormat('pdf')}
@@ -773,7 +760,7 @@ export default function GeneratePage() {
               {/* Full Resume */}
               <div className="bg-white rounded-2xl shadow-lg p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <FileText className="w-6 h-6 text-blue-600" />
+                  <FileText className={`w-6 h-6 ${selectedColor.text}`} />
                   Tailored Resume
                 </h3>
                 <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
@@ -784,7 +771,7 @@ export default function GeneratePage() {
                 <button
                   onClick={() => handleDownload(generatedResume.fullResume, 'full')}
                   disabled={isDownloading}
-                  className="mt-4 w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className={`mt-4 w-full px-6 py-3 ${selectedColor.accent} text-white rounded-lg font-semibold hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2`}
                 >
                   {isDownloading ? (
                     <>
@@ -807,7 +794,7 @@ export default function GeneratePage() {
                   ATS-Optimized Version
                 </h3>
                 <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
-                  <div className="text-gray-800 whitespace-pre-wrap font-serif text-sm leading-relaxed">
+                  <div className="text-gray-800 whitespace-pre-wrap font-mono text-sm leading-relaxed">
                     {generatedResume.atsOptimizedResume}
                   </div>
                 </div>
@@ -861,7 +848,6 @@ export default function GeneratePage() {
               </div>
             </div>
 
-            {/* Generate Another Button */}
             <div className="mt-12 text-center">
               <button
                 onClick={() => {
