@@ -2,11 +2,22 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, FileText, Lock } from "lucide-react";
+import { ArrowLeft, Check, FileText, Lock, Palette } from "lucide-react";
 import Footer from "../components/Footer";
+
+// Color presets for Modern template
+const colorPresets = [
+  { name: "Blue", primary: "blue", hex: "#2563eb", bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-600", accent: "bg-blue-600" },
+  { name: "Green", primary: "green", hex: "#16a34a", bg: "bg-green-50", text: "text-green-600", border: "border-green-600", accent: "bg-green-600" },
+  { name: "Purple", primary: "purple", hex: "#9333ea", bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-600", accent: "bg-purple-600" },
+  { name: "Red", primary: "red", hex: "#dc2626", bg: "bg-red-50", text: "text-red-600", border: "border-red-600", accent: "bg-red-600" },
+  { name: "Teal", primary: "teal", hex: "#0d9488", bg: "bg-teal-50", text: "text-teal-600", border: "border-teal-600", accent: "bg-teal-600" },
+  { name: "Orange", primary: "orange", hex: "#ea580c", bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-600", accent: "bg-orange-600" },
+];
 
 export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<"modern" | "traditional" | "ats">("modern");
+  const [selectedColor, setSelectedColor] = useState(colorPresets[0]); // Default to blue
 
   // Sample resume data
   const sampleData = {
@@ -87,19 +98,19 @@ export default function TemplatesPage() {
               onClick={() => setSelectedTemplate("modern")}
               className={`group relative rounded-2xl border-2 p-6 text-left transition-all ${
                 selectedTemplate === "modern"
-                  ? "border-blue-600 bg-blue-50 shadow-lg dark:bg-blue-950/20"
+                  ? `${selectedColor.border} ${selectedColor.bg} shadow-lg dark:bg-opacity-20`
                   : "border-gray-200 bg-white hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
               }`}
             >
               {selectedTemplate === "modern" && (
-                <div className="absolute -top-3 -right-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 shadow-lg">
+                <div className={`absolute -top-3 -right-3 flex h-10 w-10 items-center justify-center rounded-full ${selectedColor.accent} shadow-lg`}>
                   <Check className="h-6 w-6 text-white" />
                 </div>
               )}
-              <div className="mb-4 flex h-32 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30">
+              <div className={`mb-4 flex h-32 items-center justify-center rounded-xl bg-gradient-to-br ${selectedColor.bg} to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30`}>
                 <div className="w-full px-4">
-                  <div className="h-3 w-3/4 rounded bg-blue-600 mb-2"></div>
-                  <div className="h-2 w-1/2 rounded bg-blue-400 mb-4"></div>
+                  <div className={`h-3 w-3/4 rounded ${selectedColor.accent} mb-2`}></div>
+                  <div className={`h-2 w-1/2 rounded ${selectedColor.accent} opacity-60 mb-4`}></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <div className="h-1.5 rounded bg-gray-400"></div>
@@ -116,9 +127,9 @@ export default function TemplatesPage() {
                 Modern
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Two-column layout with blue accents. Perfect for tech, creative, and startup roles.
+                Two-column layout with color accents. Perfect for tech, creative, and startup roles.
               </p>
-              <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+              <div className={`flex items-center gap-2 text-xs ${selectedColor.text}`}>
                 <FileText className="h-4 w-4" />
                 <span className="font-semibold">Best for: Tech, Marketing, Design</span>
               </div>
@@ -202,7 +213,7 @@ export default function TemplatesPage() {
 
           {/* Full Preview Section */}
           <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-gray-800 dark:bg-gray-900">
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {selectedTemplate === "modern" && "Modern Template Preview"}
                 {selectedTemplate === "traditional" && "Traditional Template Preview"}
@@ -218,15 +229,54 @@ export default function TemplatesPage() {
               </Link>
             </div>
 
+            {/* Color Picker - Only show for Modern template */}
+            {selectedTemplate === "modern" && (
+              <div className="mb-6 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3 mb-3">
+                  <Palette className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Customize Color</span>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {colorPresets.map((color) => (
+                    <button
+                      key={color.name}
+                      onClick={() => setSelectedColor(color)}
+                      className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                        selectedColor.name === color.name
+                          ? `${color.border} ${color.bg} shadow-md`
+                          : "border-gray-200 bg-white hover:border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:hover:border-gray-500"
+                      }`}
+                      title={color.name}
+                    >
+                      <div 
+                        className="h-5 w-5 rounded-full shadow-inner" 
+                        style={{ backgroundColor: color.hex }}
+                      />
+                      <span className={`text-sm font-medium ${
+                        selectedColor.name === color.name 
+                          ? color.text 
+                          : "text-gray-600 dark:text-gray-300"
+                      }`}>
+                        {color.name}
+                      </span>
+                      {selectedColor.name === color.name && (
+                        <Check className={`h-4 w-4 ${color.text}`} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Modern Template Preview */}
             {selectedTemplate === "modern" && (
               <div className="rounded-xl border-2 border-gray-200 bg-white p-8 dark:border-gray-700 dark:bg-gray-800" style={{ minHeight: "600px" }}>
                 <div className="grid gap-8 md:grid-cols-[30%_70%]">
                   {/* Left Sidebar */}
-                  <div className="space-y-6 rounded-lg bg-blue-50 p-6 dark:bg-blue-950/20">
+                  <div className={`space-y-6 rounded-lg ${selectedColor.bg} p-6 dark:bg-opacity-20`}>
                     <div>
                       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{sampleData.name}</h1>
-                      <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">{sampleData.title}</p>
+                      <p className={`text-sm ${selectedColor.text} mt-1`}>{sampleData.title}</p>
                       <div className="mt-3 space-y-1 text-xs text-gray-600 dark:text-gray-400">
                         <p>{sampleData.email}</p>
                         <p>{sampleData.phone}</p>
@@ -235,11 +285,11 @@ export default function TemplatesPage() {
                     </div>
 
                     <div>
-                      <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400 mb-2">SKILLS</h3>
+                      <h3 className={`text-sm font-bold ${selectedColor.text} mb-2`}>SKILLS</h3>
                       <div className="space-y-1.5">
                         {sampleData.skills.slice(0, 6).map((skill, i) => (
                           <div key={i} className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
-                            <div className="h-1.5 w-1.5 rounded-full bg-blue-600"></div>
+                            <div className={`h-1.5 w-1.5 rounded-full ${selectedColor.accent}`}></div>
                             {skill}
                           </div>
                         ))}
@@ -247,7 +297,7 @@ export default function TemplatesPage() {
                     </div>
 
                     <div>
-                      <h3 className="text-sm font-bold text-blue-600 dark:text-blue-400 mb-2">EDUCATION</h3>
+                      <h3 className={`text-sm font-bold ${selectedColor.text} mb-2`}>EDUCATION</h3>
                       <div className="space-y-2">
                         {sampleData.education.map((edu, i) => (
                           <p key={i} className="text-xs text-gray-700 dark:text-gray-300">{edu}</p>
@@ -259,7 +309,7 @@ export default function TemplatesPage() {
                   {/* Right Content */}
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-base font-bold text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 pb-1 mb-3">
+                      <h3 className={`text-base font-bold ${selectedColor.text} ${selectedColor.border} border-b-2 pb-1 mb-3`}>
                         PROFESSIONAL SUMMARY
                       </h3>
                       <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -268,13 +318,13 @@ export default function TemplatesPage() {
                     </div>
 
                     <div>
-                      <h3 className="text-base font-bold text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 pb-1 mb-3">
+                      <h3 className={`text-base font-bold ${selectedColor.text} ${selectedColor.border} border-b-2 pb-1 mb-3`}>
                         WORK EXPERIENCE
                       </h3>
                       <div className="space-y-4">
                         {sampleData.experience.map((exp, i) => (
-                          <div key={i} className="relative pl-4 border-l-2 border-blue-600">
-                            <div className="absolute -left-1.5 top-0 h-3 w-3 rounded-full bg-blue-600"></div>
+                          <div key={i} className={`relative pl-4 border-l-2 ${selectedColor.border}`}>
+                            <div className={`absolute -left-1.5 top-0 h-3 w-3 rounded-full ${selectedColor.accent}`}></div>
                             <h4 className="text-sm font-bold text-gray-900 dark:text-white">{exp.title}</h4>
                             <p className="text-xs text-gray-600 dark:text-gray-400">{exp.company} | {exp.period}</p>
                             <ul className="mt-2 space-y-1">
@@ -384,7 +434,7 @@ export default function TemplatesPage() {
                           <p className="text-gray-600 dark:text-gray-400">{exp.company} | {exp.period}</p>
                           <ul className="mt-1 space-y-0.5">
                             {exp.achievements.map((achievement, j) => (
-                              <li key={j} className="text-gray-700 dark:text-gray-300">• {achievement}</li>
+                              <li key={j} className="text-gray-700 dark:text-gray-300">- {achievement}</li>
                             ))}
                           </ul>
                         </div>

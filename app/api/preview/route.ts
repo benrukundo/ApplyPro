@@ -57,6 +57,11 @@ interface PreviewResponse {
   };
 }
 
+// Input limits (reduced for cost optimization)
+const MAX_RESUME_CHARS = 1500;
+const MAX_JOB_DESC_CHARS = 1500;
+const MAX_OUTPUT_TOKENS = 800;
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting by IP
@@ -129,37 +134,24 @@ export async function POST(request: NextRequest) {
     });
 
     // Optimized prompt with system message
-    const systemPrompt = `You are a resume analyst. Analyze resumes against job descriptions and return scores and feedback.
+    const systemPrompt = `You are a resume analyst. Analyze resumes against job descriptions concisely.
 
-Return ONLY valid JSON with no markdown or extra text:
-{
-  "overallScore": <0-100>,
-  "atsScore": <0-100>,
-  "keywordScore": <0-100>,
-  "experienceScore": <0-100>,
-  "skillsScore": <0-100>,
-  "matchedKeywords": ["keyword1", "keyword2"],
-  "missingKeywords": [{"keyword": "x", "priority": "high", "context": "why"}],
-  "improvements": [{"issue": "x", "fix": "y", "impact": "high"}],
-  "strengths": ["strength1", "strength2"],
-  "insights": ["insight1", "insight2"],
-  "previewText": "First 100 words of tailored resume opening...",
-  "keywordStats": {"matched": 5, "total": 10}
-}`;
+Return ONLY valid JSON:
+{"overallScore":<0-100>,"atsScore":<0-100>,"keywordScore":<0-100>,"experienceScore":<0-100>,"skillsScore":<0-100>,"matchedKeywords":["kw1","kw2"],"missingKeywords":[{"keyword":"x","priority":"high","context":"why"}],"improvements":[{"issue":"x","fix":"y","impact":"high"}],"strengths":["s1","s2"],"insights":["i1"],"previewText":"Brief tailored opening...","keywordStats":{"matched":5,"total":10}}`;
 
     const userPrompt = `Resume:
-${resumeText.substring(0, 2000)}
+${resumeText.substring(0, MAX_RESUME_CHARS)}
 
-Job Description:
-${jobDescription.substring(0, 2000)}
+Job:
+${jobDescription.substring(0, MAX_JOB_DESC_CHARS)}
 
-Analyze and score this resume against the job. Be specific and actionable.`;
+Analyze and score. Be concise.`;
 
-    // Call Claude API with Haiku 3.5 (upgraded from 3)
+    // Call Claude API with Haiku 3.5
     const message = await anthropic.messages.create({
-      model: "claude-3-5-haiku-20241022", // Upgraded to Haiku 3.5
-      max_tokens: 1000,
-      temperature: 0.7,
+      model: "claude-3-5-haiku-20241022",
+      max_tokens: MAX_OUTPUT_TOKENS,
+      temperature: 0.5, // Lower temperature for more consistent, shorter responses
       system: systemPrompt,
       messages: [
         {
@@ -228,11 +220,11 @@ Analyze and score this resume against the job. Be specific and actionable.`;
     parsedResponse.skillsScore = Math.max(0, Math.min(100, parsedResponse.skillsScore));
 
     // Limit array sizes
-    parsedResponse.matchedKeywords = parsedResponse.matchedKeywords.slice(0, 10);
-    parsedResponse.missingKeywords = parsedResponse.missingKeywords.slice(0, 5);
-    parsedResponse.improvements = parsedResponse.improvements.slice(0, 5);
-    parsedResponse.strengths = parsedResponse.strengths.slice(0, 5);
-    parsedResponse.insights = parsedResponse.insights.slice(0, 3);
+    parsedResponse.matchedKeywords = parsedResponse.matchedKeywords.slice(0, 8);
+    parsedResponse.missingKeywords = parsedResponse.missingKeywords.slice(0, 4);
+    parsedResponse.improvements = parsedResponse.improvements.slice(0, 4);
+    parsedResponse.strengths = parsedResponse.strengths.slice(0, 4);
+    parsedResponse.insights = parsedResponse.insights.slice(0, 2);
 
     return NextResponse.json(parsedResponse, { status: 200 });
     
