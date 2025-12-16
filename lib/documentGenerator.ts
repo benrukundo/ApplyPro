@@ -1,888 +1,538 @@
-'use client';
+// Improved document generation utilities for PDF and DOCX
+// Place this in lib/documentGenerator.ts
 
-import { useState, useCallback, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useDropzone } from 'react-dropzone';
-import Link from 'next/link';
-import {
-  Upload,
-  FileText,
-  Loader2,
-  CheckCircle2,
-  ArrowLeft,
-  TrendingUp,
-  AlertCircle,
-  Sparkles,
-  Target,
-  Search,
-  Briefcase,
-  XCircle,
-  AlertTriangle,
-  Lock,
-  Download,
-  Palette,
-  Check,
-} from 'lucide-react';
-import { generatePDF, generateDOCX, generateCoverLetterPDF, generateCoverLetterDOCX, type ColorPreset } from '@/lib/documentGenerator';
+import { jsPDF } from 'jspdf';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, BorderStyle } from 'docx';
+import { saveAs } from 'file-saver';
 
-export const dynamic = 'force-dynamic';
+// Color presets matching the templates page
+export const colorPresets = {
+  blue: { name: "Blue", hex: "#2563eb", rgb: [37, 99, 235] as [number, number, number] },
+  green: { name: "Green", hex: "#16a34a", rgb: [22, 163, 74] as [number, number, number] },
+  purple: { name: "Purple", hex: "#9333ea", rgb: [147, 51, 234] as [number, number, number] },
+  red: { name: "Red", hex: "#dc2626", rgb: [220, 38, 38] as [number, number, number] },
+  teal: { name: "Teal", hex: "#0d9488", rgb: [13, 148, 136] as [number, number, number] },
+  orange: { name: "Orange", hex: "#ea580c", rgb: [234, 88, 12] as [number, number, number] },
+};
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const MIN_JOB_DESC_LENGTH = 100;
+export type ColorPreset = keyof typeof colorPresets;
 
-// Color presets for Modern template
-const colorPresets = [
-  { key: 'blue' as ColorPreset, name: 'Blue', hex: '#2563eb', bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-600', accent: 'bg-blue-600' },
-  { key: 'green' as ColorPreset, name: 'Green', hex: '#16a34a', bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-600', accent: 'bg-green-600' },
-  { key: 'purple' as ColorPreset, name: 'Purple', hex: '#9333ea', bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-600', accent: 'bg-purple-600' },
-  { key: 'red' as ColorPreset, name: 'Red', hex: '#dc2626', bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-600', accent: 'bg-red-600' },
-  { key: 'teal' as ColorPreset, name: 'Teal', hex: '#0d9488', bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-600', accent: 'bg-teal-600' },
-  { key: 'orange' as ColorPreset, name: 'Orange', hex: '#ea580c', bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-600', accent: 'bg-orange-600' },
-];
-
-interface PreviewData {
-  overallScore: number;
-  atsScore: number;
-  keywordScore: number;
-  experienceScore: number;
-  skillsScore: number;
-  matchedKeywords: string[];
-  missingKeywords: Array<{ keyword: string; priority: string; context: string }>;
-  improvements: Array<{ issue: string; fix: string; impact: string }>;
-  strengths: string[];
-  insights: string[];
-  previewText: string;
-  keywordStats: {
-    matched: number;
-    total: number;
-  };
+interface ResumeSection {
+  type: 'header' | 'section' | 'subsection' | 'bullet' | 'text' | 'contact' | 'skill';
+  content: string;
+  bold?: boolean;
 }
 
-interface SubscriptionInfo {
-  plan: 'free' | 'monthly' | 'yearly' | 'pay-per-use' | null;
-  status: 'active' | 'cancelled' | 'failed' | null;
-  monthlyUsageCount: number;
-  monthlyLimit: number;
-  daysUntilReset: number;
-  isActive: boolean;
+/**
+ * Parse resume text into structured sections
+ */
+function parseResumeContent(content: string): ResumeSection[] {
+  const lines = content.split('\n');
+  const sections: ResumeSection[] = [];
+  
+  let isFirstLine = true;
+  let currentSection = '';
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    
+    // First line is usually the name (header)
+    if (isFirstLine) {
+      sections.push({ type: 'header', content: trimmed });
+      isFirstLine = false;
+      continue;
+    }
+    
+    // Contact info (email, phone patterns)
+    if (trimmed.includes('@') || /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/.test(trimmed) || 
+        (trimmed.includes('|') && (trimmed.includes('@') || trimmed.includes('Phone')))) {
+      sections.push({ type: 'contact', content: trimmed });
+      continue;
+    }
+    
+    // Section headers (all caps or followed by colon)
+    if (trimmed === trimmed.toUpperCase() && trimmed.length > 3 && trimmed.length < 50 && !/\d/.test(trimmed)) {
+      sections.push({ type: 'section', content: trimmed });
+      currentSection = trimmed.toLowerCase();
+      continue;
+    }
+    
+    // Lines ending with colon are likely section headers
+    if (trimmed.endsWith(':') && trimmed.length < 50) {
+      const sectionName = trimmed.replace(':', '');
+      sections.push({ type: 'section', content: sectionName });
+      currentSection = sectionName.toLowerCase();
+      continue;
+    }
+    
+    // Bullet points
+    if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*') || trimmed.startsWith('–')) {
+      sections.push({ type: 'bullet', content: trimmed.replace(/^[•\-*–]\s*/, '') });
+      continue;
+    }
+    
+    // Skills (if in skills section and comma-separated or short)
+    if (currentSection.includes('skill') && (trimmed.includes(',') || trimmed.length < 30)) {
+      sections.push({ type: 'skill', content: trimmed });
+      continue;
+    }
+    
+    // Job titles / dates (usually contain pipes or dashes with dates)
+    if (trimmed.includes('|') || /\d{4}\s*[-–]\s*(\d{4}|Present|Current)/i.test(trimmed)) {
+      sections.push({ type: 'subsection', content: trimmed, bold: true });
+      continue;
+    }
+    
+    // Regular text
+    sections.push({ type: 'text', content: trimmed });
+  }
+  
+  return sections;
 }
 
-interface GeneratedResume {
-  fullResume: string;
-  atsOptimizedResume: string;
-  coverLetter: string;
-  matchScore: number;
-}
-
-export default function GeneratePage() {
-  const { data: session, status: sessionStatus } = useSession();
-
-  // Subscription state
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
-  const [subscriptionError, setSubscriptionError] = useState('');
-
-  // Resume input state
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [resumeText, setResumeText] = useState<string>('');
-  const [jobDescription, setJobDescription] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
-  const [apiError, setApiError] = useState<string>('');
-  const [generatedResume, setGeneratedResume] = useState<GeneratedResume | null>(null);
-  const [showResults, setShowResults] = useState(false);
-  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'docx'>('pdf');
-  const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'traditional' | 'ats'>('modern');
-  const [selectedColor, setSelectedColor] = useState(colorPresets[0]); // Default to blue
-  const [isDownloading, setIsDownloading] = useState(false);
-
-  // Load subscription info only when user is logged in
-  useEffect(() => {
-    const loadSubscription = async () => {
-      if (!session?.user?.id) {
-        setSubscription(null);
-        return;
-      }
-
-      setIsLoadingSubscription(true);
-      try {
-        const response = await fetch('/api/user/subscription');
-        const data = await response.json();
-
-        if (response.ok) {
-          setSubscription(data.subscription);
-        } else {
-          setSubscriptionError(data.error || 'Failed to load subscription');
-        }
-      } catch (err) {
-        console.error('Error loading subscription:', err);
-        setSubscriptionError('Failed to load subscription info');
-      } finally {
-        setIsLoadingSubscription(false);
-      }
-    };
-
-    loadSubscription();
-  }, [session?.user?.id]);
-
-  // Extract text from PDF
-  const extractPdfText = async (file: File): Promise<string> => {
-    const pdfParse = (await import('pdf-parse' as any)).default;
-    const arrayBuffer = await file.arrayBuffer();
-    const data = await pdfParse(Buffer.from(arrayBuffer));
-    return data.text;
-  };
-
-  // Extract text from DOCX
-  const extractDocxText = async (file: File): Promise<string> => {
-    const mammoth = (await import('mammoth' as any)).default;
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value;
-  };
-
-  // Handle file drop
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    setError('');
-    setIsExtracting(true);
-
-    const file = acceptedFiles[0];
-
-    if (!file) {
-      setIsExtracting(false);
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      setError('File size must be less than 5MB');
-      setIsExtracting(false);
-      return;
-    }
-
-    const fileType = file.type;
-    const fileName = file.name.toLowerCase();
-
-    if (
-      fileType !== 'application/pdf' &&
-      fileType !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' &&
-      !fileName.endsWith('.pdf') &&
-      !fileName.endsWith('.docx')
-    ) {
-      setError('Please upload a PDF or DOCX file');
-      setIsExtracting(false);
-      return;
-    }
-
-    try {
-      setResumeFile(file);
-
-      let text = '';
-      if (fileName.endsWith('.pdf')) {
-        text = await extractPdfText(file);
-      } else if (fileName.endsWith('.docx')) {
-        text = await extractDocxText(file);
-      }
-
-      setResumeText(text);
-      setIsExtracting(false);
-    } catch (err) {
-      console.error('Error extracting text:', err);
-      setError('Failed to read file. Please try another file.');
-      setResumeFile(null);
-      setResumeText('');
-      setIsExtracting(false);
-    }
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-    },
-    maxFiles: 1,
-    multiple: false,
+/**
+ * Generate a professionally formatted PDF
+ */
+export async function generatePDF(
+  content: string, 
+  filename: string,
+  template: 'modern' | 'traditional' | 'ats' = 'modern',
+  colorKey: ColorPreset = 'blue'
+): Promise<void> {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
   });
 
-  // Free analysis - no auth required
-  const handleAnalyze = async () => {
-    setIsAnalyzing(true);
-    setApiError('');
-    setPreviewData(null);
-
-    try {
-      const response = await fetch('/api/preview', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          resumeText,
-          jobDescription,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to analyze resume');
-      }
-
-      setPreviewData(data);
-    } catch (err) {
-      console.error('Error analyzing resume:', err);
-      setApiError(
-        err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
-      );
-    } finally {
-      setIsAnalyzing(false);
-    }
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  const maxWidth = pageWidth - (margin * 2);
+  
+  let y = margin;
+  const lineHeight = 5;
+  const sectionGap = 8;
+  
+  // Get color based on template and selection
+  const selectedColor = colorPresets[colorKey] || colorPresets.blue;
+  
+  // Colors based on template
+  const colors = {
+    modern: { 
+      primary: selectedColor.rgb, 
+      secondary: [80, 80, 80] as [number, number, number],
+      text: [50, 50, 50] as [number, number, number]
+    },
+    traditional: { 
+      primary: [30, 30, 30] as [number, number, number], 
+      secondary: [60, 60, 60] as [number, number, number],
+      text: [40, 40, 40] as [number, number, number]
+    },
+    ats: { 
+      primary: [0, 0, 0] as [number, number, number], 
+      secondary: [60, 60, 60] as [number, number, number],
+      text: [30, 30, 30] as [number, number, number]
+    },
   };
+  
+  const theme = colors[template];
+  const sections = parseResumeContent(content);
 
-  // Handle download with template and color
-  const handleDownload = async (content: string, type: 'full' | 'ats' | 'cover') => {
-    setIsDownloading(true);
-    setError('');
+  // Traditional and ATS templates - single column
+  for (const section of sections) {
+    if (y > pageHeight - margin - 20) {
+      doc.addPage();
+      y = margin;
+    }
 
-    try {
-      const timestamp = new Date().toISOString().split('T')[0];
-
-      if (type === 'cover') {
-        if (downloadFormat === 'pdf') {
-          await generateCoverLetterPDF(content, `Cover_Letter_${timestamp}.pdf`, selectedColor.key);
+    switch (section.type) {
+      case 'header':
+        doc.setFontSize(template === 'ats' ? 14 : 22);
+        doc.setFont(template === 'ats' ? 'courier' : 'helvetica', 'bold');
+        doc.setTextColor(theme.primary[0], theme.primary[1], theme.primary[2]);
+        
+        if (template === 'traditional') {
+          // Center aligned for traditional
+          doc.text(section.content, pageWidth / 2, y, { align: 'center' });
+          y += 8;
+          doc.setDrawColor(theme.primary[0], theme.primary[1], theme.primary[2]);
+          doc.setLineWidth(0.8);
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 6;
+        } else if (template === 'modern') {
+          doc.text(section.content, margin, y);
+          y += 8;
+          doc.setDrawColor(theme.primary[0], theme.primary[1], theme.primary[2]);
+          doc.setLineWidth(0.8);
+          doc.line(margin, y, pageWidth - margin, y);
+          y += 6;
         } else {
-          await generateCoverLetterDOCX(content, `Cover_Letter_${timestamp}.docx`, selectedColor.key);
+          doc.text(section.content.toUpperCase(), margin, y);
+          y += 6;
         }
-      } else {
-        const baseName = type === 'full' ? 'Tailored_Resume' : 'ATS_Optimized_Resume';
-        // ATS type always uses 'ats' template, full uses selected template
-        const template = type === 'ats' ? 'ats' : selectedTemplate;
+        break;
 
-        if (downloadFormat === 'pdf') {
-          await generatePDF(content, `${baseName}_${timestamp}.pdf`, template, selectedColor.key);
+      case 'contact':
+        doc.setFontSize(template === 'ats' ? 9 : 10);
+        doc.setFont(template === 'ats' ? 'courier' : 'helvetica', 'normal');
+        doc.setTextColor(theme.secondary[0], theme.secondary[1], theme.secondary[2]);
+        
+        if (template === 'traditional') {
+          doc.text(section.content, pageWidth / 2, y, { align: 'center' });
         } else {
-          await generateDOCX(content, `${baseName}_${timestamp}.docx`, template, selectedColor.key);
+          doc.text(section.content, margin, y);
         }
-      }
-    } catch (err) {
-      console.error('Error generating document:', err);
-      setError(`Failed to download ${downloadFormat.toUpperCase()}. Please try again.`);
-    } finally {
-      setIsDownloading(false);
+        y += 5;
+        break;
+
+      case 'section':
+        y += sectionGap / 2;
+        doc.setFontSize(template === 'ats' ? 10 : 12);
+        doc.setFont(template === 'ats' ? 'courier' : 'helvetica', 'bold');
+        doc.setTextColor(theme.primary[0], theme.primary[1], theme.primary[2]);
+        doc.text(section.content.toUpperCase(), margin, y);
+        y += 2;
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.3);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += lineHeight;
+        break;
+
+      case 'subsection':
+        doc.setFontSize(template === 'ats' ? 9 : 11);
+        doc.setFont(template === 'ats' ? 'courier' : 'helvetica', 'bold');
+        doc.setTextColor(theme.secondary[0], theme.secondary[1], theme.secondary[2]);
+        const subLines = doc.splitTextToSize(section.content, maxWidth);
+        doc.text(subLines, margin, y);
+        y += subLines.length * lineHeight;
+        break;
+
+      case 'bullet':
+        doc.setFontSize(template === 'ats' ? 9 : 10);
+        doc.setFont(template === 'ats' ? 'courier' : 'helvetica', 'normal');
+        doc.setTextColor(theme.text[0], theme.text[1], theme.text[2]);
+        const bulletText = template === 'ats' ? `- ${section.content}` : `• ${section.content}`;
+        const bulletLines = doc.splitTextToSize(bulletText, maxWidth - 5);
+        doc.text(bulletLines, margin + 3, y);
+        y += bulletLines.length * (lineHeight - 0.5);
+        break;
+
+      case 'skill':
+        doc.setFontSize(template === 'ats' ? 9 : 10);
+        doc.setFont(template === 'ats' ? 'courier' : 'helvetica', 'normal');
+        doc.setTextColor(theme.text[0], theme.text[1], theme.text[2]);
+        const skillLines = doc.splitTextToSize(section.content, maxWidth);
+        doc.text(skillLines, margin, y);
+        y += skillLines.length * lineHeight;
+        break;
+
+      case 'text':
+      default:
+        doc.setFontSize(template === 'ats' ? 9 : 10);
+        doc.setFont(template === 'ats' ? 'courier' : 'helvetica', 'normal');
+        doc.setTextColor(theme.text[0], theme.text[1], theme.text[2]);
+        const textLines = doc.splitTextToSize(section.content, maxWidth);
+        doc.text(textLines, margin, y);
+        y += textLines.length * lineHeight;
+        break;
     }
-  };
-
-  // Paid generation - requires auth + subscription
-  const handleGenerate = async () => {
-    // Check authentication
-    if (!session?.user?.id) {
-      window.location.href = '/login?callbackUrl=/generate';
-      return;
-    }
-
-    // Check subscription
-    if (!subscription?.isActive) {
-      setError('Please purchase a subscription to generate resumes.');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const checkResponse = await fetch('/api/user/can-generate');
-      const checkData = await checkResponse.json();
-
-      if (!checkData.allowed) {
-        setError(checkData.reason || 'You cannot generate a resume at this time.');
-        setIsLoading(false);
-        return;
-      }
-
-      const generateResponse = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          resumeText,
-          jobDescription,
-        }),
-      });
-
-      const generateData = await generateResponse.json();
-
-      if (!generateResponse.ok) {
-        throw new Error(generateData.error || 'Failed to generate resume');
-      }
-
-      // Save to localStorage for backup
-      try {
-        localStorage.setItem('applypro_resume_text', resumeText);
-        localStorage.setItem('applypro_job_description', jobDescription);
-        localStorage.setItem('applypro_generated_content', JSON.stringify(generateData));
-      } catch (err) {
-        console.error('Error saving to localStorage:', err);
-      }
-
-      setGeneratedResume(generateData);
-      setShowResults(true);
-
-      setTimeout(() => {
-        const resultsSection = document.getElementById('results-section');
-        if (resultsSection) {
-          resultsSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-    } catch (err) {
-      console.error('Error generating resume:', err);
-      setError(
-        err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Determine if user can generate (has active subscription)
-  const canGenerate = session?.user?.id && subscription?.isActive;
-
-  // Show loading only during initial session check
-  if (sessionStatus === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20">
-      <div className="container mx-auto px-4 max-w-6xl">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
-          </Link>
+  doc.save(filename);
+}
 
-          {/* Show subscription badge if logged in with subscription */}
-          {session?.user && subscription?.isActive && (
-            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg shadow-md">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-              <div className="text-right">
-                <p className="text-sm font-semibold text-gray-900">
-                  {subscription.plan === 'monthly'
-                    ? 'Pro Monthly'
-                    : subscription.plan === 'yearly'
-                      ? 'Pro Yearly'
-                      : 'Pay-Per-Use'}
-                </p>
-                <p className="text-xs text-gray-600">
-                  {subscription.monthlyUsageCount}/{subscription.monthlyLimit} resumes used
-                </p>
-              </div>
-            </div>
-          )}
+/**
+ * Generate a professionally formatted DOCX
+ */
+export async function generateDOCX(
+  content: string,
+  filename: string,
+  template: 'modern' | 'traditional' | 'ats' = 'modern',
+  colorKey: ColorPreset = 'blue'
+): Promise<void> {
+  const sections = parseResumeContent(content);
+  const children: Paragraph[] = [];
+  
+  // Get color hex (without #)
+  const selectedColor = colorPresets[colorKey] || colorPresets.blue;
+  const colorHex = selectedColor.hex.replace('#', '');
 
-          {/* Show login prompt if not logged in */}
-          {!session?.user && (
-            <Link
-              href="/login?callbackUrl=/generate"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Lock className="w-4 h-4" />
-              Sign In
-            </Link>
-          )}
+  for (const section of sections) {
+    switch (section.type) {
+      case 'header':
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: template === 'ats' ? section.content.toUpperCase() : section.content,
+                bold: true,
+                size: template === 'ats' ? 28 : 48,
+                color: template === 'modern' ? colorHex : '000000',
+                font: template === 'ats' ? 'Courier New' : 'Arial',
+              }),
+            ],
+            heading: HeadingLevel.TITLE,
+            alignment: template === 'traditional' ? 'center' : 'left',
+            spacing: { after: 100 },
+          })
+        );
+        
+        if (template === 'modern' || template === 'traditional') {
+          children.push(
+            new Paragraph({
+              border: {
+                bottom: {
+                  color: template === 'modern' ? colorHex : '000000',
+                  space: 1,
+                  style: BorderStyle.SINGLE,
+                  size: template === 'modern' ? 12 : 6,
+                },
+              },
+              spacing: { after: 200 },
+            })
+          );
+        }
+        break;
 
-          {/* Show upgrade prompt if logged in but no subscription */}
-          {session?.user && !subscription?.isActive && !isLoadingSubscription && (
-            <Link
-              href="/pricing"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-colors"
-            >
-              <Sparkles className="w-4 h-4" />
-              Upgrade to Pro
-            </Link>
-          )}
-        </div>
+      case 'contact':
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: section.content,
+                size: template === 'ats' ? 18 : 20,
+                color: '666666',
+                font: template === 'ats' ? 'Courier New' : 'Arial',
+              }),
+            ],
+            alignment: template === 'traditional' ? 'center' : 'left',
+            spacing: { after: 100 },
+          })
+        );
+        break;
 
-        <h1 className="text-4xl font-bold text-gray-900 mb-2 text-center">
-          Resume Analyzer & Generator
-        </h1>
-        <p className="text-xl text-gray-600 text-center mb-4">
-          Upload your resume and paste a job description to get started
-        </p>
-        <p className="text-center text-green-600 font-medium mb-12">
-          ✓ Free analysis available — no sign-up required
-        </p>
+      case 'section':
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: section.content.toUpperCase(),
+                bold: true,
+                size: template === 'ats' ? 20 : 24,
+                color: template === 'modern' ? colorHex : '000000',
+                font: template === 'ats' ? 'Courier New' : 'Arial',
+              }),
+            ],
+            heading: HeadingLevel.HEADING_1,
+            spacing: { before: 300, after: 100 },
+            border: {
+              bottom: {
+                color: template === 'modern' ? colorHex : 'CCCCCC',
+                space: 1,
+                style: BorderStyle.SINGLE,
+                size: 6,
+              },
+            },
+          })
+        );
+        break;
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Left: Upload & Input */}
-          <div className="space-y-6">
-            {/* Resume Upload */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <FileText className="w-6 h-6 text-blue-600" />
-                Your Resume
-              </h2>
+      case 'subsection':
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: section.content,
+                bold: true,
+                size: template === 'ats' ? 18 : 22,
+                font: template === 'ats' ? 'Courier New' : 'Arial',
+              }),
+            ],
+            spacing: { before: 150, after: 50 },
+          })
+        );
+        break;
 
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all ${
-                  isDragActive
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                <input {...getInputProps()} />
-                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-lg font-semibold text-gray-900 mb-1">
-                  {isDragActive ? 'Drop your file here' : 'Drag your resume here'}
-                </p>
-                <p className="text-sm text-gray-600">or click to select (PDF or DOCX)</p>
-                <p className="text-xs text-gray-500 mt-2">Max 5MB</p>
-              </div>
+      case 'bullet':
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: section.content,
+                size: template === 'ats' ? 18 : 20,
+                font: template === 'ats' ? 'Courier New' : 'Arial',
+              }),
+            ],
+            bullet: { level: 0 },
+            spacing: { after: 50 },
+          })
+        );
+        break;
 
-              {resumeFile && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                  <span className="text-sm text-green-800">{resumeFile.name}</span>
-                </div>
-              )}
+      case 'skill':
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: section.content,
+                size: template === 'ats' ? 18 : 20,
+                font: template === 'ats' ? 'Courier New' : 'Arial',
+              }),
+            ],
+            spacing: { after: 50 },
+          })
+        );
+        break;
 
-              {isExtracting && (
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
-                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" />
-                  <span className="text-sm text-blue-800">Extracting text from file...</span>
-                </div>
-              )}
-            </div>
+      case 'text':
+      default:
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: section.content,
+                size: template === 'ats' ? 18 : 20,
+                font: template === 'ats' ? 'Courier New' : 'Arial',
+              }),
+            ],
+            spacing: { after: 100 },
+          })
+        );
+        break;
+    }
+  }
 
-            {/* Job Description */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <Briefcase className="w-6 h-6 text-blue-600" />
-                Job Description
-              </h2>
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: 720,
+              right: 720,
+              bottom: 720,
+              left: 720,
+            },
+          },
+        },
+        children,
+      },
+    ],
+  });
 
-              <textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="Paste the job description here..."
-                className="w-full h-48 p-4 border-2 border-gray-300 rounded-xl focus:border-blue-600 focus:outline-none resize-none text-gray-700"
-              />
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, filename);
+}
 
-              <p className="text-sm text-gray-600 mt-2">
-                {jobDescription.length} characters (
-                {Math.max(0, MIN_JOB_DESC_LENGTH - jobDescription.length)} more needed)
-              </p>
-            </div>
-          </div>
+/**
+ * Generate cover letter PDF
+ */
+export async function generateCoverLetterPDF(
+  content: string,
+  filename: string,
+  colorKey: ColorPreset = 'blue'
+): Promise<void> {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
 
-          {/* Right: Preview & Actions */}
-          <div className="space-y-6">
-            {/* Action Buttons */}
-            <div className="bg-white rounded-2xl shadow-lg p-8 space-y-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Ready?</h2>
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 25;
+  const maxWidth = pageWidth - (margin * 2);
+  
+  const selectedColor = colorPresets[colorKey] || colorPresets.blue;
+  
+  // Add a subtle header line
+  doc.setDrawColor(selectedColor.rgb[0], selectedColor.rgb[1], selectedColor.rgb[2]);
+  doc.setLineWidth(1);
+  doc.line(margin, 15, pageWidth - margin, 15);
+  
+  doc.setFontSize(11);
+  doc.setFont('times', 'normal');
+  doc.setTextColor(40, 40, 40);
+  
+  const lines = doc.splitTextToSize(content, maxWidth);
+  let y = 30;
+  const lineHeight = 6;
+  
+  for (const line of lines) {
+    if (y > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.text(line, margin, y);
+    y += lineHeight;
+  }
 
-              {/* Free Analysis Button */}
-              <button
-                onClick={handleAnalyze}
-                disabled={!resumeText || jobDescription.length < MIN_JOB_DESC_LENGTH || isAnalyzing}
-                className="w-full px-6 py-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-5 h-5" />
-                    Analyze Resume (Free)
-                  </>
-                )}
-              </button>
+  doc.save(filename);
+}
 
-              {/* Paid Generation Button */}
-              <button
-                onClick={handleGenerate}
-                disabled={
-                  !resumeText ||
-                  jobDescription.length < MIN_JOB_DESC_LENGTH ||
-                  isLoading
-                }
-                className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Generate Full Resume
-                    {!canGenerate && <Lock className="w-4 h-4 ml-1" />}
-                  </>
-                )}
-              </button>
-
-              {/* Contextual message based on auth/subscription state */}
-              {!session?.user ? (
-                <p className="text-xs text-gray-600 text-center">
-                  <Link href="/login?callbackUrl=/generate" className="text-blue-600 hover:underline">
-                    Sign in
-                  </Link>{' '}
-                  and subscribe to generate tailored resumes
-                </p>
-              ) : !subscription?.isActive ? (
-                <p className="text-xs text-gray-600 text-center">
-                  <Link href="/pricing" className="text-blue-600 hover:underline">
-                    Upgrade to Pro
-                  </Link>{' '}
-                  to generate tailored resumes
-                </p>
-              ) : (
-                <p className="text-xs text-gray-600 text-center">
-                  Generating will use 1 of your {subscription.monthlyLimit} monthly resumes
-                </p>
-              )}
-            </div>
-
-            {/* Error Messages */}
-            {error && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
-                <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-red-800 text-sm">{error}</p>
-                  {error.includes('subscription') && (
-                    <Link
-                      href="/pricing"
-                      className="text-red-600 text-sm font-medium hover:underline mt-1 inline-block"
-                    >
-                      View pricing plans →
-                    </Link>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {apiError && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-red-800 text-sm">{apiError}</p>
-              </div>
-            )}
-
-            {subscriptionError && (
-              <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <p className="text-amber-800 text-sm">{subscriptionError}</p>
-              </div>
-            )}
-
-            {/* Free Preview Results */}
-            {previewData && (
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
-                  Analysis Results
-                </h3>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Overall Match</p>
-                      <p className="text-2xl font-bold text-blue-600">{previewData.overallScore}%</p>
-                    </div>
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <p className="text-sm text-gray-600">ATS Score</p>
-                      <p className="text-2xl font-bold text-green-600">{previewData.atsScore}%</p>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-purple-50 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-2">Matched Keywords</p>
-                    <div className="flex flex-wrap gap-2">
-                      {previewData.matchedKeywords.slice(0, 5).map((keyword, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs font-semibold"
-                        >
-                          {keyword}
-                        </span>
-                      ))}
-                      {previewData.matchedKeywords.length > 5 && (
-                        <span className="px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs font-semibold">
-                          +{previewData.matchedKeywords.length - 5} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* CTA to upgrade after seeing preview */}
-                  {!canGenerate && (
-                    <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                      <p className="text-sm font-medium text-gray-900 mb-2">
-                        Want a tailored resume that matches this job?
-                      </p>
-                      <Link
-                        href={session?.user ? '/pricing' : '/login?callbackUrl=/generate'}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                        {session?.user ? 'Upgrade to Generate' : 'Sign In to Generate'}
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Generated Resume Results Section */}
-        {showResults && generatedResume && (
-          <div id="results-section" className="mt-16 pt-16 border-t-2 border-gray-200">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
-                Your Tailored Resume is Ready!
-              </h2>
-              <p className="text-xl text-gray-600">
-                Match Score: <span className="font-bold text-blue-600">{generatedResume.matchScore}%</span>
-              </p>
-            </div>
-
-            {/* Template & Format Selection */}
-            <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-              {/* Template Selection */}
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Choose Resume Template</h3>
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <button
-                  onClick={() => setSelectedTemplate('modern')}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    selectedTemplate === 'modern'
-                      ? `${selectedColor.border} ${selectedColor.bg}`
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                >
-                  <div className="font-semibold text-gray-900 mb-1">Modern</div>
-                  <div className="text-xs text-gray-600">Two-column with color accents</div>
-                </button>
-                <button
-                  onClick={() => setSelectedTemplate('traditional')}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    selectedTemplate === 'traditional'
-                      ? 'border-gray-600 bg-gray-50'
-                      : 'border-gray-200 hover:border-gray-400'
-                  }`}
-                >
-                  <div className="font-semibold text-gray-900 mb-1">Traditional</div>
-                  <div className="text-xs text-gray-600">Classic single-column</div>
-                </button>
-                <button
-                  onClick={() => setSelectedTemplate('ats')}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    selectedTemplate === 'ats'
-                      ? 'border-green-600 bg-green-50'
-                      : 'border-gray-200 hover:border-green-300'
-                  }`}
-                >
-                  <div className="font-semibold text-gray-900 mb-1">ATS-Optimized</div>
-                  <div className="text-xs text-gray-600">Machine-readable format</div>
-                </button>
-              </div>
-
-              {/* Color Picker - Only show for Modern template */}
-              {selectedTemplate === 'modern' && (
-                <div className="mb-6 p-4 rounded-xl bg-gray-50 border border-gray-200">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Palette className="h-5 w-5 text-gray-600" />
-                    <span className="text-sm font-semibold text-gray-700">Customize Color</span>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    {colorPresets.map((color) => (
-                      <button
-                        key={color.name}
-                        onClick={() => setSelectedColor(color)}
-                        className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
-                          selectedColor.name === color.name
-                            ? `${color.border} ${color.bg} shadow-md`
-                            : 'border-gray-200 bg-white hover:border-gray-300'
-                        }`}
-                        title={color.name}
-                      >
-                        <div
-                          className="h-5 w-5 rounded-full shadow-inner"
-                          style={{ backgroundColor: color.hex }}
-                        />
-                        <span
-                          className={`text-sm font-medium ${
-                            selectedColor.name === color.name ? color.text : 'text-gray-600'
-                          }`}
-                        >
-                          {color.name}
-                        </span>
-                        {selectedColor.name === color.name && (
-                          <Check className={`h-4 w-4 ${color.text}`} />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Download Format Selection */}
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Select Download Format</h3>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setDownloadFormat('pdf')}
-                  className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
-                    downloadFormat === 'pdf'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  PDF Format
-                </button>
-                <button
-                  onClick={() => setDownloadFormat('docx')}
-                  className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all ${
-                    downloadFormat === 'docx'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  DOCX Format
-                </button>
-              </div>
-            </div>
-
-            {/* Resume Cards */}
-            <div className="grid lg:grid-cols-3 gap-8">
-              {/* Full Resume */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <FileText className={`w-6 h-6 ${selectedColor.text}`} />
-                  Tailored Resume
-                </h3>
-                <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
-                  <div className="text-gray-800 whitespace-pre-wrap font-serif text-sm leading-relaxed">
-                    {generatedResume.fullResume}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDownload(generatedResume.fullResume, 'full')}
-                  disabled={isDownloading}
-                  className={`mt-4 w-full px-6 py-3 ${selectedColor.accent} text-white rounded-lg font-semibold hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2`}
-                >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      Download as {downloadFormat.toUpperCase()}
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* ATS Optimized Resume */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <Target className="w-6 h-6 text-green-600" />
-                  ATS-Optimized Version
-                </h3>
-                <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
-                  <div className="text-gray-800 whitespace-pre-wrap font-mono text-sm leading-relaxed">
-                    {generatedResume.atsOptimizedResume}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDownload(generatedResume.atsOptimizedResume, 'ats')}
-                  disabled={isDownloading}
-                  className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      Download as {downloadFormat.toUpperCase()}
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Cover Letter */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <FileText className="w-6 h-6 text-purple-600" />
-                  Cover Letter
-                </h3>
-                <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
-                  <div className="text-gray-800 whitespace-pre-wrap font-serif text-sm leading-relaxed">
-                    {generatedResume.coverLetter}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDownload(generatedResume.coverLetter, 'cover')}
-                  disabled={isDownloading}
-                  className="mt-4 w-full px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      Download as {downloadFormat.toUpperCase()}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Generate Another Button */}
-            <div className="mt-12 text-center">
-              <button
-                onClick={() => {
-                  setShowResults(false);
-                  setGeneratedResume(null);
-                  setPreviewData(null);
-                  setResumeFile(null);
-                  setResumeText('');
-                  setJobDescription('');
-                }}
-                className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
-              >
-                Generate Another Resume
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+/**
+ * Generate cover letter DOCX
+ */
+export async function generateCoverLetterDOCX(
+  content: string,
+  filename: string,
+  colorKey: ColorPreset = 'blue'
+): Promise<void> {
+  const selectedColor = colorPresets[colorKey] || colorPresets.blue;
+  const colorHex = selectedColor.hex.replace('#', '');
+  
+  const paragraphs: Paragraph[] = [
+    // Header line
+    new Paragraph({
+      border: {
+        bottom: {
+          color: colorHex,
+          space: 1,
+          style: BorderStyle.SINGLE,
+          size: 12,
+        },
+      },
+      spacing: { after: 400 },
+    }),
+  ];
+  
+  // Split content into paragraphs
+  const contentParagraphs = content.split('\n\n').map(
+    (para) =>
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: para.replace(/\n/g, ' '),
+            size: 22,
+            font: 'Times New Roman',
+          }),
+        ],
+        spacing: { after: 200 },
+      })
   );
+  
+  paragraphs.push(...contentParagraphs);
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: 1440,
+              right: 1440,
+              bottom: 1440,
+              left: 1440,
+            },
+          },
+        },
+        children: paragraphs,
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, filename);
 }
