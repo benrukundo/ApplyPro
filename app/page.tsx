@@ -21,6 +21,7 @@ export default function Home() {
   // Payment links - redirecting to coming soon page
   const payPerUseLink = '/coming-soon';
   const monthlyLink = '/coming-soon';
+  const yearlyLink = '/coming-soon';
 
   const faqs = [
     {
@@ -311,7 +312,7 @@ export default function Home() {
           </div>
 
           <div className="max-w-6xl mx-auto">
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-4 gap-6">
               {/* FREE PLAN */}
               <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-200 hover:shadow-xl transition">
                 <div className="text-center">
@@ -444,6 +445,65 @@ export default function Home() {
                 </Link>
 
                 <p className="text-xs text-blue-200 mt-4 text-center">
+                  *Fair use: 100 resumes/month for personal job search
+                </p>
+              </div>
+
+              {/* PRO YEARLY PLAN */}
+              <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-purple-200 hover:shadow-xl transition relative">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-green-500 text-white px-4 py-1 rounded-full text-sm font-bold">
+                    BEST VALUE
+                  </span>
+                </div>
+
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold mb-2 text-gray-900">Pro Yearly</h3>
+                  <div className="mb-2">
+                    <span className="text-lg text-gray-400 line-through mr-2">$228</span>
+                  </div>
+                  <div className="mb-6">
+                    <span className="text-5xl font-bold text-gray-900">$149</span>
+                    <span className="text-gray-600"> / year</span>
+                  </div>
+                  <p className="text-gray-600 mb-6">Save 35% vs monthly</p>
+                </div>
+
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700"><strong>Unlimited AI-tailored resumes*</strong></span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">All 3 professional templates</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Unlimited job tracking</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Priority email support</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Early access to new features</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Cancel anytime</span>
+                  </li>
+                </ul>
+
+                <Link
+                  href={yearlyLink}
+                  className="block w-full text-center bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+                >
+                  Subscribe Yearly
+                </Link>
+
+                <p className="text-xs text-gray-500 mt-4 text-center">
                   *Fair use: 100 resumes/month for personal job search
                 </p>
               </div>
