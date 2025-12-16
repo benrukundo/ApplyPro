@@ -48,7 +48,9 @@ export default function PaddleCheckout({
           },
         });
 
-        setPaddle(paddleInstance);
+        if (paddleInstance) {
+          setPaddle(paddleInstance);
+        }
       } catch (error) {
         console.error('Failed to initialize Paddle:', error);
       }
