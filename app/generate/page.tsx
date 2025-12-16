@@ -365,9 +365,9 @@ export default function GeneratePage() {
       }
 
       // Track generation in database
-      await fetch('/api/user/track-generation', {
-        method: 'POST',
-      });
+      //await fetch('/api/user/track-generation', {
+       // method: 'POST',
+      //});
 
       // Save data to localStorage for backup
       try {

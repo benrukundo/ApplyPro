@@ -241,6 +241,9 @@ export async function trackGeneration(userId: string): Promise<boolean> {
 /**
  * Create or update subscription from payment webhook
  */
+/**
+ * Create or update subscription from payment webhook
+ */
 export async function createSubscription(data: {
   userId: string;
   email: string;
@@ -266,7 +269,7 @@ export async function createSubscription(data: {
             email: data.email,
             plan: data.plan,
             status: 'active',
-            gumroadId: data.paymentId,
+            paddleId: data.paymentId,  // ← Fixed
             monthlyUsageCount: 0,
           },
         });
@@ -276,7 +279,7 @@ export async function createSubscription(data: {
           where: { id: existing.id },
           data: {
             status: 'active',
-            gumroadId: data.paymentId,
+            paddleId: data.paymentId,  // ← Fixed
           },
         });
       }
@@ -288,7 +291,7 @@ export async function createSubscription(data: {
           email: data.email,
           plan: data.plan,
           status: 'active',
-          gumroadId: data.paymentId,
+          paddleId: data.paymentId,  // ← Fixed
           monthlyUsageCount: 0,
         },
       });
@@ -310,19 +313,17 @@ export async function cancelSubscription(
   plan?: string
 ): Promise<boolean> {
   try {
-    // First, check if this is a gumroadId
-    const byGumroad = await prisma.subscription.findFirst({
-      where: { gumroadId: identifier },
+    // First, check if this is a paddleId
+    const byPaddle = await prisma.subscription.findFirst({
+      where: { paddleId: identifier },
     });
 
-    if (byGumroad) {
-      // Cancel by Gumroad ID
+    if (byPaddle) {
       await prisma.subscription.updateMany({
-        where: { gumroadId: identifier },
+        where: { paddleId: identifier },
         data: { status: 'cancelled' },
       });
     } else {
-      // Cancel by user ID
       const whereClause: { userId: string; status: string; plan?: string } = {
         userId: identifier,
         status: 'active',
@@ -404,21 +405,18 @@ export async function getUsageStats(userId: string): Promise<{
 export async function createOrUpdateSubscription(
   email: string,
   plan: 'monthly' | 'yearly' | 'pay-per-use',
-  gumroadId?: string
+  paddleId?: string  // ← Renamed parameter
 ): Promise<boolean> {
   try {
-    // Find user by email
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
     });
 
     if (!user) {
       console.error('User not found for email:', email);
-      // Create a placeholder - user will be linked when they sign up
       return false;
     }
 
-    // Check for existing active subscription
     const existing = await prisma.subscription.findFirst({
       where: {
         userId: user.id,
@@ -428,24 +426,22 @@ export async function createOrUpdateSubscription(
     });
 
     if (existing) {
-      // Update existing
       await prisma.subscription.update({
         where: { id: existing.id },
         data: {
           status: 'active',
-          gumroadId: gumroadId || existing.gumroadId,
+          paddleId: paddleId || existing.paddleId,  // ← Fixed
           lastResetDate: new Date(),
         },
       });
     } else {
-      // Create new
       await prisma.subscription.create({
         data: {
           userId: user.id,
           email: email.toLowerCase().trim(),
           plan,
           status: 'active',
-          gumroadId,
+          paddleId,  // ← Fixed
           monthlyUsageCount: 0,
         },
       });
@@ -461,10 +457,10 @@ export async function createOrUpdateSubscription(
 /**
  * Mark subscription payment as failed (for Gumroad webhook)
  */
-export async function markPaymentFailed(gumroadId: string): Promise<boolean> {
+export async function markPaymentFailed(paddleId: string): Promise<boolean> {
   try {
     await prisma.subscription.updateMany({
-      where: { gumroadId },
+      where: { paddleId },
       data: { status: 'failed' },
     });
     return true;
@@ -473,3 +469,4 @@ export async function markPaymentFailed(gumroadId: string): Promise<boolean> {
     return false;
   }
 }
+
