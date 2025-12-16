@@ -266,11 +266,11 @@ export async function createSubscription(data: {
         await prisma.subscription.create({
           data: {
             userId: data.userId,
-            email: data.email,
             plan: data.plan,
             status: 'active',
-            paddleId: data.paymentId,  // ← Fixed
+            paddleId: data.paymentId,
             monthlyUsageCount: 0,
+            monthlyLimit: PAY_PER_USE_LIMIT,
           },
         });
       } else {
@@ -279,20 +279,21 @@ export async function createSubscription(data: {
           where: { id: existing.id },
           data: {
             status: 'active',
-            paddleId: data.paymentId,  // ← Fixed
+            paddleId: data.paymentId,
           },
         });
       }
     } else {
       // Create new subscription
+      const monthlyLimit = data.plan === 'pay-per-use' ? PAY_PER_USE_LIMIT : MONTHLY_GENERATION_LIMIT;
       await prisma.subscription.create({
         data: {
           userId: data.userId,
-          email: data.email,
           plan: data.plan,
           status: 'active',
-          paddleId: data.paymentId,  // ← Fixed
+          paddleId: data.paymentId,
           monthlyUsageCount: 0,
+          monthlyLimit,
         },
       });
     }
@@ -430,19 +431,20 @@ export async function createOrUpdateSubscription(
         where: { id: existing.id },
         data: {
           status: 'active',
-          paddleId: paddleId || existing.paddleId,  // ← Fixed
+          paddleId: paddleId || existing.paddleId,
           lastResetDate: new Date(),
         },
       });
     } else {
+      const monthlyLimit = plan === 'pay-per-use' ? PAY_PER_USE_LIMIT : MONTHLY_GENERATION_LIMIT;
       await prisma.subscription.create({
         data: {
           userId: user.id,
-          email: email.toLowerCase().trim(),
           plan,
           status: 'active',
-          paddleId,  // ← Fixed
+          paddleId,
           monthlyUsageCount: 0,
+          monthlyLimit,
         },
       });
     }
