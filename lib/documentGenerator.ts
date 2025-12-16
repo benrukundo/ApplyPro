@@ -72,11 +72,20 @@ function parseResumeToStructure(content: string): ParsedResume {
     // Skip empty lines
     if (!cleanLine) continue;
 
-    // Detect section headers (## SECTION NAME or ALL CAPS)
-    const isHeader = line.startsWith('#') || (cleanLine === cleanLine.toUpperCase() && cleanLine.length > 2 && cleanLine.length < 60 && !cleanLine.match(/^\d/) && !cleanLine.includes('@'));
-    
+    // Detect section headers (## SECTION NAME, ALL CAPS, or Title Case section keywords)
+    const headerLower = cleanLine.toLowerCase();
+    const isSectionKeyword = (
+      headerLower.includes('summary') || headerLower.includes('profile') || headerLower.includes('objective') ||
+      headerLower.includes('skill') || headerLower.includes('competenc') || headerLower.includes('technical') ||
+      headerLower.includes('experience') || headerLower.includes('employment') || headerLower.includes('work history') ||
+      headerLower.includes('education') || headerLower.includes('academic') ||
+      headerLower.includes('certif') || headerLower.includes('training') ||
+      headerLower.includes('contact') || headerLower.includes('additional') || headerLower.includes('qualif')
+    );
+    const isAllCaps = cleanLine === cleanLine.toUpperCase() && cleanLine.length > 2 && cleanLine.length < 60 && !cleanLine.match(/^\d/) && !cleanLine.includes('@');
+    const isHeader = line.startsWith('#') || isAllCaps || (isSectionKeyword && cleanLine.length < 60);
+
     if (isHeader) {
-      const headerLower = cleanLine.toLowerCase();
       
       // Save current experience if exists
       if (currentExperience && currentExperience.title) {
