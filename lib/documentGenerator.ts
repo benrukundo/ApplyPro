@@ -740,9 +740,23 @@ export async function generateDOCX(
   template: 'modern' | 'traditional' | 'ats' = 'modern',
   colorKey: ColorPreset = 'blue'
 ): Promise<void> {
+  console.log('generateDOCX - Input content length:', content.length);
+  console.log('generateDOCX - Template:', template);
+  console.log('generateDOCX - First 500 chars:', content.substring(0, 500));
+
   const selectedColor = colorPresets[colorKey] || colorPresets.blue;
   const colorHex = selectedColor.hex.replace('#', '');
   const parsed = parseResumeToStructure(content);
+
+  console.log('generateDOCX - Parsed data:', {
+    name: parsed.name,
+    title: parsed.title,
+    contactCount: parsed.contact.length,
+    summaryLength: parsed.summary.length,
+    skillsCount: parsed.skills.length,
+    educationCount: parsed.education.length,
+    experienceCount: parsed.experience.length,
+  });
 
   let children: (Paragraph | Table)[] = [];
 
@@ -752,19 +766,22 @@ export async function generateDOCX(
     children = generateSingleColumnDOCX(parsed, template);
   }
 
+  console.log('generateDOCX - Generated children count:', children.length);
+
   const doc = new Document({
-    sections: [{ 
-      properties: { 
-        page: { 
-          margin: { top: 400, right: 400, bottom: 400, left: 400 } 
-        } 
-      }, 
-      children 
+    sections: [{
+      properties: {
+        page: {
+          margin: { top: 400, right: 400, bottom: 400, left: 400 }
+        }
+      },
+      children
     }],
   });
 
   const blob = await Packer.toBlob(doc);
   saveAs(blob, filename);
+  console.log('generateDOCX - Document saved');
 }
 
 /**
