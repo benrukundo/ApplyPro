@@ -250,39 +250,49 @@ export default function GeneratePage() {
 
   // Download handler using documentGenerator
   const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 'docx') => {
-  // ADD THIS DEBUG BLOCK
-  console.log('=== DOWNLOAD DEBUG ===');
-  console.log('Type:', type);
-  console.log('Format:', format);
-  console.log('Selected Template:', selectedTemplate);
-  console.log('Generated Resume object:', generatedResume);
-  console.log('Full Resume length:', generatedResume?.fullResume?.length || 0);
-  console.log('Full Resume first 500 chars:', generatedResume?.fullResume?.substring(0, 500));
-  console.log('======================');
-  
-  // rest of your handleDownload code...
+    console.log('=== DOWNLOAD DEBUG ===');
+    console.log('Type:', type);
+    console.log('Format:', format);
+    console.log('Selected Template:', selectedTemplate);
+    console.log('Generated Resume object:', generatedResume);
+    console.log('Full Resume length:', generatedResume?.fullResume?.length || 0);
+    console.log('Full Resume first 500 chars:', generatedResume?.fullResume?.substring(0, 500));
+    console.log('======================');
 
-  const handleDownload = async (content: string, type: 'full' | 'ats' | 'cover') => {
     setIsDownloading(true);
     setError('');
 
     try {
       const timestamp = new Date().toISOString().split('T')[0];
 
+      // Determine content based on type
+      let content = '';
+      if (type === 'cover') {
+        content = generatedResume?.coverLetter || '';
+      } else if (type === 'ats') {
+        content = generatedResume?.atsOptimizedResume || generatedResume?.fullResume || '';
+      } else {
+        content = generatedResume?.fullResume || '';
+      }
+
+      if (!content) {
+        throw new Error('No content available to download');
+      }
+
       if (type === 'cover') {
         // Cover letter
-        if (downloadFormat === 'pdf') {
+        if (format === 'pdf') {
           await generateCoverLetterPDF(content, `Cover_Letter_${timestamp}.pdf`, selectedColor.key);
         } else {
           await generateCoverLetterDOCX(content, `Cover_Letter_${timestamp}.docx`, selectedColor.key);
         }
       } else {
         // Resume (full or ats)
-        const baseName = type === 'full' ? 'Tailored_Resume' : 'ATS_Optimized_Resume';
+        const baseName = type === 'ats' ? 'ATS_Optimized_Resume' : 'Tailored_Resume';
         // ATS type always uses 'ats' template, full uses selected template
         const template = type === 'ats' ? 'ats' : selectedTemplate;
 
-        if (downloadFormat === 'pdf') {
+        if (format === 'pdf') {
           await generatePDF(content, `${baseName}_${timestamp}.pdf`, template, selectedColor.key);
         } else {
           await generateDOCX(content, `${baseName}_${timestamp}.docx`, template, selectedColor.key);
@@ -290,7 +300,7 @@ export default function GeneratePage() {
       }
     } catch (err) {
       console.error('Error generating document:', err);
-      setError(`Failed to download ${downloadFormat.toUpperCase()}. Please try again.`);
+      setError(`Failed to download ${format.toUpperCase()}. Please try again.`);
     } finally {
       setIsDownloading(false);
     }
@@ -782,7 +792,7 @@ export default function GeneratePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDownload(generatedResume.fullResume, 'full')}
+                  onClick={() => handleDownload('resume', downloadFormat)}
                   disabled={isDownloading}
                   className={`mt-4 w-full px-6 py-3 ${selectedColor.accent} text-white rounded-lg font-semibold hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2`}
                 >
@@ -812,7 +822,7 @@ export default function GeneratePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDownload(generatedResume.atsOptimizedResume, 'ats')}
+                  onClick={() => handleDownload('ats', downloadFormat)}
                   disabled={isDownloading}
                   className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
@@ -842,7 +852,7 @@ export default function GeneratePage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDownload(generatedResume.coverLetter, 'cover')}
+                  onClick={() => handleDownload('cover', downloadFormat)}
                   disabled={isDownloading}
                   className="mt-4 w-full px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
