@@ -13,16 +13,11 @@ import {
   TrendingUp,
   AlertCircle,
   Sparkles,
-  ShoppingCart,
   Target,
   Search,
   Briefcase,
-  Award,
   XCircle,
   AlertTriangle,
-  Lightbulb,
-  Zap,
-  Star,
   Lock,
   Download,
 } from 'lucide-react';
@@ -66,13 +61,12 @@ interface GeneratedResume {
   matchScore: number;
 }
 
-
 export default function GeneratePage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
 
   // Subscription state
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState('');
 
   // Resume input state
@@ -80,6 +74,7 @@ export default function GeneratePage() {
   const [resumeText, setResumeText] = useState<string>('');
   const [jobDescription, setJobDescription] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string>('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
@@ -90,14 +85,15 @@ export default function GeneratePage() {
   const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'traditional' | 'ats'>('modern');
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Load subscription info
+  // Load subscription info only when user is logged in
   useEffect(() => {
     const loadSubscription = async () => {
       if (!session?.user?.id) {
-        setIsLoadingSubscription(false);
+        setSubscription(null);
         return;
       }
 
+      setIsLoadingSubscription(true);
       try {
         const response = await fetch('/api/user/subscription');
         const data = await response.json();
@@ -120,7 +116,6 @@ export default function GeneratePage() {
 
   // Extract text from PDF
   const extractPdfText = async (file: File): Promise<string> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pdfParse = (await import('pdf-parse' as any)).default;
     const arrayBuffer = await file.arrayBuffer();
     const data = await pdfParse(Buffer.from(arrayBuffer));
@@ -129,7 +124,6 @@ export default function GeneratePage() {
 
   // Extract text from DOCX
   const extractDocxText = async (file: File): Promise<string> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mammoth = (await import('mammoth' as any)).default;
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
@@ -148,14 +142,12 @@ export default function GeneratePage() {
       return;
     }
 
-    // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       setError('File size must be less than 5MB');
       setIsExtracting(false);
       return;
     }
 
-    // Validate file type
     const fileType = file.type;
     const fileName = file.name.toLowerCase();
 
@@ -173,7 +165,6 @@ export default function GeneratePage() {
     try {
       setResumeFile(file);
 
-      // Extract text based on file type
       let text = '';
       if (fileName.endsWith('.pdf')) {
         text = await extractPdfText(file);
@@ -202,8 +193,9 @@ export default function GeneratePage() {
     multiple: false,
   });
 
+  // Free analysis - no auth required
   const handleAnalyze = async () => {
-    setIsLoading(true);
+    setIsAnalyzing(true);
     setApiError('');
     setPreviewData(null);
 
@@ -232,7 +224,7 @@ export default function GeneratePage() {
         err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
       );
     } finally {
-      setIsLoading(false);
+      setIsAnalyzing(false);
     }
   };
 
@@ -243,17 +235,14 @@ export default function GeneratePage() {
       const { jsPDF } = await import('jspdf');
       const doc = new jsPDF();
 
-      // Set font and margins
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 20;
-      const maxWidth = pageWidth - (margin * 2);
+      const maxWidth = pageWidth - margin * 2;
 
-      // Add title/header
       doc.setFontSize(12);
       doc.setTextColor(40, 40, 40);
 
-      // Split content into lines and add to PDF
       const lines = doc.splitTextToSize(content, maxWidth);
       let y = margin;
 
@@ -266,7 +255,6 @@ export default function GeneratePage() {
         y += 7;
       });
 
-      // Save the PDF
       doc.save(filename);
     } catch (err) {
       console.error('Error generating PDF:', err);
@@ -283,23 +271,23 @@ export default function GeneratePage() {
       const { Document, Packer, Paragraph, TextRun } = await import('docx');
       const { saveAs } = await import('file-saver');
 
-      // Split content into paragraphs
-      const paragraphs = content.split('\n').map(line =>
-        new Paragraph({
-          children: [new TextRun(line || ' ')],
-          spacing: { after: 100 },
-        })
+      const paragraphs = content.split('\n').map(
+        (line) =>
+          new Paragraph({
+            children: [new TextRun(line || ' ')],
+            spacing: { after: 100 },
+          })
       );
 
-      // Create document
       const doc = new Document({
-        sections: [{
-          properties: {},
-          children: paragraphs,
-        }],
+        sections: [
+          {
+            properties: {},
+            children: paragraphs,
+          },
+        ],
       });
 
-      // Generate and save DOCX
       const blob = await Packer.toBlob(doc);
       saveAs(blob, filename);
     } catch (err) {
@@ -310,12 +298,14 @@ export default function GeneratePage() {
     }
   };
 
-  // Handle download based on selected format
   const handleDownload = (content: string, type: 'full' | 'ats' | 'cover') => {
     const timestamp = new Date().toISOString().split('T')[0];
-    const baseName = type === 'full' ? 'Tailored_Resume' :
-                      type === 'ats' ? 'ATS_Optimized_Resume' :
-                      'Cover_Letter';
+    const baseName =
+      type === 'full'
+        ? 'Tailored_Resume'
+        : type === 'ats'
+          ? 'ATS_Optimized_Resume'
+          : 'Cover_Letter';
 
     if (downloadFormat === 'pdf') {
       downloadAsPDF(content, `${baseName}_${timestamp}.pdf`);
@@ -324,7 +314,7 @@ export default function GeneratePage() {
     }
   };
 
-  // Handle generation with subscription check
+  // Paid generation - requires auth + subscription
   const handleGenerate = async () => {
     // Check authentication
     if (!session?.user?.id) {
@@ -332,11 +322,16 @@ export default function GeneratePage() {
       return;
     }
 
+    // Check subscription
+    if (!subscription?.isActive) {
+      setError('Please purchase a subscription to generate resumes.');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
     try {
-      // Check if user can generate
       const checkResponse = await fetch('/api/user/can-generate');
       const checkData = await checkResponse.json();
 
@@ -346,7 +341,6 @@ export default function GeneratePage() {
         return;
       }
 
-      // Generate resume
       const generateResponse = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -364,12 +358,7 @@ export default function GeneratePage() {
         throw new Error(generateData.error || 'Failed to generate resume');
       }
 
-      // Track generation in database
-      //await fetch('/api/user/track-generation', {
-       // method: 'POST',
-      //});
-
-      // Save data to localStorage for backup
+      // Save to localStorage for backup
       try {
         localStorage.setItem('applypro_resume_text', resumeText);
         localStorage.setItem('applypro_job_description', jobDescription);
@@ -378,11 +367,9 @@ export default function GeneratePage() {
         console.error('Error saving to localStorage:', err);
       }
 
-      // Show results on the same page
       setGeneratedResume(generateData);
       setShowResults(true);
 
-      // Scroll to results
       setTimeout(() => {
         const resultsSection = document.getElementById('results-section');
         if (resultsSection) {
@@ -392,17 +379,18 @@ export default function GeneratePage() {
     } catch (err) {
       console.error('Error generating resume:', err);
       setError(
-        err instanceof Error
-          ? err.message
-          : 'An unexpected error occurred. Please try again.'
+        err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Show loading state
-  if (!session && isLoadingSubscription) {
+  // Determine if user can generate (has active subscription)
+  const canGenerate = session?.user?.id && subscription?.isActive;
+
+  // Show loading only during initial session check
+  if (sessionStatus === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -413,52 +401,10 @@ export default function GeneratePage() {
     );
   }
 
-  // Check if user is authenticated
-  if (!session?.user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 py-20">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <Lock className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Sign In Required</h2>
-          <p className="text-gray-600 mb-6">
-            Please sign in with your Google account to generate tailored resumes.
-          </p>
-          <Link
-            href="/login?callbackUrl=/generate"
-            className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            Sign In with Google
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Check if no subscription
-  if (!subscription?.isActive && !isLoadingSubscription) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center px-4 py-20">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Active Subscription</h2>
-          <p className="text-gray-600 mb-6">
-            You don't have an active subscription. Please upgrade to generate tailored resumes.
-          </p>
-          <Link
-            href="/pricing"
-            className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            View Pricing Plans
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20">
       <div className="container mx-auto px-4 max-w-6xl">
-        {/* Header with subscription info */}
+        {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <Link
             href="/"
@@ -468,8 +414,8 @@ export default function GeneratePage() {
             Back to Home
           </Link>
 
-          {/* Subscription badge */}
-          {subscription?.isActive && (
+          {/* Show subscription badge if logged in with subscription */}
+          {session?.user && subscription?.isActive && (
             <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg shadow-md">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
               <div className="text-right">
@@ -486,11 +432,38 @@ export default function GeneratePage() {
               </div>
             </div>
           )}
+
+          {/* Show login prompt if not logged in */}
+          {!session?.user && (
+            <Link
+              href="/login?callbackUrl=/generate"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              <Lock className="w-4 h-4" />
+              Sign In
+            </Link>
+          )}
+
+          {/* Show upgrade prompt if logged in but no subscription */}
+          {session?.user && !subscription?.isActive && !isLoadingSubscription && (
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              Upgrade to Pro
+            </Link>
+          )}
         </div>
 
-        <h1 className="text-4xl font-bold text-gray-900 mb-2 text-center">Generate Your Resume</h1>
-        <p className="text-xl text-gray-600 text-center mb-12">
-          Upload your resume and paste a job description to get a tailored resume
+        <h1 className="text-4xl font-bold text-gray-900 mb-2 text-center">
+          Resume Analyzer & Generator
+        </h1>
+        <p className="text-xl text-gray-600 text-center mb-4">
+          Upload your resume and paste a job description to get started
+        </p>
+        <p className="text-center text-green-600 font-medium mb-12">
+          ✓ Free analysis available — no sign-up required
         </p>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -550,7 +523,8 @@ export default function GeneratePage() {
               />
 
               <p className="text-sm text-gray-600 mt-2">
-                {jobDescription.length} characters ({Math.max(0, MIN_JOB_DESC_LENGTH - jobDescription.length)} more needed)
+                {jobDescription.length} characters (
+                {Math.max(0, MIN_JOB_DESC_LENGTH - jobDescription.length)} more needed)
               </p>
             </div>
           </div>
@@ -561,12 +535,13 @@ export default function GeneratePage() {
             <div className="bg-white rounded-2xl shadow-lg p-8 space-y-4">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Ready?</h2>
 
+              {/* Free Analysis Button */}
               <button
                 onClick={handleAnalyze}
-                disabled={!resumeText || jobDescription.length < MIN_JOB_DESC_LENGTH || isLoading}
+                disabled={!resumeText || jobDescription.length < MIN_JOB_DESC_LENGTH || isAnalyzing}
                 className="w-full px-6 py-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
-                {isLoading ? (
+                {isAnalyzing ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Analyzing...
@@ -574,18 +549,18 @@ export default function GeneratePage() {
                 ) : (
                   <>
                     <Search className="w-5 h-5" />
-                    Analyze Resume
+                    Analyze Resume (Free)
                   </>
                 )}
               </button>
 
+              {/* Paid Generation Button */}
               <button
                 onClick={handleGenerate}
                 disabled={
                   !resumeText ||
                   jobDescription.length < MIN_JOB_DESC_LENGTH ||
-                  isLoading ||
-                  !subscription?.isActive
+                  isLoading
                 }
                 className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
@@ -598,20 +573,48 @@ export default function GeneratePage() {
                   <>
                     <Sparkles className="w-5 h-5" />
                     Generate Full Resume
+                    {!canGenerate && <Lock className="w-4 h-4 ml-1" />}
                   </>
                 )}
               </button>
 
-              <p className="text-xs text-gray-600 text-center">
-                Generating will use 1 of your monthly resumes
-              </p>
+              {/* Contextual message based on auth/subscription state */}
+              {!session?.user ? (
+                <p className="text-xs text-gray-600 text-center">
+                  <Link href="/login?callbackUrl=/generate" className="text-blue-600 hover:underline">
+                    Sign in
+                  </Link>{' '}
+                  and subscribe to generate tailored resumes
+                </p>
+              ) : !subscription?.isActive ? (
+                <p className="text-xs text-gray-600 text-center">
+                  <Link href="/pricing" className="text-blue-600 hover:underline">
+                    Upgrade to Pro
+                  </Link>{' '}
+                  to generate tailored resumes
+                </p>
+              ) : (
+                <p className="text-xs text-gray-600 text-center">
+                  Generating will use 1 of your {subscription.monthlyLimit} monthly resumes
+                </p>
+              )}
             </div>
 
             {/* Error Messages */}
             {error && (
               <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
                 <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-red-800 text-sm">{error}</p>
+                <div>
+                  <p className="text-red-800 text-sm">{error}</p>
+                  {error.includes('subscription') && (
+                    <Link
+                      href="/pricing"
+                      className="text-red-600 text-sm font-medium hover:underline mt-1 inline-block"
+                    >
+                      View pricing plans →
+                    </Link>
+                  )}
+                </div>
               </div>
             )}
 
@@ -629,7 +632,7 @@ export default function GeneratePage() {
               </div>
             )}
 
-            {/* Preview */}
+            {/* Free Preview Results */}
             {previewData && (
               <div className="bg-white rounded-2xl shadow-lg p-8">
                 <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -653,7 +656,10 @@ export default function GeneratePage() {
                     <p className="text-sm text-gray-600 mb-2">Matched Keywords</p>
                     <div className="flex flex-wrap gap-2">
                       {previewData.matchedKeywords.slice(0, 5).map((keyword, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs font-semibold">
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-purple-200 text-purple-800 rounded text-xs font-semibold"
+                        >
                           {keyword}
                         </span>
                       ))}
@@ -664,6 +670,22 @@ export default function GeneratePage() {
                       )}
                     </div>
                   </div>
+
+                  {/* CTA to upgrade after seeing preview */}
+                  {!canGenerate && (
+                    <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                      <p className="text-sm font-medium text-gray-900 mb-2">
+                        Want a tailored resume that matches this job?
+                      </p>
+                      <Link
+                        href={session?.user ? '/pricing' : '/login?callbackUrl=/generate'}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        {session?.user ? 'Upgrade to Generate' : 'Sign In to Generate'}
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
