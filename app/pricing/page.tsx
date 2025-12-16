@@ -1,13 +1,19 @@
 'use client';
 
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Check, X } from 'lucide-react';
 
 export default function PricingPage() {
+  const { data: session } = useSession();
+
   // Payment links - redirecting to coming soon page
   const payPerUseLink = '/coming-soon';
   const monthlyLink = '/coming-soon';
   const yearlyLink = '/coming-soon';
+
+  // If user is logged in, redirect to dashboard instead of signup
+  const freeLink = session?.user ? '/dashboard' : '/signup';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-20">
@@ -55,10 +61,10 @@ export default function PricingPage() {
             </ul>
 
             <Link
-              href="/signup"
+              href={freeLink}
               className="block w-full text-center bg-gray-200 text-gray-800 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
             >
-              Get Started Free
+              {session?.user ? 'Go to Dashboard' : 'Get Started Free'}
             </Link>
           </div>
 
