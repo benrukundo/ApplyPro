@@ -134,11 +134,11 @@ export default function TermsPage() {
                     4.2 Payment Processing
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
-                    All payments are processed securely through Lemon Squeezy, a
-                    third-party payment processor and merchant of record. We do not store or have
+                    All payments are processed securely through Paddle, a
+                    third-party payment processor. We do not store or have
                     access to your payment card information. By making a
-                    purchase or subscribing, you agree to Lemon Squeezy's terms of service and
-                    privacy policy. Lemon Squeezy handles all payment transactions, refunds,
+                    purchase or subscribing, you agree to Paddle's terms of service and
+                    privacy policy. Paddle handles all payment transactions, refunds,
                     and billing inquiries.
                   </p>
                 </div>
@@ -482,7 +482,7 @@ export default function TermsPage() {
                     Service interruptions, technical failures, or downtime
                   </li>
                   <li>
-                    Third-party actions or content (including Anthropic, Lemon Squeezy, Google, Vercel)
+                    Third-party actions or content (including Anthropic, Paddle, Google, Vercel)
                   </li>
                   <li>
                     Any damages arising from your use or inability to use the

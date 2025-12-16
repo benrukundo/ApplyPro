@@ -65,7 +65,7 @@ export default function PrivacyPage() {
                     </li>
                     <li>
                       <strong>Payment Information:</strong> Billing information and transaction details
-                      (collected and stored by Lemon Squeezy, not directly by us)
+                      (collected and stored by Paddle, not directly by us)
                     </li>
                     <li>
                       <strong>Subscription Data:</strong> Your subscription plan, status, and usage limits
@@ -110,7 +110,7 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   <strong>Payment Processing:</strong> To process payments and manage subscriptions
-                  through Lemon Squeezy
+                  through Paddle
                 </li>
                 <li>
                   <strong>Subscription Management:</strong> To track your subscription plan, usage limits,
@@ -247,8 +247,8 @@ export default function PrivacyPage() {
                   for details on their data handling
                 </li>
                 <li>
-                  <strong>Lemon Squeezy:</strong> For payment processing and subscription management.
-                  Lemon Squeezy handles all payment information as our merchant of record. See Lemon Squeezy's Privacy Policy for details
+                  <strong>Paddle:</strong> For payment processing and subscription management.
+                  Paddle handles all payment information. See Paddle's Privacy Policy for details
                 </li>
                 <li>
                   <strong>Vercel:</strong> Our hosting provider. Server infrastructure and deployment
