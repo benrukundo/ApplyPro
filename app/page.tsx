@@ -305,7 +305,7 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <span><strong>Pro:</strong> $19.99/month unlimited</span>
+                <span><strong>Pro:</strong> $19/month or $149/year</span>
               </div>
             </div>
           </div>
@@ -403,7 +403,7 @@ export default function Home() {
                 <div className="text-center text-white">
                   <h3 className="text-2xl font-bold mb-2">Pro</h3>
                   <div className="mb-2">
-                    <span className="text-5xl font-bold">$19.99</span>
+                    <span className="text-5xl font-bold">$19</span>
                     <span className="text-blue-200"> / month</span>
                   </div>
                   <p className="text-blue-200 mb-6">Unlimited resume generation*</p>

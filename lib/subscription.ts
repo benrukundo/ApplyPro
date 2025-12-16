@@ -310,7 +310,7 @@ export function getSubscriptionInfo(email: string): {
         'Unlimited job tracking',
         'Priority email support',
         'Early access to new features',
-        'Save 17% vs monthly ($199/year)'
+        'Save 35% vs monthly ($149/year)'
       ],
       isUnlimited: true,
       monthlyLimit: MONTHLY_GENERATION_LIMIT,

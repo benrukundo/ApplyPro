@@ -110,16 +110,16 @@ export default function TermsPage() {
                       Resume Score Dashboard, and Job Application Tracker (up to 25 applications)
                     </li>
                     <li>
-                      <strong>Pay-Per-Use:</strong> $4.99 USD for 3 AI-tailored resume generations
+                      <strong>Pay-Per-Use (Resume Pack):</strong> $9 USD for 3 AI-tailored resume generations
                       with all professional templates, PDF & DOCX downloads, and ATS optimization
                     </li>
                     <li>
-                      <strong>Pro Monthly:</strong> $19.99 USD per month for unlimited
+                      <strong>Pro Monthly:</strong> $19 USD per month for unlimited
                       AI-tailored resumes (100/month fair use limit), all templates,
                       unlimited job tracking, and priority support
                     </li>
                     <li>
-                      <strong>Pro Yearly:</strong> $199 USD per year (17% savings compared to monthly)
+                      <strong>Pro Yearly:</strong> $149 USD per year (35% savings compared to monthly)
                       with all Pro Monthly benefits
                     </li>
                   </ul>
@@ -179,7 +179,7 @@ export default function TermsPage() {
               <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4 mt-2">
                 <li>
                   You may generate up to THREE tailored resumes and cover letters per license
-                  key purchased ($4.99 for 3 generations)
+                  key purchased ($9 for 3 generations)
                 </li>
                 <li>
                   To generate more than 3 resumes, you must purchase additional
@@ -492,7 +492,7 @@ export default function TermsPage() {
                 <p className="text-gray-700 leading-relaxed mt-4">
                   IN ANY EVENT, OUR TOTAL LIABILITY TO YOU SHALL NOT EXCEED THE
                   AMOUNT YOU PAID FOR THE SERVICE IN THE TWELVE (12) MONTHS PRECEDING
-                  THE CLAIM (e.g., $4.99 for Pay-Per-Use, up to $239.88 for Pro Yearly).
+                  THE CLAIM (e.g., $9 for Pay-Per-Use, $19/month for Pro Monthly, $149/year for Pro Yearly).
                 </p>
               </div>
             </section>
