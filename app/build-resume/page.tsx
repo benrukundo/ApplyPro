@@ -1764,39 +1764,44 @@ export default function BuildResumePage() {
                               {/* AI Enhanced Summary - Parse and display */}
                               {(enhancedPreview || generatedResume) && (
                                 <div className="space-y-4">
-                                  {parseResumeForPreview(enhancedPreview || generatedResume!).split('\n').map((line, idx) => {
+                                  {(enhancedPreview || generatedResume)!.split('\n').map((line, idx) => {
                                     const trimmedLine = line.trim();
                                     if (!trimmedLine) return null;
 
-                                    // Section headers
-                                    if (trimmedLine.toUpperCase() === trimmedLine && trimmedLine.length > 5 && !trimmedLine.includes('@')) {
+                                    // Section headers (all caps or starts with ##)
+                                    if ((trimmedLine.toUpperCase() === trimmedLine && trimmedLine.length > 5 && !trimmedLine.includes('@')) || trimmedLine.startsWith('##')) {
+                                      const headerText = trimmedLine.replace(/^#+\s*/, '');
                                       return (
                                         <h3
                                           key={idx}
                                           className="text-sm font-bold mt-4 mb-2 uppercase tracking-wider pb-1 border-b"
                                           style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
                                         >
-                                          {trimmedLine}
+                                          {headerText}
                                         </h3>
                                       );
                                     }
 
                                     // Bullet points
-                                    if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-')) {
+                                    if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
                                       return (
                                         <p key={idx} className="text-xs text-gray-700 leading-relaxed flex items-start">
                                           <span className="mr-2">•</span>
-                                          <span>{trimmedLine.replace(/^[•-]\s*/, '')}</span>
+                                          <span>{trimmedLine.replace(/^[•\-*]\s*/, '')}</span>
                                         </p>
                                       );
                                     }
 
-                                    // Regular paragraphs
-                                    return (
-                                      <p key={idx} className="text-xs text-gray-700 leading-relaxed">
-                                        {trimmedLine}
-                                      </p>
-                                    );
+                                    // Regular paragraphs (skip very short lines that might be spacing)
+                                    if (trimmedLine.length > 3) {
+                                      return (
+                                        <p key={idx} className="text-xs text-gray-700 leading-relaxed">
+                                          {trimmedLine.replace(/\*\*/g, '')}
+                                        </p>
+                                      );
+                                    }
+
+                                    return null;
                                   })}
                                 </div>
                               )}
