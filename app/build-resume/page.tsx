@@ -1709,6 +1709,18 @@ export default function BuildResumePage() {
                                     // Remove markdown and bullets
                                     const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
 
+                                    // Skip if this line is the person's name or title (already shown in header)
+                                    if (cleanLine.toLowerCase().includes(formData.fullName.toLowerCase()) && cleanLine.length < 100) {
+                                      return null;
+                                    }
+                                    if (cleanLine.toLowerCase() === formData.targetJobTitle.toLowerCase()) {
+                                      return null;
+                                    }
+                                    // Skip contact info lines (already in sidebar)
+                                    if (cleanLine.includes('@') || cleanLine.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/)) {
+                                      return null;
+                                    }
+
                                     // Section headers (all caps or starts with ##)
                                     const isHeader = trimmedLine.startsWith('##') ||
                                                     (trimmedLine.toUpperCase() === trimmedLine &&
@@ -1841,17 +1853,40 @@ export default function BuildResumePage() {
                               const trimmedLine = line.trim();
                               if (!trimmedLine) return null;
 
+                              const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
+
+                              // Skip name, title, and contact info (already in header)
+                              if (cleanLine.toLowerCase().includes(formData.fullName.toLowerCase()) && cleanLine.length < 100) {
+                                return null;
+                              }
+                              if (cleanLine.toLowerCase() === formData.targetJobTitle.toLowerCase()) {
+                                return null;
+                              }
+                              if (cleanLine.includes('@') || cleanLine.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/)) {
+                                return null;
+                              }
+
                               if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
                                 return (
                                   <h2 key={idx} className="text-sm font-bold text-gray-900 uppercase tracking-wider mt-4 mb-2 border-b border-gray-300 pb-1">
-                                    {trimmedLine.replace(/\*\*/g, '')}
+                                    {cleanLine}
                                   </h2>
                                 );
                               }
 
+                              // Bullet points
+                              if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+                                return (
+                                  <div key={idx} className="flex items-start text-sm text-gray-700 mb-1">
+                                    <span className="mr-2 mt-0.5">•</span>
+                                    <span>{cleanLine.replace(/^[•\-*]\s*/, '')}</span>
+                                  </div>
+                                );
+                              }
+
                               return (
-                                <p key={idx} className="text-sm text-gray-700">
-                                  {trimmedLine.replace(/\*\*/g, '')}
+                                <p key={idx} className="text-sm text-gray-700 leading-relaxed">
+                                  {cleanLine}
                                 </p>
                               );
                             })}
@@ -1874,17 +1909,40 @@ export default function BuildResumePage() {
                               const trimmedLine = line.trim();
                               if (!trimmedLine) return null;
 
+                              const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
+
+                              // Skip name, title, and contact info (already in header)
+                              if (cleanLine.toLowerCase().includes(formData.fullName.toLowerCase()) && cleanLine.length < 100) {
+                                return null;
+                              }
+                              if (cleanLine.toLowerCase() === formData.targetJobTitle.toLowerCase()) {
+                                return null;
+                              }
+                              if (cleanLine.includes('@') || cleanLine.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/)) {
+                                return null;
+                              }
+
                               if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
                                 return (
                                   <h2 key={idx} className="font-bold uppercase mt-4 mb-1">
-                                    {trimmedLine.replace(/\*\*/g, '')}
+                                    {cleanLine}
                                   </h2>
+                                );
+                              }
+
+                              // Bullet points
+                              if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+                                return (
+                                  <div key={idx} className="flex items-start text-sm text-gray-700 mb-1">
+                                    <span className="mr-2 mt-0.5">•</span>
+                                    <span>{cleanLine.replace(/^[•\-*]\s*/, '')}</span>
+                                  </div>
                                 );
                               }
 
                               return (
                                 <p key={idx} className="text-gray-700">
-                                  {trimmedLine.replace(/\*\*/g, '')}
+                                  {cleanLine}
                                 </p>
                               );
                             })}
