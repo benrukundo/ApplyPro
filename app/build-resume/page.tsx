@@ -1484,10 +1484,6 @@ export default function BuildResumePage() {
                           e.preventDefault();
                         }
                       }}
-                      onSelectStart={(e) => {
-                        e.preventDefault();
-                        return false;
-                      }}
                     >
                       {/* Lock overlay for non-subscribers */}
                       {!canDownload && (
