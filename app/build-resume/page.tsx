@@ -298,42 +298,84 @@ export default function BuildResumePage() {
   };
 
   const handleGenerate = async () => {
-    if (!session?.user?.id) {
-      router.push('/login?callbackUrl=/build-resume');
-      return;
-    }
+  if (!session?.user?.id) {
+    router.push('/login?callbackUrl=/build-resume');
+    return;
+  }
 
-    setIsGenerating(true);
-    setError('');
+  setIsGenerating(true);
+  setError('');
 
-    try {
-      const response = await fetch('/api/build-resume/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          builderId,
-          formData,
-        }),
-      });
+  try {
+    const response = await fetch('/api/build-resume/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        builderId,
+        formData,
+      }),
+    });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate resume');
+    // Check if response is ok before parsing JSON
+    if (!response.ok) {
+      let errorMessage = 'Failed to generate resume';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+        
+        if (errorData.requiresUpgrade) {
+          setError('You have reached the free generation limit. Please subscribe to generate more resumes.');
+          return;
+        }
+      } catch (parseError) {
+        // Response body might be empty
+        errorMessage = `Server error (${response.status}). Please try again.`;
       }
-
-      setGeneratedResume(data.resume);
-      trackEvent('builder_resume_generated', {
-        target_job: formData.targetJobTitle,
-        experience_count: formData.experience.length,
-        education_count: formData.education.length,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate resume');
-    } finally {
-      setIsGenerating(false);
+      throw new Error(errorMessage);
     }
-  };
+
+    // Check if response has content
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response from server. Please try again.');
+    }
+
+    const text = await response.text();
+    if (!text || text.trim().length === 0) {
+      throw new Error('Empty response from server. Please try again.');
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError, 'Response text:', text);
+      throw new Error('Invalid response format. Please try again.');
+    }
+
+    if (!data.resume) {
+      throw new Error(data.error || 'No resume content received. Please try again.');
+    }
+
+    setGeneratedResume(data.resume);
+    
+    if (data.warning) {
+      console.warn('Generation warning:', data.warning);
+    }
+
+    trackEvent('builder_resume_generated', {
+      target_job: formData.targetJobTitle,
+      experience_count: formData.experience.length,
+      education_count: formData.education.length,
+    });
+  } catch (err) {
+    console.error('Generation error:', err);
+    setError(err instanceof Error ? err.message : 'Failed to generate resume. Please try again.');
+  } finally {
+    setIsGenerating(false);
+  }
+};
+
 
   const handleDownload = async (format: 'pdf' | 'docx') => {
     if (!generatedResume || !canDownload) return;
