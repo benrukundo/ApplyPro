@@ -3,7 +3,6 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 
-// Free preview uses Haiku (cheapest model)
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
 });
@@ -22,7 +21,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { formData } = body;
 
-    // Validate required fields
     if (!formData.fullName || !formData.targetJobTitle) {
       return NextResponse.json(
         { error: 'Name and target job title are required' },
@@ -30,15 +28,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build the prompt from form data
     const prompt = buildEnhancedPreviewPrompt(formData);
 
-    console.log('[PREVIEW] Generating enhanced preview with Haiku for:', session.user.email);
+    console.log('[PREVIEW] Generating enhanced preview for:', session.user.email);
 
-    // Use Haiku model for cost-effective preview
     const message = await client.messages.create({
-      model: 'claude-3-5-haiku-20241022', // Cheapest model
-      max_tokens: 1500, // Limited tokens for preview
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 2000,
       temperature: 0.7,
       messages: [
         {
@@ -54,17 +50,11 @@ export async function POST(request: NextRequest) {
       throw new Error('No content generated');
     }
 
-    console.log('[PREVIEW] Raw AI output (first 500 chars):', enhancedContent.substring(0, 500));
-
-    // Post-process: Remove sections that should only appear in sidebar
-    const filteredContent = filterSidebarSections(enhancedContent, formData.fullName, formData.targetJobTitle);
-
-    console.log('[PREVIEW] Filtered content (first 500 chars):', filteredContent.substring(0, 500));
-    console.log('[PREVIEW] Enhanced preview generated successfully');
+    console.log('[PREVIEW] Generated successfully, length:', enhancedContent.length);
 
     return NextResponse.json({
       success: true,
-      content: filteredContent,
+      content: enhancedContent,
     });
   } catch (error) {
     console.error('[PREVIEW] Error generating preview:', error);
@@ -79,6 +69,20 @@ export async function POST(request: NextRequest) {
   }
 }
 
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  
+  // Handle YYYY-MM format
+  if (dateStr.match(/^\d{4}-\d{2}$/)) {
+    const [year, month] = dateStr.split('-');
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${monthNames[parseInt(month) - 1]} ${year}`;
+  }
+  
+  return dateStr;
+}
+
 function buildEnhancedPreviewPrompt(formData: any): string {
   const {
     fullName,
@@ -91,201 +95,97 @@ function buildEnhancedPreviewPrompt(formData: any): string {
     summary,
   } = formData;
 
-  let prompt = `You are a professional resume writer. Create an enhanced, professional resume preview for this candidate.
+  // Calculate total years of experience
+  let totalYears = 0;
+  if (experience && experience.length > 0) {
+    experience.forEach((exp: any) => {
+      if (exp.startDate) {
+        const startYear = parseInt(exp.startDate.split('-')[0]);
+        const endYear = exp.current ? new Date().getFullYear() : (exp.endDate ? parseInt(exp.endDate.split('-')[0]) : startYear);
+        totalYears += (endYear - startYear);
+      }
+    });
+  }
 
-CANDIDATE INFO:
-Name: ${fullName}
-Target Role: ${targetJobTitle}
-${targetIndustry ? `Industry: ${targetIndustry}` : ''}
-${experienceLevel ? `Experience Level: ${experienceLevel}` : ''}
+  let prompt = `You are an expert resume writer. Generate ONLY a professional summary and enhanced experience bullet points.
+
+CANDIDATE PROFILE:
+- Name: ${fullName}
+- Target Role: ${targetJobTitle}
+- Industry: ${targetIndustry || 'General'}
+- Experience Level: ${experienceLevel || 'Not specified'}
+- Total Years of Experience: ${totalYears > 0 ? totalYears + '+ years' : 'Entry level'}
 
 `;
 
-  // Add summary if provided
   if (summary) {
-    prompt += `PROFESSIONAL SUMMARY PROVIDED:
+    prompt += `CANDIDATE'S SUMMARY (enhance this):
 ${summary}
 
 `;
   }
 
-  // Add education
-  if (education && education.length > 0) {
-    prompt += `EDUCATION:
-`;
-    education.forEach((edu: any) => {
-      prompt += `- ${edu.degree}${edu.field ? ` in ${edu.field}` : ''} from ${edu.school}`;
-      if (edu.startDate) {
-        prompt += ` (${edu.startDate} - ${edu.current ? 'Present' : edu.endDate || 'N/A'})`;
-      }
-      if (edu.gpa) {
-        prompt += ` - GPA: ${edu.gpa}`;
-      }
-      if (edu.highlights) {
-        prompt += `\n  Highlights: ${edu.highlights}`;
-      }
-      prompt += '\n';
-    });
-    prompt += '\n';
-  }
-
-  // Add experience
+  // Add experience details for AI to enhance
   if (experience && experience.length > 0) {
-    prompt += `WORK EXPERIENCE:
+    prompt += `WORK EXPERIENCE TO ENHANCE:
 `;
-    experience.forEach((exp: any) => {
-      prompt += `- ${exp.title} at ${exp.company}`;
-      if (exp.location) prompt += `, ${exp.location}`;
-      if (exp.startDate) {
-        prompt += ` (${exp.startDate} - ${exp.current ? 'Present' : exp.endDate || 'N/A'})`;
-      }
-      if (exp.description) {
-        prompt += `\n  ${exp.description}`;
-      }
-      prompt += '\n';
+    experience.forEach((exp: any, idx: number) => {
+      const startFormatted = formatDate(exp.startDate);
+      const endFormatted = exp.current ? 'Present' : formatDate(exp.endDate);
+      
+      prompt += `
+Role ${idx + 1}:
+- Job Title: ${exp.title}
+- Company: ${exp.company}
+- Location: ${exp.location || 'Not specified'}
+- Period: ${startFormatted} - ${endFormatted}
+- Description: ${exp.description || 'General responsibilities'}
+`;
     });
-    prompt += '\n';
   }
 
-  // Add skills
-  if (skills) {
-    const allSkills = [
-      ...(skills.technical || []),
-      ...(skills.soft || []),
-      ...(skills.languages || []),
-      ...(skills.certifications || []),
-    ];
-    if (allSkills.length > 0) {
-      prompt += `SKILLS & CERTIFICATIONS:
-${allSkills.join(', ')}
+  prompt += `
+=== OUTPUT INSTRUCTIONS ===
 
-`;
-    }
-  }
+Generate EXACTLY this format (no deviations):
 
-  prompt += `CRITICAL INSTRUCTIONS - DO NOT INCLUDE:
-- DO NOT write the candidate's name "${fullName}" anywhere in your output
-- DO NOT write the job title "${targetJobTitle}" as a standalone line
-- DO NOT include contact information (email, phone, address)
-- DO NOT include SKILLS section (already in sidebar)
-- DO NOT include EDUCATION section (already in sidebar)
-- DO NOT include CERTIFICATIONS section (already in sidebar)
-- DO NOT include LANGUAGES section (already in sidebar)
-
-WHAT TO GENERATE - ONLY 2 SECTIONS:
-
-1. PROFESSIONAL SUMMARY section:
-   - Header: ## PROFESSIONAL SUMMARY
-   - 2-3 compelling sentences highlighting key strengths for ${targetJobTitle} role
-   - Include years of experience if applicable
-   - Mention key achievements or expertise areas
-
-2. EXPERIENCE section:
-   - Header: ## PROFESSIONAL EXPERIENCE
-   - For EACH work experience, use this EXACT format:
-
-   Job Title
-   Company Name | Start Date - End Date
-   • Achievement 1 with action verbs and impact
-   • Achievement 2 with quantifiable results
-   • Achievement 3 highlighting key responsibilities
-
-   - Use the EXACT company names, job titles, and dates provided in the input
-   - Enhance the description with strong action verbs (Led, Managed, Developed, Increased, Implemented, Architected, etc.)
-   - Add quantifiable achievements where possible (e.g., "Increased efficiency by 40%", "Managed team of 12+")
-   - 3-5 bullet points per role
-   - Keep achievements concise but impactful
-
-FORMATTING RULES:
-- Start directly with ## PROFESSIONAL SUMMARY (no name, no title above it)
-- Use ## for section headers
-- Use - for bullet points
-- Keep it ATS-friendly
-- Professional language throughout
-
-OUTPUT FORMAT EXAMPLE:
 ## PROFESSIONAL SUMMARY
-[2-3 sentences about the candidate]
+[Write a compelling 2-3 sentence summary highlighting ${totalYears > 0 ? totalYears + '+ years of experience' : 'enthusiasm and potential'} in ${targetIndustry || 'the field'}. Mention key strengths relevant to ${targetJobTitle}. Include quantifiable achievements if possible.]
 
 ## PROFESSIONAL EXPERIENCE
-[Enhanced work experience with bullet points]
+`;
 
-Output ONLY these two sections. Do NOT include any header with the name or title. Start immediately with ## PROFESSIONAL SUMMARY.`;
-
-  return prompt;
-}
-
-/**
- * Filter out sections that should only appear in sidebar
- * Also removes name, title, and contact info from AI output
- * Keeps only: PROFESSIONAL SUMMARY, EXPERIENCE, and any other narrative sections
- */
-function filterSidebarSections(content: string, fullName: string, targetJobTitle: string): string {
-  const lines = content.split('\n');
-  const sectionsToSkip = ['SKILLS', 'SKILL', 'EDUCATION', 'CERTIFICATIONS', 'CERTIFICATION', 'LANGUAGES', 'LANGUAGE', 'CONTACT'];
-
-  let skipSection = false;
-  const filteredLines: string[] = [];
-
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    if (!trimmedLine) {
-      filteredLines.push(line);
-      continue;
-    }
-
-    const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
-
-    // Always skip lines containing the person's name (anywhere in the content)
-    const lineUpper = cleanLine.toUpperCase();
-    const nameUpper = fullName.toUpperCase();
-    const titleUpper = targetJobTitle.toUpperCase();
-
-    // Skip if line contains full name
-    if (lineUpper.includes(nameUpper) && cleanLine.length < 100) {
-      console.log('[FILTER] Skipping name line:', cleanLine);
-      continue;
-    }
-
-    // Skip if line is exactly the job title
-    if (lineUpper === titleUpper) {
-      console.log('[FILTER] Skipping title line:', cleanLine);
-      continue;
-    }
-
-    // Skip contact info
-    if (cleanLine.includes('@') || cleanLine.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/)) {
-      continue;
-    }
-
-    // Check if this is a section header
-    const isHeader =
-      trimmedLine.startsWith('##') ||
-      trimmedLine.startsWith('**') ||
-      (trimmedLine === trimmedLine.toUpperCase() &&
-       trimmedLine.length > 5 &&
-       trimmedLine.length < 60 &&
-       !trimmedLine.includes('@'));
-
-    if (isHeader) {
-      const cleanHeader = cleanLine.toUpperCase();
-
-      // Check if this is a section we should skip
-      if (sectionsToSkip.some(s => cleanHeader.includes(s))) {
-        skipSection = true;
-        continue; // Skip this header
-      } else {
-        // This is a valid section (SUMMARY or EXPERIENCE)
-        skipSection = false;
-        filteredLines.push(line);
-      }
-    } else if (!skipSection) {
-      // Only add content if we're not in a skipped section
-      filteredLines.push(line);
-    }
+  // Generate exact format for each experience
+  if (experience && experience.length > 0) {
+    experience.forEach((exp: any) => {
+      const startFormatted = formatDate(exp.startDate);
+      const endFormatted = exp.current ? 'Present' : formatDate(exp.endDate);
+      
+      prompt += `
+**${exp.title}**
+${exp.company}${exp.location ? ', ' + exp.location : ''} | ${startFormatted} - ${endFormatted}
+- [Achievement bullet with action verb and quantifiable result]
+- [Achievement bullet with action verb and quantifiable result]
+- [Achievement bullet with action verb and quantifiable result]
+- [Achievement bullet with action verb and quantifiable result]
+`;
+    });
   }
 
-  return filteredLines.join('\n');
+  prompt += `
+=== CRITICAL RULES ===
+1. Use EXACTLY the job titles, company names, locations, and dates I provided above
+2. DO NOT change or omit any dates - use the exact "Month YYYY - Month YYYY" format shown
+3. DO NOT include the candidate's name anywhere
+4. DO NOT include contact information, skills, education, or certifications
+5. Start each bullet point with a strong action verb (Led, Developed, Managed, Implemented, Increased, etc.)
+6. Include quantifiable metrics where possible (%, $, numbers)
+7. Keep bullets concise but impactful (one line each)
+8. Output ONLY the two sections: PROFESSIONAL SUMMARY and PROFESSIONAL EXPERIENCE
+
+Begin output now:`;
+
+  return prompt;
 }
 
 export async function GET() {

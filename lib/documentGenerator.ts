@@ -37,15 +37,20 @@ interface ParsedResume {
 /**
  * Parse resume text into structured data
  */
+/**
+ * Parse resume text into structured data
+ */
 function parseResumeToStructure(content: string): ParsedResume {
-  // First, clean markdown formatting from the content
+  console.log('[PARSER] Input length:', content.length);
+  
+  // Clean markdown formatting
   let cleanedContent = content
-    .replace(/^##\s*/gm, '')           // Remove ## headers
-    .replace(/^###\s*/gm, '')          // Remove ### headers
-    .replace(/\*\*(.*?)\*\*/g, '$1')   // Remove **bold** markers
-    .replace(/\*(.*?)\*/g, '$1')       // Remove *italic* markers
-    .replace(/^[-•]\s*/gm, '- ')       // Normalize bullets to "- "
-    .replace(/\n{3,}/g, '\n\n');       // Reduce multiple newlines
+    .replace(/^##\s*/gm, '')
+    .replace(/^###\s*/gm, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/^[-•]\s*/gm, '- ')
+    .replace(/\n{3,}/g, '\n\n');
 
   const lines = cleanedContent.split('\n').map(l => l.trim()).filter(l => l);
 
@@ -65,106 +70,84 @@ function parseResumeToStructure(content: string): ParsedResume {
   let currentExperience: { title: string; company: string; period: string; achievements: string[] } | null = null;
   let foundName = false;
 
+  // Section keywords to detect headers
+  const sectionKeywords = {
+    summary: ['summary', 'profile', 'objective', 'about'],
+    skills: ['skills', 'competenc', 'technical', 'expertise'],
+    experience: ['experience', 'employment', 'work history', 'professional experience'],
+    education: ['education', 'academic', 'qualification'],
+    certifications: ['certif', 'training', 'license'],
+    contact: ['contact'],
+    languages: ['language'],
+    additional: ['additional', 'other', 'interest', 'volunteer'],
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const cleanLine = line.replace(/^#+\s*/, '').trim();
     
-    // Skip empty lines
     if (!cleanLine) continue;
 
-    // Detect section headers (## SECTION NAME, ALL CAPS, or Title Case section keywords)
-    const headerLower = cleanLine.toLowerCase();
-    const isSectionKeyword = (
-      headerLower.includes('summary') || headerLower.includes('profile') || headerLower.includes('objective') ||
-      headerLower.includes('skill') || headerLower.includes('competenc') || headerLower.includes('technical') ||
-      headerLower.includes('experience') || headerLower.includes('employment') || headerLower.includes('work history') ||
-      headerLower.includes('education') || headerLower.includes('academic') ||
-      headerLower.includes('certif') || headerLower.includes('training') ||
-      headerLower.includes('contact') || headerLower.includes('additional') || headerLower.includes('qualif')
-    );
-    const isAllCaps = cleanLine === cleanLine.toUpperCase() && cleanLine.length > 2 && cleanLine.length < 60 && !cleanLine.match(/^\d/) && !cleanLine.includes('@');
-    const isHeader = line.startsWith('#') || isAllCaps || (isSectionKeyword && cleanLine.length < 60);
+    const lineLower = cleanLine.toLowerCase();
+    const lineUpper = cleanLine.toUpperCase();
+    
+    // Check if this is a section header
+    const isAllCaps = cleanLine === lineUpper && cleanLine.length > 3 && cleanLine.length < 60 && !cleanLine.includes('@') && !cleanLine.match(/^\d/);
+    const isSectionHeader = Object.values(sectionKeywords).some(keywords => 
+      keywords.some(kw => lineLower.includes(kw))
+    ) && cleanLine.length < 60;
+    const isHeader = isAllCaps || isSectionHeader;
 
     if (isHeader) {
-      
       // Save current experience if exists
       if (currentExperience && currentExperience.title) {
         result.experience.push(currentExperience);
         currentExperience = null;
       }
 
-      // First header is usually the name (but exclude common section keywords)
-      if (!foundName &&
-          !headerLower.includes('summary') &&
-          !headerLower.includes('experience') &&
-          !headerLower.includes('skill') &&
-          !headerLower.includes('education') &&
-          !headerLower.includes('contact') &&
-          !headerLower.includes('language') &&
-          !headerLower.includes('certif') &&
-          !headerLower.includes('training') &&
-          !headerLower.includes('additional')) {
+      // First header might be the name
+      if (!foundName && !isSectionHeader) {
         result.name = cleanLine;
         foundName = true;
         continue;
       }
 
-      // Second non-section header could be title
-      if (foundName && !result.title &&
-          !headerLower.includes('summary') &&
-          !headerLower.includes('experience') &&
-          !headerLower.includes('skill') &&
-          !headerLower.includes('education') &&
-          !headerLower.includes('contact') &&
-          !headerLower.includes('competen') &&
-          !headerLower.includes('certif') &&
-          !headerLower.includes('qualif') &&
-          !headerLower.includes('language') &&
-          !headerLower.includes('training') &&
-          !headerLower.includes('additional')) {
+      // Second non-section header might be title
+      if (foundName && !result.title && !isSectionHeader) {
         result.title = cleanLine;
         continue;
       }
 
       // Identify section type
-      if (headerLower.includes('summary') || headerLower.includes('profile') || headerLower.includes('objective')) {
-        currentSection = 'summary';
-      } else if (headerLower.includes('skill') || headerLower.includes('competen') || headerLower.includes('technical')) {
-        currentSection = 'skills';
-      } else if (headerLower.includes('experience') || headerLower.includes('employment') || headerLower.includes('work history')) {
-        currentSection = 'experience';
-      } else if (headerLower.includes('education')) {
-        currentSection = 'education';
-      } else if (headerLower.includes('certif') || headerLower.includes('training')) {
-        currentSection = 'certifications';
-      } else if (headerLower.includes('contact')) {
-        currentSection = 'contact';
-      } else if (headerLower.includes('additional') || headerLower.includes('qualif') || headerLower.includes('other')) {
-        currentSection = 'additional';
+      for (const [section, keywords] of Object.entries(sectionKeywords)) {
+        if (keywords.some(kw => lineLower.includes(kw))) {
+          currentSection = section;
+          break;
+        }
       }
       continue;
     }
 
     // Check for contact info anywhere
     if (cleanLine.includes('@') && cleanLine.includes('.')) {
-      result.contact.push(cleanLine.replace(/^(Email|E-mail):\s*/i, ''));
+      const email = cleanLine.match(/[\w.-]+@[\w.-]+\.\w+/);
+      if (email) result.contact.push(email[0]);
       continue;
     }
     if (cleanLine.match(/^(\+?\d[\d\s\-()]{8,}|\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})$/)) {
       result.contact.push(cleanLine.replace(/^(Phone|Tel):\s*/i, ''));
       continue;
     }
-    if (cleanLine.toLowerCase().includes('linkedin.com') || cleanLine.toLowerCase().includes('github.com')) {
-      result.contact.push(cleanLine.replace(/^(LinkedIn|GitHub):\s*/i, ''));
+    if (lineLower.includes('linkedin.com') || lineLower.includes('github.com')) {
+      result.contact.push(cleanLine);
       continue;
     }
-    if (cleanLine.toLowerCase().startsWith('phone:') || cleanLine.toLowerCase().startsWith('email:') || 
-        cleanLine.toLowerCase().startsWith('linkedin:')) {
+    if (lineLower.startsWith('phone:') || lineLower.startsWith('email:') || 
+        lineLower.startsWith('linkedin:') || lineLower.startsWith('location:')) {
       result.contact.push(cleanLine);
       continue;
     }
 
-    // Process content based on current section
     const bulletContent = cleanLine.replace(/^[-•*–]\s*/, '');
     const isBullet = cleanLine.startsWith('-') || cleanLine.startsWith('•') || cleanLine.startsWith('*') || cleanLine.startsWith('–');
 
@@ -179,9 +162,21 @@ function parseResumeToStructure(content: string): ParsedResume {
 
       case 'skills':
         if (isBullet) {
-          result.skills.push(bulletContent);
+          // Check if it's a categorized skill line (e.g., "Programming Languages: JavaScript, Python")
+          if (bulletContent.includes(':')) {
+            const [category, skillList] = bulletContent.split(':');
+            const skills = skillList.split(',').map(s => s.trim()).filter(s => s);
+            result.skills.push(...skills);
+          } else {
+            result.skills.push(bulletContent);
+          }
         } else if (cleanLine.includes(',')) {
           result.skills.push(...cleanLine.split(',').map(s => s.trim()).filter(s => s));
+        } else if (cleanLine.includes(':')) {
+          const [, skillList] = cleanLine.split(':');
+          if (skillList) {
+            result.skills.push(...skillList.split(',').map(s => s.trim()).filter(s => s));
+          }
         } else {
           result.skills.push(cleanLine);
         }
@@ -203,6 +198,14 @@ function parseResumeToStructure(content: string): ParsedResume {
         }
         break;
 
+      case 'languages':
+        if (isBullet) {
+          result.additional.push(bulletContent);
+        } else {
+          result.additional.push(cleanLine);
+        }
+        break;
+
       case 'additional':
         if (isBullet) {
           result.additional.push(bulletContent);
@@ -212,44 +215,97 @@ function parseResumeToStructure(content: string): ParsedResume {
         break;
 
       case 'experience':
-        // Check if this is a job title line (contains | or date pattern)
-        const hasDate = /\d{4}\s*[-–]\s*(\d{4}|Present|Current)/i.test(cleanLine);
+        // Improved date detection - multiple patterns
+        const datePatterns = [
+          // "January 2020 - Present" or "Jan 2020 - Dec 2023"
+          /(\w+\s+\d{4})\s*[-–]\s*(\w+\s+\d{4}|Present|Current)/i,
+          // "2020-01 - 2023-12" or "2020-01 - Present"
+          /(\d{4}-\d{2})\s*[-–]\s*(\d{4}-\d{2}|Present|Current)/i,
+          // "2020 - 2023" or "2020 - Present"
+          /(\d{4})\s*[-–]\s*(\d{4}|Present|Current)/i,
+        ];
+        
+        let hasDate = false;
+        let extractedPeriod = '';
+        
+        for (const pattern of datePatterns) {
+          const match = cleanLine.match(pattern);
+          if (match) {
+            hasDate = true;
+            extractedPeriod = match[0];
+            break;
+          }
+        }
+        
         const hasPipe = cleanLine.includes('|');
         
+        // This line contains job info (has date or pipe separator)
         if ((hasDate || hasPipe) && !isBullet) {
           // Save previous experience
           if (currentExperience && currentExperience.title) {
             result.experience.push(currentExperience);
           }
           
-          // Parse job info
-          const parts = cleanLine.split('|').map(p => p.trim());
-          const periodMatch = cleanLine.match(/(\w+\s+\d{4}\s*[-–]\s*(?:\w+\s+\d{4}|Present|Current)|\d{4}\s*[-–]\s*(?:\d{4}|Present|Current))/i);
+          // Parse the job info line
+          // Format: "Company, Location | January 2020 - Present"
+          // Or: "Job Title" on previous line, this is "Company, Location | Date"
           
-          currentExperience = {
-            title: parts[0] || '',
-            company: parts.length > 1 ? parts[1].replace(/\d{4}.*$/, '').trim() : '',
-            period: periodMatch ? periodMatch[1] : '',
-            achievements: [],
-          };
-        } else if (isBullet && currentExperience) {
-          currentExperience.achievements.push(bulletContent);
-        } else if (!isBullet && cleanLine.length > 3 && !currentExperience) {
-          // This might be a job title on its own line
-          currentExperience = {
-            title: cleanLine,
-            company: '',
-            period: '',
-            achievements: [],
-          };
-        } else if (!isBullet && currentExperience && !currentExperience.company && cleanLine.length > 3) {
-          // This might be company info
-          const periodMatch = cleanLine.match(/(\w+\s+\d{4}\s*[-–]\s*(?:\w+\s+\d{4}|Present|Current)|\d{4}\s*[-–]\s*(?:\d{4}|Present|Current))/i);
-          if (periodMatch) {
-            currentExperience.company = cleanLine.replace(periodMatch[1], '').replace(/\|/g, '').trim();
-            currentExperience.period = periodMatch[1];
+          const parts = cleanLine.split('|').map(p => p.trim());
+          let company = parts[0] || '';
+          let period = '';
+          
+          // Extract period from the line
+          if (extractedPeriod) {
+            period = extractedPeriod;
+            // Remove period from company string
+            company = company.replace(extractedPeriod, '').trim();
+          } else if (parts.length > 1) {
+            // Period might be in the second part
+            period = parts[parts.length - 1];
+          }
+          
+          // Check if previous line was a job title (not a bullet, not a header)
+          const prevLine = i > 0 ? lines[i - 1].trim() : '';
+          const prevClean = prevLine.replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
+          const prevIsBullet = prevLine.startsWith('-') || prevLine.startsWith('•');
+          const prevHasDate = datePatterns.some(p => prevClean.match(p));
+          
+          if (prevClean && !prevIsBullet && !prevHasDate && prevClean.length < 100) {
+            // Previous line was likely the job title
+            currentExperience = {
+              title: prevClean,
+              company: company,
+              period: period,
+              achievements: [],
+            };
           } else {
-            currentExperience.company = cleanLine;
+            // This line contains both title and company info
+            currentExperience = {
+              title: company, // Will be overwritten if we detect a title
+              company: '',
+              period: period,
+              achievements: [],
+            };
+          }
+        } else if (isBullet && currentExperience) {
+          // Bullet point - add to current experience
+          currentExperience.achievements.push(bulletContent);
+        } else if (!isBullet && cleanLine.length > 3) {
+          // Non-bullet line in experience section
+          if (!currentExperience) {
+            // This is likely a job title
+            currentExperience = {
+              title: cleanLine,
+              company: '',
+              period: '',
+              achievements: [],
+            };
+          } else if (!currentExperience.company && cleanLine.length > 3) {
+            // This might be company info
+            currentExperience.company = cleanLine.replace(extractedPeriod, '').trim();
+            if (extractedPeriod && !currentExperience.period) {
+              currentExperience.period = extractedPeriod;
+            }
           }
         }
         break;
@@ -264,6 +320,17 @@ function parseResumeToStructure(content: string): ParsedResume {
   if (currentExperience && currentExperience.title) {
     result.experience.push(currentExperience);
   }
+
+  console.log('[PARSER] Parsed result:', {
+    name: result.name,
+    title: result.title,
+    contactCount: result.contact.length,
+    summaryLength: result.summary.length,
+    skillsCount: result.skills.length,
+    educationCount: result.education.length,
+    experienceCount: result.experience.length,
+    experiences: result.experience.map(e => ({ title: e.title, company: e.company, period: e.period, bullets: e.achievements.length })),
+  });
 
   return result;
 }

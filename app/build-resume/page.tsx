@@ -449,128 +449,195 @@ export default function BuildResumePage() {
   };
 
   // Build complete resume for download (combines formData with AI content)
-  const buildCompleteResume = (): string => {
-    const aiContent = enhancedPreview || generatedResume || '';
+  // Build complete resume for download (combines formData with AI content)
+const buildCompleteResume = (): string => {
+  const aiContent = enhancedPreview || generatedResume || '';
 
-    // Build complete resume with all sections
-    let resume = '';
+  let resume = '';
 
-    // Name and title (parser will extract these)
-    resume += `**${formData.fullName.toUpperCase()}**\n`;
-    resume += `${formData.targetJobTitle}\n\n`;
+  // Name and title (parser will extract these)
+  resume += `## ${formData.fullName.toUpperCase()}\n`;
+  resume += `${formData.targetJobTitle}\n\n`;
 
-    // Contact information (no header, parser auto-detects)
-    if (formData.email) resume += `${formData.email}\n`;
-    if (formData.phone) resume += `Phone: ${formData.phone}\n`;
-    if (formData.location) resume += `Location: ${formData.location}\n`;
-    if (formData.linkedin) resume += `LinkedIn: ${formData.linkedin}\n`;
-    if (formData.portfolio) resume += `Portfolio: ${formData.portfolio}\n`;
+  // Contact information
+  if (formData.email) resume += `Email: ${formData.email}\n`;
+  if (formData.phone) resume += `Phone: ${formData.phone}\n`;
+  if (formData.location) resume += `Location: ${formData.location}\n`;
+  if (formData.linkedin) resume += `LinkedIn: ${formData.linkedin}\n`;
+  if (formData.portfolio) resume += `Portfolio: ${formData.portfolio}\n`;
+  resume += `\n`;
+
+  // Extract just the summary from AI content (if available)
+  let aiSummary = '';
+  let aiExperience = '';
+  
+  if (aiContent) {
+    const summaryMatch = aiContent.match(/##\s*PROFESSIONAL\s*SUMMARY\s*\n([\s\S]*?)(?=##|$)/i);
+    if (summaryMatch) {
+      aiSummary = summaryMatch[1].trim();
+    }
+    
+    const expMatch = aiContent.match(/##\s*PROFESSIONAL\s*EXPERIENCE\s*\n([\s\S]*?)(?=##\s*(?!PROFESSIONAL)|$)/i);
+    if (expMatch) {
+      aiExperience = expMatch[1].trim();
+    }
+  }
+
+  // Professional Summary
+  resume += `## PROFESSIONAL SUMMARY\n`;
+  if (aiSummary) {
+    resume += `${aiSummary}\n\n`;
+  } else if (formData.summary) {
+    resume += `${formData.summary}\n\n`;
+  } else {
+    // Generate a basic summary
+    const totalYears = formData.experience.reduce((years: number, exp: Experience) => {
+      if (exp.startDate) {
+        const startYear = parseInt(exp.startDate.split('-')[0]);
+        const endYear = exp.current ? new Date().getFullYear() : (exp.endDate ? parseInt(exp.endDate.split('-')[0]) : startYear);
+        return years + (endYear - startYear);
+      }
+      return years;
+    }, 0);
+    
+    resume += `Dedicated ${formData.targetJobTitle} with ${totalYears > 0 ? totalYears + '+ years of' : ''} experience in ${formData.targetIndustry || 'the industry'}. `;
+    resume += `Proven track record of delivering results and driving organizational success.\n\n`;
+  }
+
+  // Professional Experience - Use AI enhanced content OR build from formData
+  resume += `## PROFESSIONAL EXPERIENCE\n`;
+  
+  if (aiExperience) {
+    // Use AI-enhanced experience
+    resume += `${aiExperience}\n\n`;
+  } else {
+    // Build from formData with proper formatting
+    formData.experience.forEach(exp => {
+      const startFormatted = formatMonthYear(exp.startDate);
+      const endFormatted = exp.current ? 'Present' : formatMonthYear(exp.endDate);
+      
+      resume += `**${exp.title}**\n`;
+      resume += `${exp.company}${exp.location ? ', ' + exp.location : ''} | ${startFormatted} - ${endFormatted}\n`;
+      
+      if (exp.description) {
+        // Split description into bullet points
+        const bullets = exp.description.split(/[\n.]+/).filter(b => b.trim().length > 10);
+        bullets.forEach(bullet => {
+          resume += `- ${bullet.trim()}\n`;
+        });
+      }
+      resume += `\n`;
+    });
+  }
+
+  // Skills section with smart categorization
+  const technicalSkills = formData.skills.technical;
+  const softSkills = formData.skills.soft;
+
+  if (technicalSkills.length > 0 || softSkills.length > 0) {
+    resume += `## SKILLS\n`;
+
+    // Categorize technical skills
+    const progLangs = technicalSkills.filter(s =>
+      ['javascript', 'python', 'java', 'c++', 'c#', 'ruby', 'php', 'go', 'rust', 'typescript', 'kotlin', 'swift', 'scala'].some(lang =>
+        s.toLowerCase().includes(lang)
+      )
+    );
+    const frontendTech = technicalSkills.filter(s =>
+      ['react', 'vue', 'angular', 'html', 'css', 'tailwind', 'bootstrap', 'next', 'svelte', 'sass', 'less'].some(tech =>
+        s.toLowerCase().includes(tech)
+      )
+    );
+    const backendTech = technicalSkills.filter(s =>
+      ['node', 'express', 'django', 'flask', 'spring', 'api', 'rest', 'graphql', 'database', 'sql', 'mongodb', 'postgresql', 'mysql', 'redis'].some(tech =>
+        s.toLowerCase().includes(tech)
+      )
+    );
+    const cloudDevOps = technicalSkills.filter(s =>
+      ['aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'ci/cd', 'terraform', 'ansible'].some(tech =>
+        s.toLowerCase().includes(tech)
+      )
+    );
+    const otherTech = technicalSkills.filter(s =>
+      !progLangs.includes(s) && !frontendTech.includes(s) && !backendTech.includes(s) && !cloudDevOps.includes(s)
+    );
+
+    if (progLangs.length > 0) {
+      resume += `- Programming Languages: ${progLangs.join(', ')}\n`;
+    }
+    if (frontendTech.length > 0) {
+      resume += `- Frontend Technologies: ${frontendTech.join(', ')}\n`;
+    }
+    if (backendTech.length > 0) {
+      resume += `- Backend & Databases: ${backendTech.join(', ')}\n`;
+    }
+    if (cloudDevOps.length > 0) {
+      resume += `- Cloud & DevOps: ${cloudDevOps.join(', ')}\n`;
+    }
+    if (otherTech.length > 0) {
+      resume += `- Technical Skills: ${otherTech.join(', ')}\n`;
+    }
+    if (softSkills.length > 0) {
+      resume += `- Professional Skills: ${softSkills.join(', ')}\n`;
+    }
     resume += `\n`;
+  }
 
-    // Add AI-enhanced content (PROFESSIONAL SUMMARY and EXPERIENCE sections)
-    resume += aiContent + '\n\n';
-
-    // Skills section - enhanced with smart categorization
-    const technicalSkills = formData.skills.technical;
-    const softSkills = formData.skills.soft;
-
-    if (technicalSkills.length > 0 || softSkills.length > 0) {
-      resume += `## SKILLS\n`;
-
-      // Categorize technical skills intelligently
-      const progLangs = technicalSkills.filter(s =>
-        ['javascript', 'python', 'java', 'c++', 'c#', 'ruby', 'php', 'go', 'rust', 'typescript', 'kotlin', 'swift'].some(lang =>
-          s.toLowerCase().includes(lang)
-        )
-      );
-      const frontendTech = technicalSkills.filter(s =>
-        ['react', 'vue', 'angular', 'html', 'css', 'tailwind', 'bootstrap', 'next', 'svelte'].some(tech =>
-          s.toLowerCase().includes(tech)
-        )
-      );
-      const backendTech = technicalSkills.filter(s =>
-        ['node', 'express', 'django', 'flask', 'spring', 'api', 'rest', 'graphql', 'database', 'sql', 'mongodb', 'postgresql'].some(tech =>
-          s.toLowerCase().includes(tech)
-        )
-      );
-      const otherTech = technicalSkills.filter(s =>
-        !progLangs.includes(s) && !frontendTech.includes(s) && !backendTech.includes(s)
-      );
-
-      // Add categorized technical skills
-      if (progLangs.length > 0) {
-        resume += `• Programming Languages: ${progLangs.join(', ')}\n`;
+  // Education section
+  if (formData.education.length > 0) {
+    resume += `## EDUCATION\n`;
+    formData.education.forEach(edu => {
+      resume += `${edu.degree}${edu.field ? ' in ' + edu.field : ''} - ${edu.school}\n`;
+      
+      if (edu.startDate || edu.endDate) {
+        const startFormatted = formatMonthYear(edu.startDate);
+        const endFormatted = edu.current ? 'Present' : formatMonthYear(edu.endDate);
+        resume += `${startFormatted} - ${endFormatted}\n`;
       }
-      if (frontendTech.length > 0) {
-        resume += `• Frontend Technologies: ${frontendTech.join(', ')}\n`;
-      }
-      if (backendTech.length > 0) {
-        resume += `• Backend Development: ${backendTech.join(', ')}\n`;
-      }
-      if (otherTech.length > 0) {
-        otherTech.forEach(skill => resume += `• ${skill}\n`);
-      }
-
-      // Add soft skills with categorization
-      if (softSkills.length > 0) {
-        const leadership = softSkills.filter(s =>
-          ['leadership', 'management', 'team', 'strategic', 'planning', 'agile', 'scrum'].some(kw =>
-            s.toLowerCase().includes(kw)
-          )
-        );
-        const otherSoft = softSkills.filter(s => !leadership.includes(s));
-
-        if (leadership.length > 0) {
-          resume += `• Leadership & Management: ${leadership.join(', ')}\n`;
-        }
-        if (otherSoft.length > 0) {
-          otherSoft.forEach(skill => resume += `• ${skill}\n`);
-        }
-      }
-
+      
+      if (edu.gpa) resume += `GPA: ${edu.gpa}\n`;
+      if (edu.highlights) resume += `${edu.highlights}\n`;
       resume += `\n`;
-    }
+    });
+  }
 
-    // Education section
-    if (formData.education.length > 0) {
-      resume += `## EDUCATION\n`;
-      formData.education.forEach(edu => {
-        // Format: Degree in Field - School
-        resume += `${edu.degree}${edu.field ? ` in ${edu.field}` : ''}`;
-        if (edu.school) resume += ` - ${edu.school}`;
-        resume += `\n`;
+  // Certifications
+  if (formData.skills.certifications.length > 0) {
+    resume += `## CERTIFICATIONS\n`;
+    formData.skills.certifications.forEach(cert => {
+      resume += `- ${cert}\n`;
+    });
+    resume += `\n`;
+  }
 
-        // Add dates on separate line if available
-        if (edu.startDate || edu.endDate) {
-          resume += `${edu.startDate || ''} - ${edu.current ? 'Present' : edu.endDate || ''}\n`;
-        }
+  // Languages
+  if (formData.skills.languages.length > 0) {
+    resume += `## LANGUAGES\n`;
+    formData.skills.languages.forEach(lang => {
+      resume += `- ${lang}\n`;
+    });
+    resume += `\n`;
+  }
 
-        if (edu.gpa) resume += `GPA: ${edu.gpa}\n`;
-        if (edu.highlights) resume += `${edu.highlights}\n`;
-        resume += `\n`;
-      });
-    }
+  console.log('[BUILD-RESUME] Complete resume built, length:', resume.length);
+  console.log('[BUILD-RESUME] First 500 chars:', resume.substring(0, 500));
 
-    // Certifications
-    if (formData.skills.certifications.length > 0) {
-      resume += `## CERTIFICATIONS\n`;
-      formData.skills.certifications.forEach(cert => {
-        resume += `• ${cert}\n`;
-      });
-      resume += `\n`;
-    }
+  return resume;
+};
 
-    // Languages
-    if (formData.skills.languages.length > 0) {
-      resume += `## LANGUAGES\n`;
-      formData.skills.languages.forEach(lang => {
-        resume += `• ${lang}\n`;
-      });
-      resume += `\n`;
-    }
-
-    return resume;
-  };
+// Helper function to format date
+const formatMonthYear = (dateStr: string): string => {
+  if (!dateStr) return '';
+  
+  if (dateStr.match(/^\d{4}-\d{2}$/)) {
+    const [year, month] = dateStr.split('-');
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${monthNames[parseInt(month) - 1]} ${year}`;
+  }
+  
+  return dateStr;
+};
 
   const handleDownload = async (format: 'pdf' | 'docx') => {
     console.log('[BUILD-RESUME] handleDownload called:', {
