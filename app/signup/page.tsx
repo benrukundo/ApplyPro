@@ -15,6 +15,15 @@ import {
   CreditCard,
   Mail,
 } from "lucide-react";
+// test sentry error
+<button
+  onClick={() => {
+    throw new Error("Test Sentry Error!");
+  }}
+  className="px-4 py-2 bg-red-500 text-white rounded"
+>
+  Test Sentry
+</button>
 
 // Password strength calculator
 function getPasswordStrength(password: string): { strength: 'weak' | 'medium' | 'strong'; score: number } {
