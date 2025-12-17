@@ -34,9 +34,16 @@ import {
   MapPin,
   AlertCircle,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  DollarSign,
+  GripVertical,
+  MoreHorizontal,
 } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
+
+const CARDS_PER_COLUMN = 5;
 
 function TrackerContent() {
   const router = useRouter();
@@ -45,6 +52,9 @@ function TrackerContent() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
+
+  // Expanded columns state
+  const [expandedColumns, setExpandedColumns] = useState<Set<ApplicationStatus>>(new Set());
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -76,6 +86,10 @@ function TrackerContent() {
 
   // Drag and drop state
   const [draggedApp, setDraggedApp] = useState<Application | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<ApplicationStatus | null>(null);
+
+  // Hover state for cards
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -90,7 +104,6 @@ function TrackerContent() {
       setCurrentUserId(session.user.id);
       loadApplications();
 
-      // Check for URL params
       const action = searchParams.get('action');
       const id = searchParams.get('id');
 
@@ -112,6 +125,18 @@ function TrackerContent() {
   const loadApplications = () => {
     const apps = getAllApplications();
     setApplications(apps);
+  };
+
+  const toggleColumnExpand = (status: ApplicationStatus) => {
+    setExpandedColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
   };
 
   const resetForm = () => {
@@ -170,7 +195,6 @@ function TrackerContent() {
     e.preventDefault();
     setFormError("");
 
-    // Validation
     if (!formData.companyName.trim()) {
       setFormError("Company name is required");
       return;
@@ -243,13 +267,30 @@ function TrackerContent() {
     }
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (app: Application) => {
-    setDraggedApp(app);
+  const handleQuickDelete = (e: React.MouseEvent, app: Application) => {
+    e.stopPropagation();
+    setSelectedApp(app);
+    setShowDeleteModal(true);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleQuickEdit = (e: React.MouseEvent, app: Application) => {
+    e.stopPropagation();
+    handleOpenEditModal(app);
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, app: Application) => {
+    setDraggedApp(app);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, status: ApplicationStatus) => {
     e.preventDefault();
+    setDragOverColumn(status);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null);
   };
 
   const handleDrop = (status: ApplicationStatus) => {
@@ -261,35 +302,67 @@ function TrackerContent() {
     }
 
     setDraggedApp(null);
+    setDragOverColumn(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedApp(null);
+    setDragOverColumn(null);
+  };
+
+  const getPriorityBorderColor = (priority: Priority) => {
+    switch (priority) {
+      case "high":
+        return "border-l-red-500";
+      case "medium":
+        return "border-l-yellow-500";
+      case "low":
+        return "border-l-green-500";
+    }
   };
 
   const getStatusColor = (status: ApplicationStatus) => {
     switch (status) {
       case "saved":
-        return "bg-gray-100 border-gray-300";
+        return "bg-gray-50";
       case "applied":
-        return "bg-blue-50 border-blue-300";
+        return "bg-blue-50";
       case "interview":
-        return "bg-purple-50 border-purple-300";
+        return "bg-purple-50";
       case "offer":
-        return "bg-green-50 border-green-300";
+        return "bg-green-50";
       case "rejected":
-        return "bg-red-50 border-red-300";
+        return "bg-red-50";
     }
   };
 
   const getStatusIcon = (status: ApplicationStatus) => {
     switch (status) {
       case "saved":
-        return <Save className="h-5 w-5 text-gray-600" />;
+        return <Save className="h-4 w-4 text-gray-500" />;
       case "applied":
-        return <Clock className="h-5 w-5 text-blue-600" />;
+        return <Clock className="h-4 w-4 text-blue-500" />;
       case "interview":
-        return <Target className="h-5 w-5 text-purple-600" />;
+        return <Target className="h-4 w-4 text-purple-500" />;
       case "offer":
-        return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
       case "rejected":
-        return <XCircle className="h-5 w-5 text-red-600" />;
+        return <XCircle className="h-4 w-4 text-red-500" />;
+    }
+  };
+
+  const getStatusHeaderColor = (status: ApplicationStatus) => {
+    switch (status) {
+      case "saved":
+        return "bg-gray-100 border-gray-200";
+      case "applied":
+        return "bg-blue-100 border-blue-200";
+      case "interview":
+        return "bg-purple-100 border-purple-200";
+      case "offer":
+        return "bg-green-100 border-green-200";
+      case "rejected":
+        return "bg-red-100 border-red-200";
     }
   };
 
@@ -306,18 +379,12 @@ function TrackerContent() {
 
   const getJobSourceLabel = (source: JobSource) => {
     switch (source) {
-      case "linkedin":
-        return "LinkedIn";
-      case "indeed":
-        return "Indeed";
-      case "company_website":
-        return "Company Website";
-      case "referral":
-        return "Referral";
-      case "recruiter":
-        return "Recruiter";
-      case "other":
-        return "Other";
+      case "linkedin": return "LinkedIn";
+      case "indeed": return "Indeed";
+      case "company_website": return "Company Website";
+      case "referral": return "Referral";
+      case "recruiter": return "Recruiter";
+      case "other": return "Other";
     }
   };
 
@@ -363,34 +430,34 @@ function TrackerContent() {
     );
   }
 
-  // Not authenticated
   if (!session?.user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">
               Application Tracker
             </h1>
-            <p className="text-gray-600">
-              {filteredApplications.length} applications
+            <p className="text-gray-500">
+              {filteredApplications.length} application{filteredApplications.length !== 1 ? 's' : ''}
+              {searchQuery && ` matching "${searchQuery}"`}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             {/* View Toggle */}
-            <div className="flex rounded-lg border border-gray-300">
+            <div className="flex rounded-lg border border-gray-200 bg-white shadow-sm">
               <button
                 onClick={() => setViewMode("board")}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-l-lg ${
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all rounded-l-lg ${
                   viewMode === "board"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    ? "bg-blue-600 text-white shadow-inner"
+                    : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 <LayoutGrid className="h-4 w-4" />
@@ -398,10 +465,10 @@ function TrackerContent() {
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-r-lg ${
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all rounded-r-lg ${
                   viewMode === "list"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    ? "bg-blue-600 text-white shadow-inner"
+                    : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 <List className="h-4 w-4" />
@@ -412,7 +479,7 @@ function TrackerContent() {
             {/* Add Button */}
             <button
               onClick={handleOpenAddModal}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white hover:bg-blue-700"
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all"
             >
               <Plus className="h-5 w-5" />
               Add
@@ -423,118 +490,214 @@ function TrackerContent() {
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search applications..."
-              className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-4 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by company, position, or location..."
+              className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-12 pr-4 text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
 
         {/* Board View */}
         {viewMode === "board" && (
           <div className="grid gap-4 lg:grid-cols-5 md:grid-cols-3 sm:grid-cols-2">
-            {statusColumns.map((column) => (
-              <div
-                key={column.status}
-                className="flex flex-col"
-                onDragOver={handleDragOver}
-                onDrop={() => handleDrop(column.status)}
-              >
-                {/* Column Header */}
-                <div className="mb-3 rounded-lg bg-gray-100 p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(column.status)}
-                      <h3 className="font-semibold text-gray-900">
-                        {column.title}
-                      </h3>
+            {statusColumns.map((column) => {
+              const columnApps = applicationsByStatus[column.status];
+              const isExpanded = expandedColumns.has(column.status);
+              const visibleApps = isExpanded ? columnApps : columnApps.slice(0, CARDS_PER_COLUMN);
+              const hiddenCount = columnApps.length - CARDS_PER_COLUMN;
+
+              return (
+                <div
+                  key={column.status}
+                  className="flex flex-col"
+                  onDragOver={(e) => handleDragOver(e, column.status)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={() => handleDrop(column.status)}
+                >
+                  {/* Column Header */}
+                  <div className={`mb-3 rounded-xl p-3 border ${getStatusHeaderColor(column.status)}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(column.status)}
+                        <h3 className="font-semibold text-gray-900">
+                          {column.title}
+                        </h3>
+                      </div>
+                      <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-gray-700 shadow-sm">
+                        {columnApps.length}
+                      </span>
                     </div>
-                    <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-700">
-                      {applicationsByStatus[column.status].length}
-                    </span>
+                  </div>
+
+                  {/* Drop Zone Indicator */}
+                  <div
+                    className={`flex-1 rounded-xl transition-all ${
+                      dragOverColumn === column.status
+                        ? "bg-blue-50 border-2 border-dashed border-blue-300"
+                        : ""
+                    }`}
+                  >
+                    {/* Column Cards */}
+                    <div className="space-y-3">
+                      {columnApps.length === 0 ? (
+                        <div className="rounded-xl border-2 border-dashed border-gray-200 p-6 text-center">
+                          <Briefcase className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-400">No applications</p>
+                          <button
+                            onClick={() => {
+                              resetForm();
+                              setFormData(prev => ({ ...prev, status: column.status }));
+                              setShowAddModal(true);
+                            }}
+                            className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                          >
+                            + Add here
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          {visibleApps.map((app) => (
+                            <div
+                              key={app.id}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, app)}
+                              onDragEnd={handleDragEnd}
+                              onClick={() => {
+                                setSelectedApp(app);
+                                setShowDetailsModal(true);
+                              }}
+                              onMouseEnter={() => setHoveredCardId(app.id)}
+                              onMouseLeave={() => setHoveredCardId(null)}
+                              className={`group relative cursor-pointer rounded-xl border-l-4 bg-white p-4 shadow-sm hover:shadow-md transition-all ${
+                                getPriorityBorderColor(app.priority)
+                              } ${draggedApp?.id === app.id ? "opacity-50 scale-95" : ""}`}
+                            >
+                              {/* Drag Handle */}
+                              <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-50 transition-opacity">
+                                <GripVertical className="h-4 w-4 text-gray-400" />
+                              </div>
+
+                              {/* Quick Actions */}
+                              {hoveredCardId === app.id && (
+                                <div className="absolute right-2 top-2 flex items-center gap-1 bg-white rounded-lg shadow-md border border-gray-100 p-1">
+                                  <button
+                                    onClick={(e) => handleQuickEdit(e, app)}
+                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                    title="Edit"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => handleQuickDelete(e, app)}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Company & Position */}
+                              <h4 className="font-semibold text-gray-900 text-sm mb-0.5 pr-16 truncate">
+                                {app.companyName}
+                              </h4>
+                              <p className="text-xs text-gray-500 mb-3 truncate">
+                                {app.positionTitle}
+                              </p>
+
+                              {/* Meta Info */}
+                              <div className="space-y-1.5">
+                                {app.appliedDate && (
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                    <Calendar className="h-3 w-3 flex-shrink-0" />
+                                    <span>{new Date(app.appliedDate).toLocaleDateString()}</span>
+                                  </div>
+                                )}
+
+                                {app.location && (
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">
+                                      {app.location}
+                                      {app.isRemote && <span className="text-green-600 ml-1">• Remote</span>}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {app.salary && (
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                    <DollarSign className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{app.salary}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Footer with source */}
+                              <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
+                                <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                                  {getJobSourceLabel(app.jobSource || 'other')}
+                                </span>
+                                {app.followUpDate && new Date(app.followUpDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) && (
+                                  <span className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    Follow up
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Show More/Less Button */}
+                          {hiddenCount > 0 && (
+                            <button
+                              onClick={() => toggleColumnExpand(column.status)}
+                              className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg flex items-center justify-center gap-1 transition-colors"
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="h-4 w-4" />
+                                  Show less
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="h-4 w-4" />
+                                  Show {hiddenCount} more
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {/* Column Cards */}
-                <div className="space-y-3 flex-1">
-                  {applicationsByStatus[column.status].length === 0 ? (
-                    <div className="rounded-lg border-2 border-dashed border-gray-300 p-4 text-center">
-                      <p className="text-sm text-gray-500">No applications</p>
-                    </div>
-                  ) : (
-                    applicationsByStatus[column.status].map((app) => (
-                      <div
-                        key={app.id}
-                        draggable
-                        onDragStart={() => handleDragStart(app)}
-                        onClick={() => {
-                          setSelectedApp(app);
-                          setShowDetailsModal(true);
-                        }}
-                        className={`cursor-move rounded-lg border-2 p-4 transition-all hover:shadow-md ${getStatusColor(
-                          app.status
-                        )} ${draggedApp?.id === app.id ? "opacity-50" : ""}`}
-                      >
-                        <h4 className="font-semibold text-gray-900 mb-1">
-                          {app.companyName}
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          {app.positionTitle}
-                        </p>
-
-                        <div className="space-y-2 text-xs text-gray-600">
-                          {app.appliedDate && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              <span>
-                                {new Date(app.appliedDate).toLocaleDateString()}
-                              </span>
-                            </div>
-                          )}
-
-                          {app.location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              <span>{app.location}</span>
-                              {app.isRemote && (
-                                <span className="ml-1 text-green-600">(Remote)</span>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${getPriorityColor(
-                                app.priority
-                              )}`}
-                            >
-                              {app.priority}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* List View */}
         {viewMode === "list" && (
-          <div className="rounded-xl border border-gray-200 bg-white">
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             {filteredApplications.length === 0 ? (
-              <div className="py-12 text-center">
-                <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-gray-600 mb-4">No applications found</p>
+              <div className="py-16 text-center">
+                <Briefcase className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                <p className="text-gray-500 mb-4">No applications found</p>
                 <button
                   onClick={handleOpenAddModal}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="h-5 w-5" />
                   Add Your First Application
@@ -545,86 +708,89 @@ function TrackerContent() {
                 <table className="w-full">
                   <thead className="border-b border-gray-200 bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
                         Company / Position
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        Priority
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
                         Source
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                        Applied Date
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        Applied
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
                         Location
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-700">
+                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-100">
                     {filteredApplications.map((app) => (
-                      <tr key={app.id} className="hover:bg-gray-50">
+                      <tr
+                        key={app.id}
+                        className="hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setSelectedApp(app);
+                          setShowDetailsModal(true);
+                        }}
+                      >
                         <td className="px-6 py-4">
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {app.companyName}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {app.positionTitle}
-                            </p>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-1 h-10 rounded-full ${
+                              app.priority === 'high' ? 'bg-red-500' :
+                              app.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                            }`} />
+                            <div>
+                              <p className="font-semibold text-gray-900">{app.companyName}</p>
+                              <p className="text-sm text-gray-500">{app.positionTitle}</p>
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
                             {getStatusIcon(app.status)}
-                            <span className="text-sm text-gray-700 capitalize">
-                              {app.status}
-                            </span>
+                            <span className="capitalize">{app.status}</span>
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${getPriorityColor(app.priority)}`}>
+                            {app.priority}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {getJobSourceLabel(app.jobSource || 'other')}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {app.appliedDate
-                            ? new Date(app.appliedDate).toLocaleDateString()
-                            : "—"}
+                          {app.appliedDate ? new Date(app.appliedDate).toLocaleDateString() : "—"}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {app.location || "—"}
-                          {app.isRemote && (
-                            <span className="ml-1 text-green-600">(Remote)</span>
-                          )}
+                          <span className="truncate block max-w-[150px]">
+                            {app.location || "—"}
+                            {app.isRemote && <span className="text-green-600 ml-1">• Remote</span>}
+                          </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={() => {
-                              setSelectedApp(app);
-                              setShowDetailsModal(true);
-                            }}
-                            className="text-blue-600 hover:underline mr-3"
-                          >
-                            View
-                          </button>
-                          <button
-                            onClick={() => handleOpenEditModal(app)}
-                            className="text-gray-600 hover:text-gray-900 mr-3"
-                          >
-                            <Edit className="inline h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedApp(app);
-                              setShowDeleteModal(true);
-                            }}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="inline h-4 w-4" />
-                          </button>
+                        <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={(e) => handleQuickEdit(e, app)}
+                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={(e) => handleQuickDelete(e, app)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -637,11 +803,11 @@ function TrackerContent() {
 
         {/* Add/Edit Application Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white">
-              <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+              <div className="sticky top-0 z-10 border-b border-gray-100 bg-white px-6 py-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-gray-900">
                     {isEditMode ? "Edit Application" : "Add Application"}
                   </h2>
                   <button
@@ -649,26 +815,24 @@ function TrackerContent() {
                       setShowAddModal(false);
                       resetForm();
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                   >
-                    <X className="h-6 w-6" />
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
-              <form onSubmit={handleSubmitApplication} className="p-6 space-y-6">
+              <form onSubmit={handleSubmitApplication} className="p-6 space-y-5">
                 {/* Company Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Company Name *
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Company Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.companyName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, companyName: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     placeholder="Google, Apple, etc."
                     disabled={isSubmitting}
                   />
@@ -676,36 +840,27 @@ function TrackerContent() {
 
                 {/* Position Title */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Position Title *
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Position Title <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.positionTitle}
-                    onChange={(e) =>
-                      setFormData({ ...formData, positionTitle: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, positionTitle: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     placeholder="Senior Software Engineer"
                     disabled={isSubmitting}
                   />
                 </div>
 
                 {/* Status, Priority, Job Source */}
-                <div className="grid gap-6 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Status *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
                     <select
                       value={formData.status}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          status: e.target.value as ApplicationStatus,
-                        })
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as ApplicationStatus })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       disabled={isSubmitting}
                     >
                       <option value="saved">Saved</option>
@@ -717,18 +872,11 @@ function TrackerContent() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Priority
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Priority</label>
                     <select
                       value={formData.priority}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          priority: e.target.value as Priority,
-                        })
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       disabled={isSubmitting}
                     >
                       <option value="low">Low</option>
@@ -738,18 +886,11 @@ function TrackerContent() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Job Source
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Source</label>
                     <select
                       value={formData.jobSource}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          jobSource: e.target.value as JobSource,
-                        })
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, jobSource: e.target.value as JobSource })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       disabled={isSubmitting}
                     >
                       <option value="linkedin">LinkedIn</option>
@@ -763,67 +904,51 @@ function TrackerContent() {
                 </div>
 
                 {/* Dates */}
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Applied Date
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Applied Date</label>
                     <input
                       type="date"
                       value={formData.appliedDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, appliedDate: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, appliedDate: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Follow-up Date
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Follow-up Date</label>
                     <input
                       type="date"
                       value={formData.followUpDate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, followUpDate: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, followUpDate: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       disabled={isSubmitting}
                     />
                   </div>
                 </div>
 
                 {/* Location and Salary */}
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Location
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Location</label>
                     <input
                       type="text"
                       value={formData.location}
-                      onChange={(e) =>
-                        setFormData({ ...formData, location: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       placeholder="San Francisco, CA"
                       disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Salary Range
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Salary Range</label>
                     <input
                       type="text"
                       value={formData.salary}
-                      onChange={(e) =>
-                        setFormData({ ...formData, salary: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       placeholder="$100k - $150k"
                       disabled={isSubmitting}
                     />
@@ -831,68 +956,52 @@ function TrackerContent() {
                 </div>
 
                 {/* Remote Checkbox */}
-                <div className="flex items-center">
+                <div className="flex items-center gap-2">
                   <input
                     id="remote"
                     type="checkbox"
                     checked={formData.isRemote}
-                    onChange={(e) =>
-                      setFormData({ ...formData, isRemote: e.target.checked })
-                    }
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, isRemote: e.target.checked })}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     disabled={isSubmitting}
                   />
-                  <label htmlFor="remote" className="ml-2 text-sm text-gray-700">
-                    Remote position
-                  </label>
+                  <label htmlFor="remote" className="text-sm text-gray-700">Remote position</label>
                 </div>
 
                 {/* Job URL */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Job Posting URL
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Job Posting URL</label>
                   <input
                     type="url"
                     value={formData.jobUrl}
-                    onChange={(e) =>
-                      setFormData({ ...formData, jobUrl: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setFormData({ ...formData, jobUrl: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     placeholder="https://..."
                     disabled={isSubmitting}
                   />
                 </div>
 
                 {/* Contact Info */}
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Person
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Contact Person</label>
                     <input
                       type="text"
                       value={formData.contactPerson}
-                      onChange={(e) =>
-                        setFormData({ ...formData, contactPerson: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       placeholder="Jane Doe (Recruiter)"
                       disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contact Email
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Contact Email</label>
                     <input
                       type="email"
                       value={formData.contactEmail}
-                      onChange={(e) =>
-                        setFormData({ ...formData, contactEmail: e.target.value })
-                      }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       placeholder="jane@company.com"
                       disabled={isSubmitting}
                     />
@@ -901,16 +1010,12 @@ function TrackerContent() {
 
                 {/* Notes */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
                   <textarea
                     value={formData.notes}
-                    onChange={(e) =>
-                      setFormData({ ...formData, notes: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={3}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
                     placeholder="Interview notes, requirements, etc..."
                     disabled={isSubmitting}
                   />
@@ -918,14 +1023,14 @@ function TrackerContent() {
 
                 {/* Error Message */}
                 {formError && (
-                  <div className="flex items-start gap-2 rounded-lg bg-red-50 p-4">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600" />
+                  <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-100 p-3">
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500 mt-0.5" />
                     <p className="text-sm text-red-600">{formError}</p>
                   </div>
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
                   <button
                     type="button"
                     onClick={() => {
@@ -933,23 +1038,23 @@ function TrackerContent() {
                       resetForm();
                     }}
                     disabled={isSubmitting}
-                    className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="px-5 py-2.5 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         Saving...
                       </>
                     ) : (
                       <>
-                        <Save className="h-5 w-5" />
+                        <Save className="h-4 w-4" />
                         {isEditMode ? "Update" : "Save"}
                       </>
                     )}
@@ -962,130 +1067,147 @@ function TrackerContent() {
 
         {/* Details Modal */}
         {showDetailsModal && selectedApp && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white">
-              <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+              <div className="sticky top-0 z-10 border-b border-gray-100 bg-white px-6 py-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    Application Details
-                  </h2>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-10 rounded-full ${
+                      selectedApp.priority === 'high' ? 'bg-red-500' :
+                      selectedApp.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                    }`} />
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">{selectedApp.companyName}</h2>
+                      <p className="text-gray-500">{selectedApp.positionTitle}</p>
+                    </div>
+                  </div>
                   <button
                     onClick={() => {
                       setShowDetailsModal(false);
                       setSelectedApp(null);
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                   >
-                    <X className="h-6 w-6" />
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
               <div className="p-6 space-y-6">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                    {selectedApp.companyName}
-                  </h3>
-                  <p className="text-lg text-gray-600">{selectedApp.positionTitle}</p>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
+                {/* Status and Priority */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(selectedApp.status)}`}>
                     {getStatusIcon(selectedApp.status)}
-                    <span className="font-medium text-gray-900 capitalize">
-                      {selectedApp.status}
-                    </span>
+                    <span className="capitalize">{selectedApp.status}</span>
                   </div>
-                  <span className={`rounded-full px-3 py-1 text-sm font-medium ${getPriorityColor(selectedApp.priority)}`}>
+                  <span className={`inline-flex px-3 py-1.5 rounded-full text-sm font-medium ${getPriorityColor(selectedApp.priority)}`}>
                     {selectedApp.priority} priority
+                  </span>
+                  <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
+                    {getJobSourceLabel(selectedApp.jobSource || 'other')}
                   </span>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                {/* Details Grid */}
+                <div className="grid gap-4 sm:grid-cols-2">
                   {selectedApp.appliedDate && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Applied Date</p>
-                      <p className="text-gray-900">{new Date(selectedApp.appliedDate).toLocaleDateString()}</p>
+                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                      <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">Applied</p>
+                        <p className="text-gray-900 font-medium">{new Date(selectedApp.appliedDate).toLocaleDateString()}</p>
+                      </div>
                     </div>
                   )}
                   {selectedApp.followUpDate && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Follow-up Date</p>
-                      <p className="text-gray-900">{new Date(selectedApp.followUpDate).toLocaleDateString()}</p>
+                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                      <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">Follow-up</p>
+                        <p className="text-gray-900 font-medium">{new Date(selectedApp.followUpDate).toLocaleDateString()}</p>
+                      </div>
                     </div>
                   )}
                   {selectedApp.location && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Location</p>
-                      <p className="text-gray-900">
-                        {selectedApp.location}
-                        {selectedApp.isRemote && <span className="ml-2 text-green-600">(Remote)</span>}
-                      </p>
+                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                      <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">Location</p>
+                        <p className="text-gray-900 font-medium">
+                          {selectedApp.location}
+                          {selectedApp.isRemote && <span className="text-green-600 ml-1">• Remote</span>}
+                        </p>
+                      </div>
                     </div>
                   )}
                   {selectedApp.salary && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Salary Range</p>
-                      <p className="text-gray-900">{selectedApp.salary}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Job Source</p>
-                    <p className="text-gray-900">{getJobSourceLabel(selectedApp.jobSource || 'other')}</p>
-                  </div>
-                  {selectedApp.contactPerson && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Contact</p>
-                      <p className="text-gray-900">{selectedApp.contactPerson}</p>
-                      {selectedApp.contactEmail && (
-                        <p className="text-sm text-gray-600">{selectedApp.contactEmail}</p>
-                      )}
+                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                      <DollarSign className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">Salary</p>
+                        <p className="text-gray-900 font-medium">{selectedApp.salary}</p>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {selectedApp.jobUrl && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-2">Job Posting</p>
-                    <a
-                      href={selectedApp.jobUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-blue-600 hover:underline"
-                    >
-                      View Job Posting
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
+                {/* Contact Info */}
+                {(selectedApp.contactPerson || selectedApp.contactEmail) && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <p className="text-xs text-blue-600 uppercase tracking-wide font-medium mb-2">Contact</p>
+                    {selectedApp.contactPerson && (
+                      <p className="text-gray-900 font-medium">{selectedApp.contactPerson}</p>
+                    )}
+                    {selectedApp.contactEmail && (
+                      <a href={`mailto:${selectedApp.contactEmail}`} className="text-blue-600 hover:underline text-sm">
+                        {selectedApp.contactEmail}
+                      </a>
+                    )}
                   </div>
                 )}
 
+                {/* Job URL */}
+                {selectedApp.jobUrl && (
+                  <a
+                    href={selectedApp.jobUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    View Job Posting
+                  </a>
+                )}
+
+                {/* Notes */}
                 {selectedApp.notes && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-2">Notes</p>
-                    <div className="rounded-lg bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">Notes</p>
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
                       <p className="text-gray-700 whitespace-pre-wrap">{selectedApp.notes}</p>
                     </div>
                   </div>
                 )}
 
+                {/* Timeline */}
                 {selectedApp.history && selectedApp.history.length > 0 && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-3">Timeline</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-3">Timeline</p>
                     <div className="space-y-3">
                       {selectedApp.history.map((entry, index) => (
                         <div key={index} className="flex gap-3">
                           <div className="flex flex-col items-center">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${getStatusColor(entry.status)}`}>
                               {getStatusIcon(entry.status)}
                             </div>
                             {index < selectedApp.history.length - 1 && (
                               <div className="h-full w-0.5 bg-gray-200 my-1" />
                             )}
                           </div>
-                          <div className="flex-1 pb-4">
+                          <div className="flex-1 pb-3">
                             <p className="font-medium text-gray-900 capitalize">{entry.status}</p>
-                            <p className="text-sm text-gray-600">{entry.note}</p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-sm text-gray-500">{entry.note}</p>
+                            <p className="text-xs text-gray-400 mt-1">
                               {new Date(entry.date).toLocaleString()}
                             </p>
                           </div>
@@ -1095,15 +1217,16 @@ function TrackerContent() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-200">
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-100">
                   <button
                     onClick={() => {
                       setShowDetailsModal(false);
                       setShowDeleteModal(true);
                     }}
-                    className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-6 py-3 font-semibold text-red-600 hover:bg-red-50"
+                    className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-4 w-4" />
                     Delete
                   </button>
                   <button
@@ -1111,9 +1234,9 @@ function TrackerContent() {
                       setShowDetailsModal(false);
                       handleOpenEditModal(selectedApp);
                     }}
-                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 font-semibold text-white hover:bg-blue-700 transition-colors"
                   >
-                    <Edit className="h-5 w-5" />
+                    <Edit className="h-4 w-4" />
                     Edit
                   </button>
                 </div>
@@ -1124,34 +1247,34 @@ function TrackerContent() {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && selectedApp && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6">
-              <div className="mb-4 flex items-center gap-3">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+              <div className="mb-4 flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
                   <AlertCircle className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Delete Application</h3>
-                  <p className="text-sm text-gray-600">This action cannot be undone</p>
+                  <h3 className="text-lg font-bold text-gray-900">Delete Application</h3>
+                  <p className="text-sm text-gray-500">This action cannot be undone</p>
                 </div>
               </div>
 
-              <p className="text-gray-700 mb-6">
+              <p className="text-gray-600 mb-6">
                 Are you sure you want to delete the application for{" "}
-                <strong>{selectedApp.positionTitle}</strong> at{" "}
-                <strong>{selectedApp.companyName}</strong>?
+                <span className="font-semibold text-gray-900">{selectedApp.positionTitle}</span> at{" "}
+                <span className="font-semibold text-gray-900">{selectedApp.companyName}</span>?
               </p>
 
               <div className="flex items-center justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50"
+                  className="px-5 py-2.5 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteApplication}
-                  className="rounded-lg bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700"
+                  className="px-5 py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Delete
                 </button>
