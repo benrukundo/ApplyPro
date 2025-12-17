@@ -475,11 +475,25 @@ export default function BuildResumePage() {
     // Add AI-enhanced Summary and Experience
     completeResume += aiContent + '\n\n';
 
-    // Add Skills section
-    const allSkills = [...formData.skills.technical, ...formData.skills.soft];
-    if (allSkills.length > 0) {
+    // Add Skills section (formatted for sidebar display)
+    if (formData.skills.technical.length > 0 || formData.skills.soft.length > 0) {
       completeResume += `## SKILLS\n`;
-      completeResume += allSkills.join(', ') + '\n\n';
+
+      // Technical skills
+      if (formData.skills.technical.length > 0) {
+        formData.skills.technical.forEach(skill => {
+          completeResume += `• ${skill}\n`;
+        });
+      }
+
+      // Soft skills
+      if (formData.skills.soft.length > 0) {
+        formData.skills.soft.forEach(skill => {
+          completeResume += `• ${skill}\n`;
+        });
+      }
+
+      completeResume += `\n`;
     }
 
     // Add Education section
