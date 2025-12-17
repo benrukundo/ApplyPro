@@ -1824,7 +1824,7 @@ export default function BuildResumePage() {
                           </div>
 
                           <div className="space-y-3 max-h-96 overflow-y-auto">
-                            {generatedResume.split('\n').map((line, idx) => {
+                            {(enhancedPreview || generatedResume || '').split('\n').map((line, idx) => {
                               const trimmedLine = line.trim();
                               if (!trimmedLine) return null;
 
@@ -1857,7 +1857,7 @@ export default function BuildResumePage() {
                           </div>
 
                           <div className="space-y-2 max-h-96 overflow-y-auto">
-                            {generatedResume.split('\n').map((line, idx) => {
+                            {(enhancedPreview || generatedResume || '').split('\n').map((line, idx) => {
                               const trimmedLine = line.trim();
                               if (!trimmedLine) return null;
 
