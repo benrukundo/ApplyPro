@@ -778,32 +778,40 @@ function generateModernDOCX(
   const leftContent: Paragraph[] = [];
   const rightContent: Paragraph[] = [];
 
-  // Left: Name
-  leftContent.push(
+  // RIGHT: Name (matching PDF layout)
+  rightContent.push(
     new Paragraph({
       children: [new TextRun({ text: parsed.name, bold: true, size: 32, color: '1a1a1a' })],
       spacing: { after: 80 },
     })
   );
 
-  // Left: Title
+  // RIGHT: Title (matching PDF layout)
   if (parsed.title) {
-    leftContent.push(
+    rightContent.push(
       new Paragraph({
         children: [new TextRun({ text: parsed.title, size: 18, color: colorHex })],
-        spacing: { after: 120 },
+        spacing: { after: 200 },
       })
     );
   }
 
-  // Left: Contact
-  for (const contact of parsed.contact.slice(0, 5)) {
+  // LEFT: Contact section header (matching PDF layout)
+  if (parsed.contact.length > 0) {
     leftContent.push(
       new Paragraph({
-        children: [new TextRun({ text: contact, size: 14, color: '555555' })],
-        spacing: { after: 40 },
+        children: [new TextRun({ text: 'CONTACT', bold: true, size: 16, color: colorHex })],
+        spacing: { after: 80 },
       })
     );
+    for (const contact of parsed.contact.slice(0, 5)) {
+      leftContent.push(
+        new Paragraph({
+          children: [new TextRun({ text: contact, size: 14, color: '555555' })],
+          spacing: { after: 40 },
+        })
+      );
+    }
   }
 
   // Left: Skills
