@@ -85,6 +85,9 @@ interface SubscriptionInfo {
   isActive: boolean;
   monthlyUsageCount?: number;
   monthlyLimit?: number;
+  remainingGenerations?: number;
+  currentPeriodEnd?: string;
+  cancelledAt?: string;
 }
 
 const STEPS = [
