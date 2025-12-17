@@ -2,19 +2,19 @@
 
 import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider } from 'posthog-js/react';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 if (typeof window !== 'undefined') {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-    capture_pageview: false, // We'll capture manually for better control
+    capture_pageview: false,
     capture_pageleave: true,
     persistence: 'localStorage',
   });
 }
 
-function PostHogPageView() {
+function PostHogPageViewTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -29,6 +29,14 @@ function PostHogPageView() {
   }, [pathname, searchParams]);
 
   return null;
+}
+
+function PostHogPageView() {
+  return (
+    <Suspense fallback={null}>
+      <PostHogPageViewTracker />
+    </Suspense>
+  );
 }
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
