@@ -470,20 +470,63 @@ export default function BuildResumePage() {
     // Add AI-enhanced content (PROFESSIONAL SUMMARY and EXPERIENCE sections)
     resume += aiContent + '\n\n';
 
-    // Skills section - with categorization for better display
+    // Skills section - enhanced with smart categorization
     const technicalSkills = formData.skills.technical;
     const softSkills = formData.skills.soft;
 
     if (technicalSkills.length > 0 || softSkills.length > 0) {
       resume += `## SKILLS\n`;
 
-      technicalSkills.forEach(skill => {
-        resume += `• ${skill}\n`;
-      });
+      // Categorize technical skills intelligently
+      const progLangs = technicalSkills.filter(s =>
+        ['javascript', 'python', 'java', 'c++', 'c#', 'ruby', 'php', 'go', 'rust', 'typescript', 'kotlin', 'swift'].some(lang =>
+          s.toLowerCase().includes(lang)
+        )
+      );
+      const frontendTech = technicalSkills.filter(s =>
+        ['react', 'vue', 'angular', 'html', 'css', 'tailwind', 'bootstrap', 'next', 'svelte'].some(tech =>
+          s.toLowerCase().includes(tech)
+        )
+      );
+      const backendTech = technicalSkills.filter(s =>
+        ['node', 'express', 'django', 'flask', 'spring', 'api', 'rest', 'graphql', 'database', 'sql', 'mongodb', 'postgresql'].some(tech =>
+          s.toLowerCase().includes(tech)
+        )
+      );
+      const otherTech = technicalSkills.filter(s =>
+        !progLangs.includes(s) && !frontendTech.includes(s) && !backendTech.includes(s)
+      );
 
-      softSkills.forEach(skill => {
-        resume += `• ${skill}\n`;
-      });
+      // Add categorized technical skills
+      if (progLangs.length > 0) {
+        resume += `• Programming Languages: ${progLangs.join(', ')}\n`;
+      }
+      if (frontendTech.length > 0) {
+        resume += `• Frontend Technologies: ${frontendTech.join(', ')}\n`;
+      }
+      if (backendTech.length > 0) {
+        resume += `• Backend Development: ${backendTech.join(', ')}\n`;
+      }
+      if (otherTech.length > 0) {
+        otherTech.forEach(skill => resume += `• ${skill}\n`);
+      }
+
+      // Add soft skills with categorization
+      if (softSkills.length > 0) {
+        const leadership = softSkills.filter(s =>
+          ['leadership', 'management', 'team', 'strategic', 'planning', 'agile', 'scrum'].some(kw =>
+            s.toLowerCase().includes(kw)
+          )
+        );
+        const otherSoft = softSkills.filter(s => !leadership.includes(s));
+
+        if (leadership.length > 0) {
+          resume += `• Leadership & Management: ${leadership.join(', ')}\n`;
+        }
+        if (otherSoft.length > 0) {
+          otherSoft.forEach(skill => resume += `• ${skill}\n`);
+        }
+      }
 
       resume += `\n`;
     }
