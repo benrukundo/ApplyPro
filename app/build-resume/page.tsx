@@ -24,6 +24,9 @@ import {
   Save,
   AlertCircle,
   Palette,
+  Mail,
+  Phone,
+  MapPin,
 } from 'lucide-react';
 import { trackEvent } from '@/components/PostHogProvider';
 import { generatePDF, generateDOCX, type ColorPreset } from '@/lib/documentGenerator';
@@ -397,43 +400,43 @@ export default function BuildResumePage() {
   };
 
   const handleDownload = async (format: 'pdf' | 'docx') => {
-    // Check subscription before allowing download
-    if (!subscription?.isActive) {
-      setError('Please subscribe to download your resume.');
-      return;
+  // STRICT subscription check - must be explicitly true
+  if (subscription?.isActive !== true) {
+    setError('Please subscribe to download your resume. Visit the pricing page to get started.');
+    return;
+  }
+
+  if (!generatedResume) {
+    setError('No resume to download. Please generate first.');
+    return;
+  }
+
+  setIsDownloading(true);
+  setError('');
+
+  try {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
+
+    if (format === 'pdf') {
+      await generatePDF(generatedResume, `${fileName}.pdf`, selectedTemplate, selectedColor.key);
+    } else {
+      await generateDOCX(generatedResume, `${fileName}.docx`, selectedTemplate, selectedColor.key);
     }
 
-    if (!generatedResume) {
-      setError('No resume to download. Please generate first.');
-      return;
-    }
-
-    setIsDownloading(true);
-    setError('');
-
-    try {
-      const timestamp = new Date().toISOString().split('T')[0];
-      const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
-
-      if (format === 'pdf') {
-        await generatePDF(generatedResume, `${fileName}.pdf`, selectedTemplate, selectedColor.key);
-      } else {
-        await generateDOCX(generatedResume, `${fileName}.docx`, selectedTemplate, selectedColor.key);
-      }
-
-      trackEvent('builder_resume_downloaded', {
-        format,
-        template: selectedTemplate,
-        color: selectedColor.key,
-        target_job: formData.targetJobTitle,
-      });
-    } catch (err) {
-      console.error('Download error:', err);
-      setError('Failed to download. Please try again.');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+    trackEvent('builder_resume_downloaded', {
+      format,
+      template: selectedTemplate,
+      color: selectedColor.key,
+      target_job: formData.targetJobTitle,
+    });
+  } catch (err) {
+    console.error('Download error:', err);
+    setError('Failed to download. Please try again.');
+  } finally {
+    setIsDownloading(false);
+  }
+};
 
   const addEducation = () => {
     const newEntry: Education = {
@@ -586,6 +589,27 @@ export default function BuildResumePage() {
           <p className="text-gray-600 mt-2">
             No resume? No problem. We'll guide you step by step.
           </p>
+
+          {/* Subscription Status */}
+          {session?.user && !isLoadingSubscription && (
+            <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+              canDownload
+                ? 'bg-green-100 text-green-700'
+                : 'bg-amber-100 text-amber-700'
+            }`}>
+              {canDownload ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Active Subscription - Downloads enabled</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Free Preview - <Link href="/pricing" className="underline font-medium">Upgrade to download</Link></span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Progress Steps */}
@@ -1333,7 +1357,7 @@ export default function BuildResumePage() {
                     )}
                   </div>
 
-                  {/* Preview - Non-selectable with blur overlay for non-subscribers */}
+                  {/* Professional Resume Preview */}
                   <div className="border-2 border-gray-200 rounded-xl overflow-hidden relative">
                     <div className="bg-gray-100 px-4 py-2 flex items-center justify-between">
                       <span className="font-medium text-gray-700">Resume Preview</span>
@@ -1341,14 +1365,10 @@ export default function BuildResumePage() {
                         {selectedTemplate.charAt(0).toUpperCase() + selectedTemplate.slice(1)} Template
                       </span>
                     </div>
-                    
-                    {/* Template-styled preview */}
-                    <div 
-                      className={`p-6 bg-white max-h-[600px] overflow-y-auto relative ${!canDownload ? 'select-none' : ''}`}
-                      style={{ 
-                        userSelect: canDownload ? 'auto' : 'none',
-                        WebkitUserSelect: canDownload ? 'auto' : 'none',
-                      }}
+
+                    <div
+                      className={`bg-white relative ${!canDownload ? 'select-none' : ''}`}
+                      style={{ userSelect: canDownload ? 'auto' : 'none' }}
                       onCopy={(e) => {
                         if (!canDownload) {
                           e.preventDefault();
@@ -1356,12 +1376,13 @@ export default function BuildResumePage() {
                         }
                       }}
                     >
-                      {/* Blur overlay for non-subscribers */}
+                      {/* Lock overlay for non-subscribers */}
                       {!canDownload && (
-                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
-                          <div className="text-center p-6">
-                            <Lock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-600 font-medium">Subscribe to view full resume</p>
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/60 to-white z-10 flex items-end justify-center pb-8">
+                          <div className="text-center p-4 bg-white rounded-xl shadow-lg border">
+                            <Lock className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                            <p className="text-gray-900 font-semibold text-sm">Subscribe to Unlock</p>
+                            <p className="text-gray-500 text-xs">Full access to download</p>
                           </div>
                         </div>
                       )}
@@ -1369,79 +1390,115 @@ export default function BuildResumePage() {
                       {/* Modern Template Preview */}
                       {selectedTemplate === 'modern' && (
                         <div className="font-sans">
-                          {/* Header */}
-                          <div 
-                            className="p-6 rounded-t-lg text-white mb-6"
-                            style={{ backgroundColor: selectedColor.hex }}
-                          >
-                            <h1 className="text-2xl font-bold">{formData.fullName}</h1>
-                            <p className="text-sm opacity-90">{formData.targetJobTitle}</p>
-                            <div className="flex flex-wrap gap-4 mt-3 text-xs opacity-80">
-                              {formData.email && <span>{formData.email}</span>}
-                              {formData.phone && <span>{formData.phone}</span>}
-                              {formData.location && <span>{formData.location}</span>}
+                          {/* Colored Header */}
+                          <div className="p-6 text-white" style={{ backgroundColor: selectedColor.hex }}>
+                            <h1 className="text-2xl font-bold mb-1">{formData.fullName}</h1>
+                            <p className="text-lg opacity-90 mb-3">{formData.targetJobTitle}</p>
+                            <div className="flex flex-wrap gap-4 text-sm opacity-80">
+                              {formData.email && <span className="flex items-center gap-1"><Mail className="w-4 h-4" /> {formData.email}</span>}
+                              {formData.phone && <span className="flex items-center gap-1"><Phone className="w-4 h-4" /> {formData.phone}</span>}
+                              {formData.location && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {formData.location}</span>}
                             </div>
                           </div>
-                          
-                          {/* Content - Blurred for preview */}
-                          <div className={`space-y-4 ${!canDownload ? 'blur-sm' : ''}`}>
-                            {generatedResume.split('\n').slice(0, canDownload ? undefined : 15).map((line, idx) => (
-                              <p key={idx} className="text-sm text-gray-700 leading-relaxed">
-                                {line}
-                              </p>
-                            ))}
-                            {!canDownload && (
-                              <p className="text-gray-400 italic">... content hidden ...</p>
-                            )}
+
+                          {/* Resume Content - Blurred for non-subscribers */}
+                          <div className={`p-6 space-y-4 max-h-96 overflow-y-auto ${!canDownload ? 'blur-sm' : ''}`}>
+                            {generatedResume.split('\n').map((line, idx) => {
+                              const trimmedLine = line.trim();
+                              if (!trimmedLine) return null;
+
+                              if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
+                                const headerText = trimmedLine.replace(/\*\*/g, '');
+                                return (
+                                  <h2 key={idx} className="text-lg font-bold mt-4 mb-2 pb-1 border-b-2" style={{ borderColor: selectedColor.hex, color: selectedColor.hex }}>
+                                    {headerText}
+                                  </h2>
+                                );
+                              }
+
+                              if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-')) {
+                                return (
+                                  <li key={idx} className="text-sm text-gray-700 ml-4 list-disc">
+                                    {trimmedLine.replace(/^[•-]\s*/, '')}
+                                  </li>
+                                );
+                              }
+
+                              return (
+                                <p key={idx} className="text-sm text-gray-700 leading-relaxed">
+                                  {trimmedLine.replace(/\*\*/g, '')}
+                                </p>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
 
                       {/* Traditional Template Preview */}
                       {selectedTemplate === 'traditional' && (
-                        <div className="font-serif">
-                          <div className="text-center border-b-2 border-gray-300 pb-4 mb-6">
-                            <h1 className="text-2xl font-bold text-gray-900">{formData.fullName}</h1>
-                            <p className="text-gray-600">{formData.targetJobTitle}</p>
-                            <div className="flex flex-wrap justify-center gap-4 mt-2 text-sm text-gray-500">
+                        <div className="font-serif p-8">
+                          <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
+                            <h1 className="text-2xl font-bold text-gray-900 mb-1">{formData.fullName}</h1>
+                            <p className="text-gray-600 mb-2">{formData.targetJobTitle}</p>
+                            <div className="flex flex-wrap justify-center gap-3 text-sm text-gray-600">
                               {formData.email && <span>{formData.email}</span>}
                               {formData.phone && <span>| {formData.phone}</span>}
                               {formData.location && <span>| {formData.location}</span>}
                             </div>
                           </div>
-                          
-                          <div className={`space-y-4 ${!canDownload ? 'blur-sm' : ''}`}>
-                            {generatedResume.split('\n').slice(0, canDownload ? undefined : 15).map((line, idx) => (
-                              <p key={idx} className="text-sm text-gray-700 leading-relaxed">
-                                {line}
-                              </p>
-                            ))}
-                            {!canDownload && (
-                              <p className="text-gray-400 italic">... content hidden ...</p>
-                            )}
+
+                          <div className={`space-y-3 max-h-96 overflow-y-auto ${!canDownload ? 'blur-sm' : ''}`}>
+                            {generatedResume.split('\n').map((line, idx) => {
+                              const trimmedLine = line.trim();
+                              if (!trimmedLine) return null;
+
+                              if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
+                                return (
+                                  <h2 key={idx} className="text-sm font-bold text-gray-900 uppercase tracking-wider mt-4 mb-2 border-b border-gray-300 pb-1">
+                                    {trimmedLine.replace(/\*\*/g, '')}
+                                  </h2>
+                                );
+                              }
+
+                              return (
+                                <p key={idx} className="text-sm text-gray-700">
+                                  {trimmedLine.replace(/\*\*/g, '')}
+                                </p>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
 
                       {/* ATS Template Preview */}
                       {selectedTemplate === 'ats' && (
-                        <div className="font-mono text-sm">
+                        <div className="font-mono text-sm p-8">
                           <div className="mb-6">
                             <h1 className="text-xl font-bold text-gray-900">{formData.fullName}</h1>
-                            <div className="text-gray-600">
-                              {formData.email} | {formData.phone} | {formData.location}
-                            </div>
+                            <p className="text-gray-600">
+                              {[formData.email, formData.phone, formData.location].filter(Boolean).join(' | ')}
+                            </p>
                           </div>
-                          
-                          <div className={`space-y-2 ${!canDownload ? 'blur-sm' : ''}`}>
-                            {generatedResume.split('\n').slice(0, canDownload ? undefined : 15).map((line, idx) => (
-                              <p key={idx} className="text-gray-700">
-                                {line}
-                              </p>
-                            ))}
-                            {!canDownload && (
-                              <p className="text-gray-400 italic">... content hidden ...</p>
-                            )}
+
+                          <div className={`space-y-2 max-h-96 overflow-y-auto ${!canDownload ? 'blur-sm' : ''}`}>
+                            {generatedResume.split('\n').map((line, idx) => {
+                              const trimmedLine = line.trim();
+                              if (!trimmedLine) return null;
+
+                              if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
+                                return (
+                                  <h2 key={idx} className="font-bold uppercase mt-4 mb-1">
+                                    {trimmedLine.replace(/\*\*/g, '')}
+                                  </h2>
+                                );
+                              }
+
+                              return (
+                                <p key={idx} className="text-gray-700">
+                                  {trimmedLine.replace(/\*\*/g, '')}
+                                </p>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
