@@ -30,6 +30,7 @@ import {
   generateCoverLetterDOCX,
   type ColorPreset 
 } from '@/lib/documentGenerator';
+import { trackEvent } from '@/components/PostHogProvider';
 
 export const dynamic = 'force-dynamic';
 
@@ -237,6 +238,13 @@ export default function GeneratePage() {
         throw new Error(data.error || 'Failed to analyze resume');
       }
 
+      // Track free analysis
+      trackEvent('resume_analyzed', {
+        overall_score: data.overallScore,
+        ats_score: data.atsScore,
+        matched_keywords_count: data.matchedKeywords?.length || 0,
+      });
+
       setPreviewData(data);
     } catch (err) {
       console.error('Error analyzing resume:', err);
@@ -298,6 +306,15 @@ export default function GeneratePage() {
           await generateDOCX(content, `${baseName}_${timestamp}.docx`, template, selectedColor.key);
         }
       }
+
+      // Track download
+      trackEvent('resume_downloaded', {
+        type: type,
+        format: format,
+        template: type === 'ats' ? 'ats' : selectedTemplate,
+        color: selectedColor.key,
+      });
+
     } catch (err) {
       console.error('Error generating document:', err);
       setError(`Failed to download ${format.toUpperCase()}. Please try again.`);
@@ -356,6 +373,14 @@ export default function GeneratePage() {
         console.error('Error saving to localStorage:', err);
       }
 
+      // Track successful resume generation
+      trackEvent('resume_generated', {
+        match_score: generateData.matchScore,
+        plan: subscription.plan,
+        usage_count: subscription.monthlyUsageCount + 1,
+        usage_limit: subscription.monthlyLimit,
+      });
+
       setGeneratedResume(generateData);
       setShowResults(true);
 
@@ -367,6 +392,13 @@ export default function GeneratePage() {
       }, 100);
     } catch (err) {
       console.error('Error generating resume:', err);
+
+      // Track generation failure
+      trackEvent('resume_generation_failed', {
+        error: err instanceof Error ? err.message : 'Unknown error',
+        plan: subscription?.plan,
+      });
+
       setError(
         err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
       );
@@ -447,7 +479,7 @@ export default function GeneratePage() {
           Upload your resume and paste a job description to get started
         </p>
         <p className="text-center text-green-600 font-medium mb-12">
-          ✓ Free analysis available — no sign-up required
+           Free analysis available  no sign-up required
         </p>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -584,7 +616,7 @@ export default function GeneratePage() {
                       href="/pricing"
                       className="text-red-600 text-sm font-medium hover:underline mt-1 inline-block"
                     >
-                      View pricing plans →
+                      View pricing plans 
                     </Link>
                   )}
                 </div>
@@ -681,7 +713,10 @@ export default function GeneratePage() {
               <h3 className="text-xl font-bold text-gray-900 mb-4">Choose Resume Template</h3>
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <button
-                  onClick={() => setSelectedTemplate('modern')}
+                  onClick={() => {
+                    setSelectedTemplate('modern');
+                    trackEvent('template_selected', { template: 'modern' });
+                  }}
                   className={`p-4 rounded-lg border-2 transition-all ${
                     selectedTemplate === 'modern'
                       ? `${selectedColor.border} ${selectedColor.bg}`
@@ -692,7 +727,10 @@ export default function GeneratePage() {
                   <div className="text-xs text-gray-600">Two-column with color accents</div>
                 </button>
                 <button
-                  onClick={() => setSelectedTemplate('traditional')}
+                  onClick={() => {
+                    setSelectedTemplate('traditional');
+                    trackEvent('template_selected', { template: 'traditional' });
+                  }}
                   className={`p-4 rounded-lg border-2 transition-all ${
                     selectedTemplate === 'traditional'
                       ? 'border-gray-600 bg-gray-50'
@@ -703,7 +741,10 @@ export default function GeneratePage() {
                   <div className="text-xs text-gray-600">Classic single-column</div>
                 </button>
                 <button
-                  onClick={() => setSelectedTemplate('ats')}
+                  onClick={() => {
+                    setSelectedTemplate('ats');
+                    trackEvent('template_selected', { template: 'ats' });
+                  }}
                   className={`p-4 rounded-lg border-2 transition-all ${
                     selectedTemplate === 'ats'
                       ? 'border-green-600 bg-green-50'
@@ -726,7 +767,10 @@ export default function GeneratePage() {
                     {colorPresets.map((color) => (
                       <button
                         key={color.name}
-                        onClick={() => setSelectedColor(color)}
+                        onClick={() => {
+                          setSelectedColor(color);
+                          trackEvent('color_selected', { color: color.key });
+                        }}
                         className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
                           selectedColor.name === color.name
                             ? `${color.border} ${color.bg} shadow-md`

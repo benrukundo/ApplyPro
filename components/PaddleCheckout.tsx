@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { initializePaddle, Paddle } from '@paddle/paddle-js';
+import { trackEvent } from '@/components/PostHogProvider';
 
 interface PaddleCheckoutProps {
   priceId: string;
   userId: string;
   userEmail: string;
+  planName?: string;
   onSuccess?: () => void;
   onClose?: () => void;
   children: React.ReactNode;
@@ -18,6 +20,7 @@ export default function PaddleCheckout({
   priceId,
   userId,
   userEmail,
+  planName = 'unknown',
   onSuccess,
   onClose,
   children,
@@ -38,11 +41,19 @@ export default function PaddleCheckout({
 
             if (event.name === 'checkout.completed') {
               console.log('Checkout completed!');
+              trackEvent('checkout_completed', {
+                plan: planName,
+                price_id: priceId,
+              });
               onSuccess?.();
             }
 
             if (event.name === 'checkout.closed') {
               console.log('Checkout closed');
+              trackEvent('checkout_closed', {
+                plan: planName,
+                price_id: priceId,
+              });
               onClose?.();
             }
           },
@@ -57,12 +68,18 @@ export default function PaddleCheckout({
     };
 
     initPaddle();
-  }, [onSuccess, onClose]);
+  }, [onSuccess, onClose, planName, priceId]);
 
   const openCheckout = async () => {
     if (!paddle || disabled) return;
 
     setIsLoading(true);
+
+    // Track checkout started
+    trackEvent('checkout_started', {
+      plan: planName,
+      price_id: priceId,
+    });
 
     try {
       await paddle.Checkout.open({
@@ -82,6 +99,11 @@ export default function PaddleCheckout({
       });
     } catch (error) {
       console.error('Failed to open checkout:', error);
+      trackEvent('checkout_error', {
+        plan: planName,
+        price_id: priceId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     } finally {
       setIsLoading(false);
     }

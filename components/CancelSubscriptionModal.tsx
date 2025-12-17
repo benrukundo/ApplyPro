@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, AlertTriangle, Loader2 } from 'lucide-react';
+import { trackEvent } from '@/components/PostHogProvider';
 
 interface CancelSubscriptionModalProps {
   isOpen: boolean;
@@ -47,9 +48,20 @@ export default function CancelSubscriptionModal({
         throw new Error(data.error || 'Failed to cancel subscription');
       }
 
+      // Track successful cancellation
+      trackEvent('subscription_cancelled', {
+        plan: plan,
+        effective_date: data.effectiveDate,
+      });
+
       onSuccess(data.message, data.effectiveDate);
       onClose();
     } catch (err) {
+      // Track cancellation failure
+      trackEvent('subscription_cancel_failed', {
+        plan: plan,
+        error: err instanceof Error ? err.message : 'Unknown error',
+      });
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
