@@ -448,6 +448,67 @@ export default function BuildResumePage() {
     }
   };
 
+  // Build complete resume for download (combines formData with AI content)
+  const buildCompleteResume = (): string => {
+    const aiContent = enhancedPreview || generatedResume || '';
+
+    // Build complete resume with all sections
+    let completeResume = '';
+
+    // Add name and title
+    completeResume += `${formData.fullName}\n`;
+    completeResume += `${formData.targetJobTitle}\n\n`;
+
+    // Add contact
+    completeResume += `## CONTACT\n`;
+    if (formData.email) completeResume += `${formData.email}\n`;
+    if (formData.phone) completeResume += `${formData.phone}\n`;
+    if (formData.location) completeResume += `${formData.location}\n`;
+    if (formData.linkedin) completeResume += `${formData.linkedin}\n`;
+    if (formData.portfolio) completeResume += `${formData.portfolio}\n`;
+    completeResume += `\n`;
+
+    // Add AI-enhanced content (Summary and Experience)
+    completeResume += aiContent + '\n\n';
+
+    // Add Skills
+    const allSkills = [...formData.skills.technical, ...formData.skills.soft];
+    if (allSkills.length > 0) {
+      completeResume += `## SKILLS\n`;
+      allSkills.forEach(skill => completeResume += `${skill}\n`);
+      completeResume += `\n`;
+    }
+
+    // Add Education
+    if (formData.education.length > 0) {
+      completeResume += `## EDUCATION\n`;
+      formData.education.forEach(edu => {
+        completeResume += `${edu.degree} ${edu.field ? `in ${edu.field}` : ''} - ${edu.school}\n`;
+        if (edu.startDate) {
+          completeResume += `${edu.startDate} - ${edu.current ? 'Present' : edu.endDate}\n`;
+        }
+        if (edu.gpa) completeResume += `GPA: ${edu.gpa}\n`;
+        if (edu.highlights) completeResume += `${edu.highlights}\n`;
+      });
+      completeResume += `\n`;
+    }
+
+    // Add Certifications
+    if (formData.skills.certifications.length > 0) {
+      completeResume += `## CERTIFICATIONS\n`;
+      formData.skills.certifications.forEach(cert => completeResume += `${cert}\n`);
+      completeResume += `\n`;
+    }
+
+    // Add Languages
+    if (formData.skills.languages.length > 0) {
+      completeResume += `## LANGUAGES\n`;
+      formData.skills.languages.forEach(lang => completeResume += `${lang}\n`);
+    }
+
+    return completeResume;
+  };
+
   const handleDownload = async (format: 'pdf' | 'docx') => {
     console.log('[BUILD-RESUME] handleDownload called:', {
       format,
@@ -480,8 +541,7 @@ export default function BuildResumePage() {
     }
 
     // Check for content (either enhancedPreview or generatedResume)
-    const resumeContent = enhancedPreview || generatedResume;
-    if (!resumeContent) {
+    if (!enhancedPreview && !generatedResume) {
       setError('No resume to download. Please generate a preview first.');
       return;
     }
@@ -507,20 +567,23 @@ export default function BuildResumePage() {
         return;
       }
 
-      // Proceed with download using available content
+      // Build complete resume with all sections for PDF/DOCX parser
+      const completeResumeContent = buildCompleteResume();
+      console.log('[BUILD-RESUME] Complete resume built, length:', completeResumeContent.length);
+
       const timestamp = new Date().toISOString().split('T')[0];
       const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
 
       if (format === 'pdf') {
         await generatePDF(
-          resumeContent,
+          completeResumeContent,
           `${fileName}.pdf`,
           selectedTemplate,
           selectedColor.key
         );
       } else {
         await generateDOCX(
-          resumeContent,
+          completeResumeContent,
           `${fileName}.docx`,
           selectedTemplate,
           selectedColor.key
