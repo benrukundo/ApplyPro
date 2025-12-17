@@ -54,9 +54,12 @@ export async function POST(request: NextRequest) {
       throw new Error('No content generated');
     }
 
+    console.log('[PREVIEW] Raw AI output (first 500 chars):', enhancedContent.substring(0, 500));
+
     // Post-process: Remove sections that should only appear in sidebar
     const filteredContent = filterSidebarSections(enhancedContent, formData.fullName, formData.targetJobTitle);
 
+    console.log('[PREVIEW] Filtered content (first 500 chars):', filteredContent.substring(0, 500));
     console.log('[PREVIEW] Enhanced preview generated successfully');
 
     return NextResponse.json({
@@ -160,38 +163,48 @@ ${allSkills.join(', ')}
     }
   }
 
-  prompt += `INSTRUCTIONS:
-1. Create ONLY these sections (contact, skills, education already displayed separately):
-   - PROFESSIONAL SUMMARY (2-3 compelling sentences highlighting key strengths)
-   - EXPERIENCE (enhance work history with strong action verbs and quantifiable achievements)
+  prompt += `CRITICAL INSTRUCTIONS - DO NOT INCLUDE:
+- DO NOT write the candidate's name "${fullName}" anywhere in your output
+- DO NOT write the job title "${targetJobTitle}" as a standalone line
+- DO NOT include contact information (email, phone, address)
+- DO NOT include SKILLS section (already in sidebar)
+- DO NOT include EDUCATION section (already in sidebar)
+- DO NOT include CERTIFICATIONS section (already in sidebar)
+- DO NOT include LANGUAGES section (already in sidebar)
 
-2. DO NOT include these sections (they are already displayed in the sidebar):
-   - Contact information
-   - Skills
-   - Education
-   - Certifications
-   - Languages
+WHAT TO GENERATE - ONLY 2 SECTIONS:
 
-3. For the PROFESSIONAL SUMMARY:
-   - Write 2-3 powerful sentences
-   - Highlight key qualifications for ${targetJobTitle}
+1. PROFESSIONAL SUMMARY section:
+   - Header: ## PROFESSIONAL SUMMARY
+   - 2-3 compelling sentences highlighting key strengths for ${targetJobTitle} role
    - Include years of experience if applicable
    - Mention key achievements or expertise areas
 
-4. For EXPERIENCE section:
-   - Use the exact company names and job titles provided
-   - Enhance descriptions with action verbs (Led, Managed, Developed, Increased, etc.)
+2. EXPERIENCE section:
+   - Header: ## PROFESSIONAL EXPERIENCE
+   - Use the EXACT company names and job titles from the user's input
+   - Enhance descriptions with strong action verbs (Led, Managed, Developed, Increased, Implemented, etc.)
    - Add quantifiable achievements where possible (e.g., "Increased sales by 30%")
-   - Use bullet points for achievements
+   - Use bullet points (-) for each achievement
+   - Format: Job Title | Company | Dates (if provided)
+   - Then bullet points with achievements
    - Keep each role concise but impactful
 
-5. Formatting rules:
-   - Use ## for section headers (e.g., ## PROFESSIONAL SUMMARY)
-   - Use - or • for bullet points
-   - Keep it ATS-friendly (no special characters)
-   - Professional language throughout
+FORMATTING RULES:
+- Start directly with ## PROFESSIONAL SUMMARY (no name, no title above it)
+- Use ## for section headers
+- Use - for bullet points
+- Keep it ATS-friendly
+- Professional language throughout
 
-Output ONLY the enhanced content with these two sections. No explanations or meta-commentary.`;
+OUTPUT FORMAT EXAMPLE:
+## PROFESSIONAL SUMMARY
+[2-3 sentences about the candidate]
+
+## PROFESSIONAL EXPERIENCE
+[Enhanced work experience with bullet points]
+
+Output ONLY these two sections. Do NOT include any header with the name or title. Start immediately with ## PROFESSIONAL SUMMARY.`;
 
   return prompt;
 }
