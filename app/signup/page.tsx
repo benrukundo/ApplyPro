@@ -432,15 +432,7 @@ export default function SignupPage() {
                   <>Create Account</>
                 )}
               </button>
-              {/* test sentry error*/}
-<button
-  onClick={() => {
-    throw new Error("Test Sentry Error!");
-  }}
-  className="px-4 py-2 bg-red-500 text-white rounded"
->
-  Test Sentry
-</button>
+
             </form>
 
             {/* Login Link */}
