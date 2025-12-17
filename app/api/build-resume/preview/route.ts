@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Post-process: Remove sections that should only appear in sidebar
-    const filteredContent = filterSidebarSections(enhancedContent);
+    const filteredContent = filterSidebarSections(enhancedContent, formData.fullName, formData.targetJobTitle);
 
     console.log('[PREVIEW] Enhanced preview generated successfully');
 
@@ -198,17 +198,42 @@ Output ONLY the enhanced content with these two sections. No explanations or met
 
 /**
  * Filter out sections that should only appear in sidebar
+ * Also removes name, title, and contact info from AI output
  * Keeps only: PROFESSIONAL SUMMARY, EXPERIENCE, and any other narrative sections
  */
-function filterSidebarSections(content: string): string {
+function filterSidebarSections(content: string, fullName: string, targetJobTitle: string): string {
   const lines = content.split('\n');
   const sectionsToSkip = ['SKILLS', 'SKILL', 'EDUCATION', 'CERTIFICATIONS', 'CERTIFICATION', 'LANGUAGES', 'LANGUAGE', 'CONTACT'];
 
   let skipSection = false;
+  let skippedFirstFewLines = 0; // Skip first few lines that often contain name/title
   const filteredLines: string[] = [];
 
   for (const line of lines) {
     const trimmedLine = line.trim();
+    if (!trimmedLine) {
+      filteredLines.push(line);
+      continue;
+    }
+
+    const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
+
+    // Skip first 5 lines if they contain name or title (AI often puts these at top)
+    if (skippedFirstFewLines < 5) {
+      const lineUpper = cleanLine.toUpperCase();
+      const nameUpper = fullName.toUpperCase();
+      const titleUpper = targetJobTitle.toUpperCase();
+
+      if (lineUpper.includes(nameUpper) || lineUpper === titleUpper) {
+        skippedFirstFewLines++;
+        continue; // Skip this line
+      }
+    }
+
+    // Skip contact info
+    if (cleanLine.includes('@') || cleanLine.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/)) {
+      continue;
+    }
 
     // Check if this is a section header
     const isHeader =
@@ -216,10 +241,11 @@ function filterSidebarSections(content: string): string {
       trimmedLine.startsWith('**') ||
       (trimmedLine === trimmedLine.toUpperCase() &&
        trimmedLine.length > 5 &&
-       trimmedLine.length < 60);
+       trimmedLine.length < 60 &&
+       !trimmedLine.includes('@'));
 
     if (isHeader) {
-      const cleanHeader = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '').toUpperCase();
+      const cleanHeader = cleanLine.toUpperCase();
 
       // Check if this is a section we should skip
       if (sectionsToSkip.some(s => cleanHeader.includes(s))) {
