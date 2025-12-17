@@ -479,8 +479,10 @@ export default function BuildResumePage() {
       return;
     }
 
-    if (!generatedResume) {
-      setError('No resume to download. Please generate first.');
+    // Check for content (either enhancedPreview or generatedResume)
+    const resumeContent = enhancedPreview || generatedResume;
+    if (!resumeContent) {
+      setError('No resume to download. Please generate a preview first.');
       return;
     }
 
@@ -505,20 +507,20 @@ export default function BuildResumePage() {
         return;
       }
 
-      // Proceed with download
+      // Proceed with download using available content
       const timestamp = new Date().toISOString().split('T')[0];
       const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
 
       if (format === 'pdf') {
         await generatePDF(
-          generatedResume,
+          resumeContent,
           `${fileName}.pdf`,
           selectedTemplate,
           selectedColor.key
         );
       } else {
         await generateDOCX(
-          generatedResume,
+          resumeContent,
           `${fileName}.docx`,
           selectedTemplate,
           selectedColor.key
@@ -2017,13 +2019,14 @@ export default function BuildResumePage() {
                   <div className="text-center">
                     <button
                       onClick={() => {
+                        setEnhancedPreview(null);
                         setGeneratedResume(null);
-                        handleGenerate();
+                        handleGeneratePreview();
                       }}
-                      disabled={isGenerating}
+                      disabled={isGeneratingPreview}
                       className="text-blue-600 hover:text-blue-700 font-medium text-sm"
                     >
-                      {isGenerating ? 'Regenerating...' : 'Not happy? Regenerate resume'}
+                      {isGeneratingPreview ? 'Regenerating...' : 'Not happy? Regenerate resume'}
                     </button>
                   </div>
                 </div>
