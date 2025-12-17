@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   getAllApplications,
@@ -13,19 +13,16 @@ import {
 import {
   Plus,
   Search,
-  Filter,
-  FileText,
-  Target,
-  TrendingUp,
   Briefcase,
   CheckCircle2,
   XCircle,
   Clock,
   AlertCircle,
-  Lock,
   Loader2,
   Sparkles,
   Calendar,
+  TrendingUp,
+  RefreshCw,
 } from 'lucide-react';
 import CancelSubscriptionModal from '@/components/CancelSubscriptionModal';
 
@@ -43,6 +40,7 @@ interface SubscriptionInfo {
 export default function DashboardPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [applications, setApplications] = useState<Application[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -50,6 +48,7 @@ export default function DashboardPage() {
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelMessage, setCancelMessage] = useState('');
+  const [isPolling, setIsPolling] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -59,26 +58,77 @@ export default function DashboardPage() {
   }, [session, router]);
 
   // Load subscription info
-  useEffect(() => {
-    const loadSubscription = async () => {
-      try {
-        const response = await fetch('/api/user/subscription');
-        const data = await response.json();
+  const loadSubscription = async () => {
+    try {
+      const response = await fetch('/api/user/subscription');
+      const data = await response.json();
 
-        if (response.ok) {
-          setSubscription(data.subscription);
-        }
-      } catch (err) {
-        console.error('Error loading subscription:', err);
-      } finally {
-        setIsLoadingSubscription(false);
+      if (response.ok) {
+        setSubscription(data.subscription);
+        return data.subscription;
       }
-    };
+    } catch (err) {
+      console.error('Error loading subscription:', err);
+    } finally {
+      setIsLoadingSubscription(false);
+    }
+    return null;
+  };
 
+  useEffect(() => {
     if (session?.user?.id) {
       loadSubscription();
     }
   }, [session?.user?.id]);
+
+  // Handle post-payment polling
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    
+    if (paymentStatus === 'success' && session?.user?.id) {
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      setIsPolling(true);
+      setIsLoadingSubscription(true);
+      
+      const pollSubscription = async () => {
+        attempts++;
+        
+        try {
+          const response = await fetch('/api/user/subscription');
+          const data = await response.json();
+          
+          if (response.ok && data.subscription?.isActive && !data.subscription?.cancelledAt) {
+            setSubscription(data.subscription);
+            setIsLoadingSubscription(false);
+            setIsPolling(false);
+            
+            // Clear the query parameter
+            window.history.replaceState({}, '', '/dashboard');
+            return;
+          }
+          
+          if (attempts < maxAttempts) {
+            setTimeout(pollSubscription, 1500);
+          } else {
+            setIsLoadingSubscription(false);
+            setIsPolling(false);
+          }
+        } catch (err) {
+          console.error('Error polling subscription:', err);
+          if (attempts < maxAttempts) {
+            setTimeout(pollSubscription, 1500);
+          } else {
+            setIsLoadingSubscription(false);
+            setIsPolling(false);
+          }
+        }
+      };
+      
+      pollSubscription();
+    }
+  }, [searchParams, session?.user?.id]);
 
   // Load applications
   useEffect(() => {
@@ -91,18 +141,6 @@ export default function DashboardPage() {
 
   const handleCancelSuccess = (message: string, effectiveDate: string) => {
     setCancelMessage(message);
-    // Reload subscription info
-    const loadSubscription = async () => {
-      try {
-        const response = await fetch('/api/user/subscription');
-        const data = await response.json();
-        if (response.ok) {
-          setSubscription(data.subscription);
-        }
-      } catch (err) {
-        console.error('Error loading subscription:', err);
-      }
-    };
     loadSubscription();
   };
 
@@ -157,6 +195,19 @@ export default function DashboardPage() {
     }
   };
 
+  const getPlanDisplayName = (plan: string | null) => {
+    switch (plan) {
+      case 'monthly':
+        return 'Pro Monthly';
+      case 'yearly':
+        return 'Pro Yearly';
+      case 'pay-per-use':
+        return 'Pay-Per-Use';
+      default:
+        return 'Free';
+    }
+  };
+
   if (!session?.user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -176,8 +227,22 @@ export default function DashboardPage() {
 
         {/* Success Message */}
         {cancelMessage && (
-          <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl">
+          <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between">
             <p className="text-green-800 font-medium">{cancelMessage}</p>
+            <button 
+              onClick={() => setCancelMessage('')}
+              className="text-green-600 hover:text-green-800"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        {/* Payment Processing Message */}
+        {isPolling && (
+          <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
+            <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+            <p className="text-blue-800 font-medium">Processing your payment... Please wait.</p>
           </div>
         )}
 
@@ -191,25 +256,23 @@ export default function DashboardPage() {
                   Your Plan
                 </h2>
 
-                {subscription?.isActive ? (
+                {subscription?.isActive || (subscription?.cancelledAt && subscription?.currentPeriodEnd) ? (
                   <div className="space-y-4">
                     <div>
                       <p className="text-lg font-semibold text-blue-600 mb-2">
-                        {subscription.plan === 'monthly'
-                          ? 'Pro Monthly'
-                          : subscription.plan === 'yearly'
-                            ? 'Pro Yearly'
-                            : 'Pay-Per-Use'}
+                        {getPlanDisplayName(subscription?.plan)}
                       </p>
                       <p className="text-gray-600">
-                        {subscription.plan === 'monthly' || subscription.plan === 'yearly'
+                        {subscription?.plan === 'monthly' || subscription?.plan === 'yearly'
                           ? `${subscription.monthlyLimit} resumes per month`
-                          : 'Pay per resume'}
+                          : subscription?.plan === 'pay-per-use'
+                            ? `${subscription.monthlyLimit - subscription.monthlyUsageCount} credits remaining`
+                            : 'Limited access'}
                       </p>
                     </div>
 
                     {/* Cancellation Warning */}
-                    {subscription.cancelledAt && subscription.currentPeriodEnd && (
+                    {subscription?.cancelledAt && subscription?.currentPeriodEnd && (
                       <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                         <p className="text-amber-900 font-semibold mb-1">
                           Subscription Cancelled
@@ -225,7 +288,8 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    {(subscription.plan === 'monthly' || subscription.plan === 'yearly') && (
+                    {/* Usage Progress */}
+                    {(subscription?.plan === 'monthly' || subscription?.plan === 'yearly') && !subscription?.cancelledAt && (
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-gray-700">Usage This Month</span>
@@ -247,6 +311,26 @@ export default function DashboardPage() {
                         </p>
                       </div>
                     )}
+
+                    {/* Pay-per-use credits */}
+                    {subscription?.plan === 'pay-per-use' && (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-700">Credits Used</span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {subscription.monthlyUsageCount} / {subscription.monthlyLimit}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div
+                            className="bg-green-600 h-3 rounded-full transition-all"
+                            style={{
+                              width: `${(subscription.monthlyUsageCount / subscription.monthlyLimit) * 100}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -262,23 +346,55 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex flex-col gap-3 ml-6">
-                <Link
-                  href={subscription?.isActive ? '/coming-soon' : '/pricing'}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
-                >
-                  {subscription?.isActive ? 'Manage Subscription' : 'Upgrade Plan'}
-                </Link>
-
-                {/* Cancel Button - Only show if active and not already cancelled */}
-                {subscription?.isActive && !subscription?.cancelledAt && (
-                  <button
-                    onClick={() => setShowCancelModal(true)}
-                    className="px-6 py-3 bg-white border-2 border-red-200 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors"
+                {subscription?.isActive && !subscription?.cancelledAt ? (
+                  <>
+                    <Link
+                      href="/generate"
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
+                    >
+                      Generate Resume
+                    </Link>
+                    <button
+                      onClick={() => setShowCancelModal(true)}
+                      className="px-6 py-3 bg-white border-2 border-red-200 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors"
+                    >
+                      Cancel Subscription
+                    </button>
+                  </>
+                ) : subscription?.cancelledAt ? (
+                  <>
+                    <Link
+                      href="/generate"
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
+                    >
+                      Generate Resume
+                    </Link>
+                    <Link
+                      href="/pricing"
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors text-center"
+                    >
+                      Resubscribe
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    href="/pricing"
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
                   >
-                    Cancel Subscription
-                  </button>
+                    Upgrade Plan
+                  </Link>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading Subscription */}
+        {isLoadingSubscription && (
+          <div className="mb-8 bg-white rounded-2xl shadow-lg p-8 border-2 border-blue-100">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+              <p className="text-gray-600">Loading subscription...</p>
             </div>
           </div>
         )}
