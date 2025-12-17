@@ -219,7 +219,6 @@ function filterSidebarSections(content: string, fullName: string, targetJobTitle
   const sectionsToSkip = ['SKILLS', 'SKILL', 'EDUCATION', 'CERTIFICATIONS', 'CERTIFICATION', 'LANGUAGES', 'LANGUAGE', 'CONTACT'];
 
   let skipSection = false;
-  let skippedFirstFewLines = 0; // Skip first few lines that often contain name/title
   const filteredLines: string[] = [];
 
   for (const line of lines) {
@@ -231,16 +230,21 @@ function filterSidebarSections(content: string, fullName: string, targetJobTitle
 
     const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
 
-    // Skip first 5 lines if they contain name or title (AI often puts these at top)
-    if (skippedFirstFewLines < 5) {
-      const lineUpper = cleanLine.toUpperCase();
-      const nameUpper = fullName.toUpperCase();
-      const titleUpper = targetJobTitle.toUpperCase();
+    // Always skip lines containing the person's name (anywhere in the content)
+    const lineUpper = cleanLine.toUpperCase();
+    const nameUpper = fullName.toUpperCase();
+    const titleUpper = targetJobTitle.toUpperCase();
 
-      if (lineUpper.includes(nameUpper) || lineUpper === titleUpper) {
-        skippedFirstFewLines++;
-        continue; // Skip this line
-      }
+    // Skip if line contains full name
+    if (lineUpper.includes(nameUpper) && cleanLine.length < 100) {
+      console.log('[FILTER] Skipping name line:', cleanLine);
+      continue;
+    }
+
+    // Skip if line is exactly the job title
+    if (lineUpper === titleUpper) {
+      console.log('[FILTER] Skipping title line:', cleanLine);
+      continue;
     }
 
     // Skip contact info

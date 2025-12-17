@@ -93,18 +93,35 @@ function parseResumeToStructure(content: string): ParsedResume {
         currentExperience = null;
       }
 
-      // First header is usually the name
-      if (!foundName && !headerLower.includes('summary') && !headerLower.includes('experience') && 
-          !headerLower.includes('skill') && !headerLower.includes('education') && !headerLower.includes('contact')) {
+      // First header is usually the name (but exclude common section keywords)
+      if (!foundName &&
+          !headerLower.includes('summary') &&
+          !headerLower.includes('experience') &&
+          !headerLower.includes('skill') &&
+          !headerLower.includes('education') &&
+          !headerLower.includes('contact') &&
+          !headerLower.includes('language') &&
+          !headerLower.includes('certif') &&
+          !headerLower.includes('training') &&
+          !headerLower.includes('additional')) {
         result.name = cleanLine;
         foundName = true;
         continue;
       }
 
       // Second non-section header could be title
-      if (foundName && !result.title && !headerLower.includes('summary') && !headerLower.includes('experience') && 
-          !headerLower.includes('skill') && !headerLower.includes('education') && !headerLower.includes('contact') &&
-          !headerLower.includes('competen') && !headerLower.includes('certif') && !headerLower.includes('qualif')) {
+      if (foundName && !result.title &&
+          !headerLower.includes('summary') &&
+          !headerLower.includes('experience') &&
+          !headerLower.includes('skill') &&
+          !headerLower.includes('education') &&
+          !headerLower.includes('contact') &&
+          !headerLower.includes('competen') &&
+          !headerLower.includes('certif') &&
+          !headerLower.includes('qualif') &&
+          !headerLower.includes('language') &&
+          !headerLower.includes('training') &&
+          !headerLower.includes('additional')) {
         result.title = cleanLine;
         continue;
       }
