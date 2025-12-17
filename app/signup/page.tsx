@@ -15,7 +15,7 @@ import {
   CreditCard,
   Mail,
 } from "lucide-react";
-
+import { trackEvent } from "@/components/PostHogProvider";
 
 // Password strength calculator
 function getPasswordStrength(password: string): { strength: 'weak' | 'medium' | 'strong'; score: number } {
@@ -57,6 +57,12 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
     setSuccess(false);
+
+    // Track signup attempt
+    trackEvent('signup_started', {
+      has_name: !!formData.name.trim(),
+      has_email: !!formData.email.trim(),
+    });
 
     // Validation
     if (!formData.name.trim()) {
@@ -100,10 +106,20 @@ export default function SignupPage() {
       const registerData = await registerResponse.json();
 
       if (!registerResponse.ok) {
+        // Track signup failure
+        trackEvent('signup_failed', {
+          error: registerData.error || 'Unknown error',
+        });
         setError(registerData.error || "Failed to create account");
         setIsLoading(false);
         return;
       }
+
+      // Track successful signup
+      trackEvent('signup_completed', {
+        verified: registerData.verified || false,
+        method: 'email',
+      });
 
       // Check if user is already verified (Google OAuth user adding password)
       if (registerData.verified) {
@@ -116,6 +132,10 @@ export default function SignupPage() {
         setSuccess(true);
       }
     } catch (err) {
+      // Track signup error
+      trackEvent('signup_error', {
+        error: 'Network or unexpected error',
+      });
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -140,6 +160,7 @@ export default function SignupPage() {
       const data = await response.json();
 
       if (response.ok) {
+        trackEvent('verification_email_resent');
         setResendMessage("Verification email sent! Please check your inbox.");
       } else {
         setResendMessage(data.error || "Failed to resend email. Please try again.");
@@ -289,7 +310,7 @@ export default function SignupPage() {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-                    placeholder="••••••••"
+                    placeholder=""
                     disabled={isLoading}
                   />
                   <button
@@ -353,7 +374,7 @@ export default function SignupPage() {
                       })
                     }
                     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-                    placeholder="••••••••"
+                    placeholder=""
                     disabled={isLoading}
                   />
                   <button
@@ -468,7 +489,7 @@ export default function SignupPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">
-                    ✅ Track Unlimited Job Applications
+                     Track Unlimited Job Applications
                   </h3>
                   <p className="text-sm text-blue-100">
                     Never lose track of where you applied. Organize everything
@@ -483,7 +504,7 @@ export default function SignupPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">
-                    ✅ Get Application Insights
+                     Get Application Insights
                   </h3>
                   <p className="text-sm text-blue-100">
                     See your success rate, response times, and identify patterns
@@ -498,7 +519,7 @@ export default function SignupPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">
-                    ✅ Set Follow-up Reminders
+                     Set Follow-up Reminders
                   </h3>
                   <p className="text-sm text-blue-100">
                     Stay on top of your applications with automatic reminders for
@@ -513,7 +534,7 @@ export default function SignupPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">
-                    ✅ 100% Free (No Credit Card Required)
+                     100% Free (No Credit Card Required)
                   </h3>
                   <p className="text-sm text-blue-100">
                     Track up to 25 applications completely free. No hidden fees,
