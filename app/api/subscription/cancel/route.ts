@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import { sendSubscriptionCancelledEmail } from '@/lib/emailTemplates';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,6 +38,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get user info for email
+    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+
     // For pay-per-use, just mark as cancelled (no recurring billing)
     if (subscription.plan === 'pay-per-use') {
       await prisma.subscription.update({
@@ -46,6 +50,16 @@ export async function POST(request: NextRequest) {
           cancelledAt: new Date(),
         },
       });
+
+      // Send cancellation email
+      if (user?.email) {
+        try {
+          await sendSubscriptionCancelledEmail(user.email, user.name || '', 'immediately');
+          console.log(`Cancellation email sent to ${user.email}`);
+        } catch (emailError) {
+          console.error('Failed to send cancellation email:', emailError);
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -71,7 +85,6 @@ export async function POST(request: NextRequest) {
       : 'https://sandbox-api.paddle.com';
 
     // Call Paddle API to cancel subscription
-    // This schedules cancellation at the end of the current billing period
     const response = await fetch(
       `${paddleBaseUrl}/subscriptions/${subscription.paddleId}/cancel`,
       {
@@ -81,7 +94,7 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          effective_from: 'next_billing_period', // Cancel at end of current period
+          effective_from: 'next_billing_period',
         }),
       }
     );
@@ -89,10 +102,8 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('Paddle cancellation error:', response.status, errorData);
-
-      // If subscription is already cancelled or not found in Paddle
+      
       if (response.status === 404 || response.status === 409) {
-        // Update local database anyway
         await prisma.subscription.update({
           where: { id: subscription.id },
           data: {
@@ -100,6 +111,16 @@ export async function POST(request: NextRequest) {
             cancelledAt: new Date(),
           },
         });
+
+        // Send cancellation email
+        if (user?.email) {
+          try {
+            await sendSubscriptionCancelledEmail(user.email, user.name || '', 'immediately');
+            console.log(`Cancellation email sent to ${user.email}`);
+          } catch (emailError) {
+            console.error('Failed to send cancellation email:', emailError);
+          }
+        }
 
         return NextResponse.json({
           success: true,
@@ -117,15 +138,12 @@ export async function POST(request: NextRequest) {
     const paddleResponse = await response.json();
     console.log('Paddle cancellation response:', paddleResponse);
 
-    // The webhook will update the subscription status, but we can also update locally
-    // to show immediate feedback. The subscription remains active until period end.
     const currentPeriodEnd = subscription.currentPeriodEnd || new Date();
-
+    
     await prisma.subscription.update({
       where: { id: subscription.id },
       data: {
         cancelledAt: new Date(),
-        // Status stays 'active' until the webhook confirms cancellation at period end
       },
     });
 
@@ -134,6 +152,16 @@ export async function POST(request: NextRequest) {
       day: 'numeric',
       year: 'numeric',
     });
+
+    // Send cancellation email
+    if (user?.email) {
+      try {
+        await sendSubscriptionCancelledEmail(user.email, user.name || '', formattedDate);
+        console.log(`Cancellation email sent to ${user.email}`);
+      } catch (emailError) {
+        console.error('Failed to send cancellation email:', emailError);
+      }
+    }
 
     return NextResponse.json({
       success: true,
