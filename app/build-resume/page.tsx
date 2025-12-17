@@ -23,9 +23,10 @@ import {
   Target,
   Save,
   AlertCircle,
+  Palette,
 } from 'lucide-react';
 import { trackEvent } from '@/components/PostHogProvider';
-import { generatePDF, generateDOCX } from '@/lib/documentGenerator';
+import { generatePDF, generateDOCX, type ColorPreset } from '@/lib/documentGenerator';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,6 +80,8 @@ interface FormData {
 interface SubscriptionInfo {
   plan: string | null;
   isActive: boolean;
+  monthlyUsageCount?: number;
+  monthlyLimit?: number;
 }
 
 const STEPS = [
@@ -115,6 +118,21 @@ const SUGGESTED_SKILLS: Record<string, string[]> = {
   'default': ['Microsoft Office', 'Communication', 'Problem Solving', 'Team Collaboration', 'Time Management'],
 };
 
+const TEMPLATES = [
+  { id: 'modern', name: 'Modern', description: 'Clean two-column layout with color accents' },
+  { id: 'traditional', name: 'Traditional', description: 'Classic single-column professional style' },
+  { id: 'ats', name: 'ATS-Optimized', description: 'Simple format optimized for applicant tracking systems' },
+];
+
+const COLOR_PRESETS = [
+  { key: 'blue' as ColorPreset, name: 'Blue', hex: '#2563eb', bg: 'bg-blue-600' },
+  { key: 'green' as ColorPreset, name: 'Green', hex: '#16a34a', bg: 'bg-green-600' },
+  { key: 'purple' as ColorPreset, name: 'Purple', hex: '#9333ea', bg: 'bg-purple-600' },
+  { key: 'red' as ColorPreset, name: 'Red', hex: '#dc2626', bg: 'bg-red-600' },
+  { key: 'teal' as ColorPreset, name: 'Teal', hex: '#0d9488', bg: 'bg-teal-600' },
+  { key: 'orange' as ColorPreset, name: 'Orange', hex: '#ea580c', bg: 'bg-orange-600' },
+];
+
 const initialFormData: FormData = {
   targetJobTitle: '',
   targetIndustry: '',
@@ -143,7 +161,10 @@ export default function BuildResumePage() {
   const [error, setError] = useState('');
   const [generatedResume, setGeneratedResume] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
   const [builderId, setBuilderId] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'traditional' | 'ats'>('modern');
+  const [selectedColor, setSelectedColor] = useState(COLOR_PRESETS[0]);
 
   // Load saved progress and subscription
   useEffect(() => {
@@ -190,14 +211,20 @@ export default function BuildResumePage() {
   };
 
   const loadSubscription = async () => {
+    setIsLoadingSubscription(true);
     try {
       const response = await fetch('/api/user/subscription');
       if (response.ok) {
         const data = await response.json();
         setSubscription(data.subscription);
+      } else {
+        setSubscription({ plan: null, isActive: false });
       }
     } catch (err) {
       console.error('Error loading subscription:', err);
+      setSubscription({ plan: null, isActive: false });
+    } finally {
+      setIsLoadingSubscription(false);
     }
   };
 
@@ -298,87 +325,88 @@ export default function BuildResumePage() {
   };
 
   const handleGenerate = async () => {
-  if (!session?.user?.id) {
-    router.push('/login?callbackUrl=/build-resume');
-    return;
-  }
-
-  setIsGenerating(true);
-  setError('');
-
-  try {
-    const response = await fetch('/api/build-resume/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        builderId,
-        formData,
-      }),
-    });
-
-    // Check if response is ok before parsing JSON
-    if (!response.ok) {
-      let errorMessage = 'Failed to generate resume';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorMessage;
-        
-        if (errorData.requiresUpgrade) {
-          setError('You have reached the free generation limit. Please subscribe to generate more resumes.');
-          return;
-        }
-      } catch (parseError) {
-        // Response body might be empty
-        errorMessage = `Server error (${response.status}). Please try again.`;
-      }
-      throw new Error(errorMessage);
+    if (!session?.user?.id) {
+      router.push('/login?callbackUrl=/build-resume');
+      return;
     }
 
-    // Check if response has content
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new Error('Invalid response from server. Please try again.');
-    }
+    setIsGenerating(true);
+    setError('');
 
-    const text = await response.text();
-    if (!text || text.trim().length === 0) {
-      throw new Error('Empty response from server. Please try again.');
-    }
-
-    let data;
     try {
-      data = JSON.parse(text);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError, 'Response text:', text);
-      throw new Error('Invalid response format. Please try again.');
+      const response = await fetch('/api/build-resume/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          builderId,
+          formData,
+        }),
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to generate resume';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          
+          if (errorData.requiresUpgrade) {
+            setError('You have reached the free generation limit. Please subscribe to generate more resumes.');
+            return;
+          }
+        } catch (parseError) {
+          errorMessage = `Server error (${response.status}). Please try again.`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response from server. Please try again.');
+      }
+
+      const text = await response.text();
+      if (!text || text.trim().length === 0) {
+        throw new Error('Empty response from server. Please try again.');
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError, 'Response text:', text);
+        throw new Error('Invalid response format. Please try again.');
+      }
+
+      if (!data.resume) {
+        throw new Error(data.error || 'No resume content received. Please try again.');
+      }
+
+      setGeneratedResume(data.resume);
+      
+      trackEvent('builder_resume_generated', {
+        target_job: formData.targetJobTitle,
+        experience_count: formData.experience.length,
+        education_count: formData.education.length,
+      });
+    } catch (err) {
+      console.error('Generation error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate resume. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
-
-    if (!data.resume) {
-      throw new Error(data.error || 'No resume content received. Please try again.');
-    }
-
-    setGeneratedResume(data.resume);
-    
-    if (data.warning) {
-      console.warn('Generation warning:', data.warning);
-    }
-
-    trackEvent('builder_resume_generated', {
-      target_job: formData.targetJobTitle,
-      experience_count: formData.experience.length,
-      education_count: formData.education.length,
-    });
-  } catch (err) {
-    console.error('Generation error:', err);
-    setError(err instanceof Error ? err.message : 'Failed to generate resume. Please try again.');
-  } finally {
-    setIsGenerating(false);
-  }
-};
-
+  };
 
   const handleDownload = async (format: 'pdf' | 'docx') => {
-    if (!generatedResume || !canDownload) return;
+    // Check subscription before allowing download
+    if (!subscription?.isActive) {
+      setError('Please subscribe to download your resume.');
+      return;
+    }
+
+    if (!generatedResume) {
+      setError('No resume to download. Please generate first.');
+      return;
+    }
 
     setIsDownloading(true);
     setError('');
@@ -388,13 +416,15 @@ export default function BuildResumePage() {
       const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
 
       if (format === 'pdf') {
-        await generatePDF(generatedResume, `${fileName}.pdf`, 'modern', 'blue');
+        await generatePDF(generatedResume, `${fileName}.pdf`, selectedTemplate, selectedColor.key);
       } else {
-        await generateDOCX(generatedResume, `${fileName}.docx`, 'modern', 'blue');
+        await generateDOCX(generatedResume, `${fileName}.docx`, selectedTemplate, selectedColor.key);
       }
 
       trackEvent('builder_resume_downloaded', {
         format,
+        template: selectedTemplate,
+        color: selectedColor.key,
         target_job: formData.targetJobTitle,
       });
     } catch (err) {
@@ -488,7 +518,49 @@ export default function BuildResumePage() {
     });
   };
 
-  const canDownload = subscription?.isActive;
+  const canDownload = subscription?.isActive === true;
+
+  // Parse resume sections for template preview
+  const parseResumeForPreview = (resumeText: string) => {
+    const sections: Record<string, string> = {};
+    const lines = resumeText.split('\n');
+    let currentSection = 'header';
+    let currentContent: string[] = [];
+
+    lines.forEach(line => {
+      const upperLine = line.toUpperCase().trim();
+      if (upperLine.includes('PROFESSIONAL SUMMARY') || upperLine.includes('SUMMARY')) {
+        if (currentContent.length) sections[currentSection] = currentContent.join('\n');
+        currentSection = 'summary';
+        currentContent = [];
+      } else if (upperLine.includes('EXPERIENCE') || upperLine.includes('WORK HISTORY')) {
+        if (currentContent.length) sections[currentSection] = currentContent.join('\n');
+        currentSection = 'experience';
+        currentContent = [];
+      } else if (upperLine.includes('EDUCATION')) {
+        if (currentContent.length) sections[currentSection] = currentContent.join('\n');
+        currentSection = 'education';
+        currentContent = [];
+      } else if (upperLine.includes('SKILLS') || upperLine.includes('TECHNICAL SKILLS')) {
+        if (currentContent.length) sections[currentSection] = currentContent.join('\n');
+        currentSection = 'skills';
+        currentContent = [];
+      } else if (upperLine.includes('CERTIFICATIONS') || upperLine.includes('CERTIFICATES')) {
+        if (currentContent.length) sections[currentSection] = currentContent.join('\n');
+        currentSection = 'certifications';
+        currentContent = [];
+      } else if (upperLine.includes('LANGUAGES')) {
+        if (currentContent.length) sections[currentSection] = currentContent.join('\n');
+        currentSection = 'languages';
+        currentContent = [];
+      } else {
+        currentContent.push(line);
+      }
+    });
+    if (currentContent.length) sections[currentSection] = currentContent.join('\n');
+    
+    return sections;
+  };
 
   if (sessionStatus === 'loading') {
     return (
@@ -1214,25 +1286,169 @@ export default function BuildResumePage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Preview */}
-                  <div className="border-2 border-gray-200 rounded-xl overflow-hidden">
+                  {/* Template Selection */}
+                  <div className="p-6 bg-gray-50 rounded-xl">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Palette className="w-5 h-5" />
+                      Choose Template & Color
+                    </h3>
+                    
+                    {/* Templates */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      {TEMPLATES.map(template => (
+                        <button
+                          key={template.id}
+                          onClick={() => setSelectedTemplate(template.id as any)}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            selectedTemplate === template.id
+                              ? 'border-blue-600 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="font-medium text-gray-900 text-sm">{template.name}</div>
+                          <div className="text-xs text-gray-500">{template.description}</div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Colors - Only for Modern template */}
+                    {selectedTemplate === 'modern' && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 mb-2">Accent Color</p>
+                        <div className="flex gap-2">
+                          {COLOR_PRESETS.map(color => (
+                            <button
+                              key={color.key}
+                              onClick={() => setSelectedColor(color)}
+                              className={`w-8 h-8 rounded-full ${color.bg} transition-all ${
+                                selectedColor.key === color.key
+                                  ? 'ring-2 ring-offset-2 ring-gray-400 scale-110'
+                                  : 'hover:scale-105'
+                              }`}
+                              title={color.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preview - Non-selectable with blur overlay for non-subscribers */}
+                  <div className="border-2 border-gray-200 rounded-xl overflow-hidden relative">
                     <div className="bg-gray-100 px-4 py-2 flex items-center justify-between">
                       <span className="font-medium text-gray-700">Resume Preview</span>
-                      {!canDownload && (
-                        <span className="text-xs text-amber-600 flex items-center gap-1">
-                          <Lock className="w-3 h-3" />
-                          Upgrade to download
-                        </span>
-                      )}
+                      <span className="text-xs text-gray-500">
+                        {selectedTemplate.charAt(0).toUpperCase() + selectedTemplate.slice(1)} Template
+                      </span>
                     </div>
-                    <div className="p-6 bg-white max-h-[500px] overflow-y-auto">
-                      <div className="whitespace-pre-wrap font-serif text-sm text-gray-800 leading-relaxed">
-                        {generatedResume}
-                      </div>
+                    
+                    {/* Template-styled preview */}
+                    <div 
+                      className={`p-6 bg-white max-h-[600px] overflow-y-auto relative ${!canDownload ? 'select-none' : ''}`}
+                      style={{ 
+                        userSelect: canDownload ? 'auto' : 'none',
+                        WebkitUserSelect: canDownload ? 'auto' : 'none',
+                      }}
+                      onCopy={(e) => {
+                        if (!canDownload) {
+                          e.preventDefault();
+                          setError('Please subscribe to copy or download your resume.');
+                        }
+                      }}
+                    >
+                      {/* Blur overlay for non-subscribers */}
+                      {!canDownload && (
+                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+                          <div className="text-center p-6">
+                            <Lock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-600 font-medium">Subscribe to view full resume</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Modern Template Preview */}
+                      {selectedTemplate === 'modern' && (
+                        <div className="font-sans">
+                          {/* Header */}
+                          <div 
+                            className="p-6 rounded-t-lg text-white mb-6"
+                            style={{ backgroundColor: selectedColor.hex }}
+                          >
+                            <h1 className="text-2xl font-bold">{formData.fullName}</h1>
+                            <p className="text-sm opacity-90">{formData.targetJobTitle}</p>
+                            <div className="flex flex-wrap gap-4 mt-3 text-xs opacity-80">
+                              {formData.email && <span>{formData.email}</span>}
+                              {formData.phone && <span>{formData.phone}</span>}
+                              {formData.location && <span>{formData.location}</span>}
+                            </div>
+                          </div>
+                          
+                          {/* Content - Blurred for preview */}
+                          <div className={`space-y-4 ${!canDownload ? 'blur-sm' : ''}`}>
+                            {generatedResume.split('\n').slice(0, canDownload ? undefined : 15).map((line, idx) => (
+                              <p key={idx} className="text-sm text-gray-700 leading-relaxed">
+                                {line}
+                              </p>
+                            ))}
+                            {!canDownload && (
+                              <p className="text-gray-400 italic">... content hidden ...</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Traditional Template Preview */}
+                      {selectedTemplate === 'traditional' && (
+                        <div className="font-serif">
+                          <div className="text-center border-b-2 border-gray-300 pb-4 mb-6">
+                            <h1 className="text-2xl font-bold text-gray-900">{formData.fullName}</h1>
+                            <p className="text-gray-600">{formData.targetJobTitle}</p>
+                            <div className="flex flex-wrap justify-center gap-4 mt-2 text-sm text-gray-500">
+                              {formData.email && <span>{formData.email}</span>}
+                              {formData.phone && <span>| {formData.phone}</span>}
+                              {formData.location && <span>| {formData.location}</span>}
+                            </div>
+                          </div>
+                          
+                          <div className={`space-y-4 ${!canDownload ? 'blur-sm' : ''}`}>
+                            {generatedResume.split('\n').slice(0, canDownload ? undefined : 15).map((line, idx) => (
+                              <p key={idx} className="text-sm text-gray-700 leading-relaxed">
+                                {line}
+                              </p>
+                            ))}
+                            {!canDownload && (
+                              <p className="text-gray-400 italic">... content hidden ...</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ATS Template Preview */}
+                      {selectedTemplate === 'ats' && (
+                        <div className="font-mono text-sm">
+                          <div className="mb-6">
+                            <h1 className="text-xl font-bold text-gray-900">{formData.fullName}</h1>
+                            <div className="text-gray-600">
+                              {formData.email} | {formData.phone} | {formData.location}
+                            </div>
+                          </div>
+                          
+                          <div className={`space-y-2 ${!canDownload ? 'blur-sm' : ''}`}>
+                            {generatedResume.split('\n').slice(0, canDownload ? undefined : 15).map((line, idx) => (
+                              <p key={idx} className="text-gray-700">
+                                {line}
+                              </p>
+                            ))}
+                            {!canDownload && (
+                              <p className="text-gray-400 italic">... content hidden ...</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Download Options */}
+                  {/* Download Options or Upgrade CTA */}
                   {canDownload ? (
                     <div className="flex gap-4 justify-center">
                       <button
@@ -1253,21 +1469,41 @@ export default function BuildResumePage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
-                      <Lock className="w-8 h-8 text-blue-600 mx-auto mb-3" />
-                      <h3 className="font-semibold text-gray-900 mb-2">Upgrade to Download</h3>
-                      <p className="text-gray-600 mb-4">
-                        Subscribe to download your resume and unlock unlimited tailoring for specific jobs.
+                    <div className="text-center p-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+                      <Lock className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">Unlock Your Resume</h3>
+                      <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                        Your resume is ready! Subscribe to download it in PDF or DOCX format, 
+                        plus get unlimited resume tailoring for specific jobs.
                       </p>
-                      <Link
-                        href="/pricing"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700"
-                      >
-                        <Sparkles className="w-5 h-5" />
-                        View Pricing Plans
-                      </Link>
+                      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <Link
+                          href="/pricing"
+                          className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
+                        >
+                          <Sparkles className="w-5 h-5" />
+                          View Pricing Plans
+                        </Link>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-4">
+                        Starting at just $4.99 for 3 resumes
+                      </p>
                     </div>
                   )}
+
+                  {/* Regenerate button */}
+                  <div className="text-center">
+                    <button
+                      onClick={() => {
+                        setGeneratedResume(null);
+                        handleGenerate();
+                      }}
+                      disabled={isGenerating}
+                      className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                    >
+                      {isGenerating ? 'Regenerating...' : 'Not happy? Regenerate resume'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
