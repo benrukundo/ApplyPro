@@ -452,82 +452,81 @@ export default function BuildResumePage() {
   const buildCompleteResume = (): string => {
     const aiContent = enhancedPreview || generatedResume || '';
 
-    // Build complete resume with all sections in proper order
-    let completeResume = '';
+    // Build complete resume with all sections
+    let resume = '';
 
-    // Name and title at the very top
-    completeResume += `${formData.fullName}\n`;
-    completeResume += `${formData.targetJobTitle}\n\n`;
+    // Name and title (parser will extract these)
+    resume += `**${formData.fullName.toUpperCase()}**\n`;
+    resume += `${formData.targetJobTitle}\n\n`;
 
-    // Contact information
-    const contactInfo: string[] = [];
-    if (formData.email) contactInfo.push(formData.email);
-    if (formData.phone) contactInfo.push(`Phone: ${formData.phone}`);
-    if (formData.location) contactInfo.push(`Location: ${formData.location}`);
-    if (formData.linkedin) contactInfo.push(`LinkedIn: ${formData.linkedin}`);
-    if (formData.portfolio) contactInfo.push(`Portfolio: ${formData.portfolio}`);
+    // Contact information (no header, parser auto-detects)
+    if (formData.email) resume += `${formData.email}\n`;
+    if (formData.phone) resume += `Phone: ${formData.phone}\n`;
+    if (formData.location) resume += `Location: ${formData.location}\n`;
+    if (formData.linkedin) resume += `LinkedIn: ${formData.linkedin}\n`;
+    if (formData.portfolio) resume += `Portfolio: ${formData.portfolio}\n`;
+    resume += `\n`;
 
-    if (contactInfo.length > 0) {
-      contactInfo.forEach(info => completeResume += `${info}\n`);
-      completeResume += `\n`;
+    // Add AI-enhanced content (PROFESSIONAL SUMMARY and EXPERIENCE sections)
+    resume += aiContent + '\n\n';
+
+    // Skills section - with categorization for better display
+    const technicalSkills = formData.skills.technical;
+    const softSkills = formData.skills.soft;
+
+    if (technicalSkills.length > 0 || softSkills.length > 0) {
+      resume += `## SKILLS\n`;
+
+      technicalSkills.forEach(skill => {
+        resume += `• ${skill}\n`;
+      });
+
+      softSkills.forEach(skill => {
+        resume += `• ${skill}\n`;
+      });
+
+      resume += `\n`;
     }
 
-    // Add AI-enhanced Summary and Experience
-    completeResume += aiContent + '\n\n';
-
-    // Add Skills section (formatted for sidebar display)
-    if (formData.skills.technical.length > 0 || formData.skills.soft.length > 0) {
-      completeResume += `## SKILLS\n`;
-
-      // Technical skills
-      if (formData.skills.technical.length > 0) {
-        formData.skills.technical.forEach(skill => {
-          completeResume += `• ${skill}\n`;
-        });
-      }
-
-      // Soft skills
-      if (formData.skills.soft.length > 0) {
-        formData.skills.soft.forEach(skill => {
-          completeResume += `• ${skill}\n`;
-        });
-      }
-
-      completeResume += `\n`;
-    }
-
-    // Add Education section
+    // Education section
     if (formData.education.length > 0) {
-      completeResume += `## EDUCATION\n`;
+      resume += `## EDUCATION\n`;
       formData.education.forEach(edu => {
-        let eduLine = `${edu.degree}${edu.field ? ` in ${edu.field}` : ''}`;
-        if (edu.school) eduLine += ` - ${edu.school}`;
-        completeResume += `${eduLine}\n`;
+        // Format: Degree in Field - School
+        resume += `${edu.degree}${edu.field ? ` in ${edu.field}` : ''}`;
+        if (edu.school) resume += ` - ${edu.school}`;
+        resume += `\n`;
 
+        // Add dates on separate line if available
         if (edu.startDate || edu.endDate) {
-          completeResume += `${edu.startDate || ''} - ${edu.current ? 'Present' : edu.endDate || ''}\n`;
+          resume += `${edu.startDate || ''} - ${edu.current ? 'Present' : edu.endDate || ''}\n`;
         }
-        if (edu.gpa) completeResume += `GPA: ${edu.gpa}\n`;
-        if (edu.highlights) completeResume += `${edu.highlights}\n`;
-        completeResume += `\n`;
+
+        if (edu.gpa) resume += `GPA: ${edu.gpa}\n`;
+        if (edu.highlights) resume += `${edu.highlights}\n`;
+        resume += `\n`;
       });
     }
 
-    // Add Certifications
+    // Certifications
     if (formData.skills.certifications.length > 0) {
-      completeResume += `## CERTIFICATIONS\n`;
-      formData.skills.certifications.forEach(cert => completeResume += `• ${cert}\n`);
-      completeResume += `\n`;
+      resume += `## CERTIFICATIONS\n`;
+      formData.skills.certifications.forEach(cert => {
+        resume += `• ${cert}\n`;
+      });
+      resume += `\n`;
     }
 
-    // Add Languages
+    // Languages
     if (formData.skills.languages.length > 0) {
-      completeResume += `## LANGUAGES\n`;
-      formData.skills.languages.forEach(lang => completeResume += `• ${lang}\n`);
-      completeResume += `\n`;
+      resume += `## LANGUAGES\n`;
+      formData.skills.languages.forEach(lang => {
+        resume += `• ${lang}\n`;
+      });
+      resume += `\n`;
     }
 
-    return completeResume;
+    return resume;
   };
 
   const handleDownload = async (format: 'pdf' | 'docx') => {

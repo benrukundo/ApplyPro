@@ -182,13 +182,19 @@ WHAT TO GENERATE - ONLY 2 SECTIONS:
 
 2. EXPERIENCE section:
    - Header: ## PROFESSIONAL EXPERIENCE
-   - Use the EXACT company names and job titles from the user's input
-   - Enhance descriptions with strong action verbs (Led, Managed, Developed, Increased, Implemented, etc.)
-   - Add quantifiable achievements where possible (e.g., "Increased sales by 30%")
-   - Use bullet points (-) for each achievement
-   - Format: Job Title | Company | Dates (if provided)
-   - Then bullet points with achievements
-   - Keep each role concise but impactful
+   - For EACH work experience, use this EXACT format:
+
+   Job Title
+   Company Name | Start Date - End Date
+   • Achievement 1 with action verbs and impact
+   • Achievement 2 with quantifiable results
+   • Achievement 3 highlighting key responsibilities
+
+   - Use the EXACT company names, job titles, and dates provided in the input
+   - Enhance the description with strong action verbs (Led, Managed, Developed, Increased, Implemented, Architected, etc.)
+   - Add quantifiable achievements where possible (e.g., "Increased efficiency by 40%", "Managed team of 12+")
+   - 3-5 bullet points per role
+   - Keep achievements concise but impactful
 
 FORMATTING RULES:
 - Start directly with ## PROFESSIONAL SUMMARY (no name, no title above it)
