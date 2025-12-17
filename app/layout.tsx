@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { Providers } from "./providers";
+import { PostHogProvider } from "@/components/PostHogProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,9 +48,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
         <Providers>
-          <Navbar />
-          <main className="flex-grow pt-20">{children}</main>
-          <Footer />
+          <PostHogProvider>
+            <Navbar />
+            <main className="flex-grow pt-20">{children}</main>
+            <Footer />
+          </PostHogProvider>
         </Providers>
       </body>
     </html>
