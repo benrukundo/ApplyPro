@@ -166,6 +166,8 @@ export default function BuildResumePage() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState('');
   const [generatedResume, setGeneratedResume] = useState<string | null>(null);
+  const [enhancedPreview, setEnhancedPreview] = useState<string | null>(null);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
   const [builderId, setBuilderId] = useState<string | null>(null);
@@ -338,6 +340,42 @@ export default function BuildResumePage() {
     }
   };
 
+  const handleGeneratePreview = async () => {
+    if (!session?.user?.id) {
+      router.push('/login?callbackUrl=/build-resume');
+      return;
+    }
+
+    setIsGeneratingPreview(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/build-resume/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formData }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate preview');
+      }
+
+      const data = await response.json();
+      setEnhancedPreview(data.content);
+
+      trackEvent('builder_preview_generated', {
+        target_job: formData.targetJobTitle,
+        has_subscription: canDownload,
+      });
+    } catch (err) {
+      console.error('Preview generation error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate preview. Please try again.');
+    } finally {
+      setIsGeneratingPreview(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!session?.user?.id) {
       router.push('/login?callbackUrl=/build-resume');
@@ -362,7 +400,7 @@ export default function BuildResumePage() {
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-          
+
           if (errorData.requiresUpgrade) {
             setError('You have reached the free generation limit. Please subscribe to generate more resumes.');
             return;
@@ -396,7 +434,7 @@ export default function BuildResumePage() {
       }
 
       setGeneratedResume(data.resume);
-      
+
       trackEvent('builder_resume_generated', {
         target_job: formData.targetJobTitle,
         experience_count: formData.experience.length,
@@ -1370,12 +1408,12 @@ export default function BuildResumePage() {
                 </div>
               </div>
 
-              {/* Generate Button */}
-              {!generatedResume ? (
-                <div className="text-center py-8">
+              {/* Generate Preview Button - Always Available */}
+              {!enhancedPreview && !generatedResume && (
+                <div className="text-center py-8 space-y-4">
                   {!session?.user ? (
                     <div>
-                      <p className="text-gray-600 mb-4">Sign in to generate and preview your resume</p>
+                      <p className="text-gray-600 mb-4">Sign in to see your professional resume preview</p>
                       <Link
                         href="/login?callbackUrl=/build-resume"
                         className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700"
@@ -1385,26 +1423,35 @@ export default function BuildResumePage() {
                       </Link>
                     </div>
                   ) : (
-                    <button
-                      onClick={handleGenerate}
-                      disabled={isGenerating}
-                      className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="w-6 h-6 animate-spin" />
-                          Generating Your Resume...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-6 h-6" />
-                          Generate My Resume
-                        </>
-                      )}
-                    </button>
+                    <div>
+                      <p className="text-gray-600 mb-4">See how your resume will look professionally formatted</p>
+                      <button
+                        onClick={handleGeneratePreview}
+                        disabled={isGeneratingPreview}
+                        className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                      >
+                        {isGeneratingPreview ? (
+                          <>
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                            Generating Preview...
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-6 h-6" />
+                            Generate Free Preview
+                          </>
+                        )}
+                      </button>
+                      <p className="text-xs text-gray-500 mt-2">
+                        ✨ Free AI-enhanced preview • No subscription required
+                      </p>
+                    </div>
                   )}
                 </div>
-              ) : (
+              )}
+
+              {/* Show preview if generated */}
+              {(enhancedPreview || generatedResume) && (
                 <div className="space-y-6">
                   {/* Template Selection */}
                   <div className="p-6 bg-gray-50 rounded-xl">
@@ -1714,10 +1761,43 @@ export default function BuildResumePage() {
                                 </div>
                               )}
 
-                              {/* AI Generated Content Preview */}
-                              {generatedResume && (
-                                <div className="text-xs text-gray-600 italic border-t pt-4 mt-4">
-                                  AI-enhanced content will appear here after generation...
+                              {/* AI Enhanced Summary - Parse and display */}
+                              {(enhancedPreview || generatedResume) && (
+                                <div className="space-y-4">
+                                  {parseResumeForPreview(enhancedPreview || generatedResume!).split('\n').map((line, idx) => {
+                                    const trimmedLine = line.trim();
+                                    if (!trimmedLine) return null;
+
+                                    // Section headers
+                                    if (trimmedLine.toUpperCase() === trimmedLine && trimmedLine.length > 5 && !trimmedLine.includes('@')) {
+                                      return (
+                                        <h3
+                                          key={idx}
+                                          className="text-sm font-bold mt-4 mb-2 uppercase tracking-wider pb-1 border-b"
+                                          style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
+                                        >
+                                          {trimmedLine}
+                                        </h3>
+                                      );
+                                    }
+
+                                    // Bullet points
+                                    if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-')) {
+                                      return (
+                                        <p key={idx} className="text-xs text-gray-700 leading-relaxed flex items-start">
+                                          <span className="mr-2">•</span>
+                                          <span>{trimmedLine.replace(/^[•-]\s*/, '')}</span>
+                                        </p>
+                                      );
+                                    }
+
+                                    // Regular paragraphs
+                                    return (
+                                      <p key={idx} className="text-xs text-gray-700 leading-relaxed">
+                                        {trimmedLine}
+                                      </p>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>
