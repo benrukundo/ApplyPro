@@ -158,15 +158,37 @@ ${allSkills.join(', ')}
   }
 
   prompt += `INSTRUCTIONS:
-1. Create a polished, professional resume with proper sections
-2. Enhance the professional summary to be compelling (2-3 sentences)
-3. Rewrite experience descriptions with strong action verbs and quantifiable achievements
-4. Format properly with clear section headers: PROFESSIONAL SUMMARY, EXPERIENCE, EDUCATION, SKILLS
-5. Keep it concise but impactful - this is a PREVIEW
-6. Use professional language appropriate for ${targetJobTitle} role
-7. Make it ATS-friendly (no special characters, clear formatting)
+1. Create ONLY these sections (contact, skills, education already displayed separately):
+   - PROFESSIONAL SUMMARY (2-3 compelling sentences highlighting key strengths)
+   - EXPERIENCE (enhance work history with strong action verbs and quantifiable achievements)
 
-Output ONLY the enhanced resume content. No explanations or meta-commentary.`;
+2. DO NOT include these sections (they are already displayed in the sidebar):
+   - Contact information
+   - Skills
+   - Education
+   - Certifications
+   - Languages
+
+3. For the PROFESSIONAL SUMMARY:
+   - Write 2-3 powerful sentences
+   - Highlight key qualifications for ${targetJobTitle}
+   - Include years of experience if applicable
+   - Mention key achievements or expertise areas
+
+4. For EXPERIENCE section:
+   - Use the exact company names and job titles provided
+   - Enhance descriptions with action verbs (Led, Managed, Developed, Increased, etc.)
+   - Add quantifiable achievements where possible (e.g., "Increased sales by 30%")
+   - Use bullet points for achievements
+   - Keep each role concise but impactful
+
+5. Formatting rules:
+   - Use ## for section headers (e.g., ## PROFESSIONAL SUMMARY)
+   - Use - or • for bullet points
+   - Keep it ATS-friendly (no special characters)
+   - Professional language throughout
+
+Output ONLY the enhanced content with these two sections. No explanations or meta-commentary.`;
 
   return prompt;
 }
