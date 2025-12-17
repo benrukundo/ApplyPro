@@ -1,5 +1,5 @@
 'use client';
-import { generatePDF, generateDOCX } from '@/lib/documentGenerator';
+
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -21,12 +21,11 @@ import {
   Eye,
   Download,
   Target,
-  ChevronDown,
-  ChevronUp,
   Save,
   AlertCircle,
 } from 'lucide-react';
 import { trackEvent } from '@/components/PostHogProvider';
+import { generatePDF, generateDOCX } from '@/lib/documentGenerator';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,24 +61,18 @@ interface Skills {
 }
 
 interface FormData {
-  // Step 1: Target
   targetJobTitle: string;
   targetIndustry: string;
   experienceLevel: string;
-  // Step 2: Personal
   fullName: string;
   email: string;
   phone: string;
   location: string;
   linkedin: string;
   portfolio: string;
-  // Step 3: Education
   education: Education[];
-  // Step 4: Experience
   experience: Experience[];
-  // Step 5: Skills
   skills: Skills;
-  // Step 6: Summary
   summary: string;
 }
 
@@ -87,36 +80,6 @@ interface SubscriptionInfo {
   plan: string | null;
   isActive: boolean;
 }
-const [isDownloading, setIsDownloading] = useState(false);
-
-// Add this function
-const handleDownload = async (format: 'pdf' | 'docx') => {
-  if (!generatedResume || !canDownload) return;
-
-  setIsDownloading(true);
-  setError('');
-
-  try {
-    const timestamp = new Date().toISOString().split('T')[0];
-    const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
-
-    if (format === 'pdf') {
-      await generatePDF(generatedResume, `${fileName}.pdf`, 'modern', 'blue');
-    } else {
-      await generateDOCX(generatedResume, `${fileName}.docx`, 'modern', 'blue');
-    }
-
-    trackEvent('builder_resume_downloaded', {
-      format,
-      target_job: formData.targetJobTitle,
-    });
-  } catch (err) {
-    console.error('Download error:', err);
-    setError('Failed to download. Please try again.');
-  } finally {
-    setIsDownloading(false);
-  }
-};
 
 const STEPS = [
   { id: 1, title: 'Target Role', icon: Target, description: 'What job are you looking for?' },
@@ -174,14 +137,13 @@ export default function BuildResumePage() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState('');
   const [generatedResume, setGeneratedResume] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [builderId, setBuilderId] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
 
   // Load saved progress and subscription
   useEffect(() => {
@@ -200,7 +162,6 @@ export default function BuildResumePage() {
           setBuilderId(data.builderResume.id);
           setCurrentStep(data.builderResume.currentStep || 1);
           
-          // Restore form data
           const saved = data.builderResume;
           setFormData({
             targetJobTitle: saved.targetJobTitle || '',
@@ -240,7 +201,6 @@ export default function BuildResumePage() {
     }
   };
 
-  // Auto-save progress
   const saveProgress = async (step?: number) => {
     if (!session?.user?.id) return;
 
@@ -270,7 +230,6 @@ export default function BuildResumePage() {
     }
   };
 
-  // Navigation
   const goToStep = (step: number) => {
     saveProgress(step);
     setCurrentStep(step);
@@ -290,7 +249,6 @@ export default function BuildResumePage() {
     goToStep(prev);
   };
 
-  // Validation
   const validateCurrentStep = (): boolean => {
     setError('');
 
@@ -314,15 +272,12 @@ export default function BuildResumePage() {
         return true;
 
       case 3:
-        // Education is optional
         return true;
 
       case 4:
-        // Experience is optional but encouraged
         return true;
 
       case 5:
-        // Skills - at least some should be added
         const totalSkills = 
           formData.skills.technical.length + 
           formData.skills.soft.length + 
@@ -335,7 +290,6 @@ export default function BuildResumePage() {
         return true;
 
       case 6:
-        // Summary can be auto-generated
         return true;
 
       default:
@@ -343,7 +297,6 @@ export default function BuildResumePage() {
     }
   };
 
-  // Generate Resume with AI
   const handleGenerate = async () => {
     if (!session?.user?.id) {
       router.push('/login?callbackUrl=/build-resume');
@@ -382,7 +335,34 @@ export default function BuildResumePage() {
     }
   };
 
-  // Helper: Add education entry
+  const handleDownload = async (format: 'pdf' | 'docx') => {
+    if (!generatedResume || !canDownload) return;
+
+    setIsDownloading(true);
+    setError('');
+
+    try {
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
+
+      if (format === 'pdf') {
+        await generatePDF(generatedResume, `${fileName}.pdf`, 'modern', 'blue');
+      } else {
+        await generateDOCX(generatedResume, `${fileName}.docx`, 'modern', 'blue');
+      }
+
+      trackEvent('builder_resume_downloaded', {
+        format,
+        target_job: formData.targetJobTitle,
+      });
+    } catch (err) {
+      console.error('Download error:', err);
+      setError('Failed to download. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const addEducation = () => {
     const newEntry: Education = {
       id: Date.now().toString(),
@@ -398,7 +378,6 @@ export default function BuildResumePage() {
     setFormData({ ...formData, education: [...formData.education, newEntry] });
   };
 
-  // Helper: Update education entry
   const updateEducation = (id: string, field: keyof Education, value: any) => {
     setFormData({
       ...formData,
@@ -408,7 +387,6 @@ export default function BuildResumePage() {
     });
   };
 
-  // Helper: Remove education entry
   const removeEducation = (id: string) => {
     setFormData({
       ...formData,
@@ -416,7 +394,6 @@ export default function BuildResumePage() {
     });
   };
 
-  // Helper: Add experience entry
   const addExperience = () => {
     const newEntry: Experience = {
       id: Date.now().toString(),
@@ -431,7 +408,6 @@ export default function BuildResumePage() {
     setFormData({ ...formData, experience: [...formData.experience, newEntry] });
   };
 
-  // Helper: Update experience entry
   const updateExperience = (id: string, field: keyof Experience, value: any) => {
     setFormData({
       ...formData,
@@ -441,7 +417,6 @@ export default function BuildResumePage() {
     });
   };
 
-  // Helper: Remove experience entry
   const removeExperience = (id: string) => {
     setFormData({
       ...formData,
@@ -449,7 +424,6 @@ export default function BuildResumePage() {
     });
   };
 
-  // Helper: Add skill
   const addSkill = (category: keyof Skills, skill: string) => {
     if (skill.trim() && !formData.skills[category].includes(skill.trim())) {
       setFormData({
@@ -462,7 +436,6 @@ export default function BuildResumePage() {
     }
   };
 
-  // Helper: Remove skill
   const removeSkill = (category: keyof Skills, skill: string) => {
     setFormData({
       ...formData,
@@ -473,7 +446,6 @@ export default function BuildResumePage() {
     });
   };
 
-  // Check if user can download
   const canDownload = subscription?.isActive;
 
   if (sessionStatus === 'loading') {
@@ -505,7 +477,7 @@ export default function BuildResumePage() {
         {/* Progress Steps */}
         <div className="mb-8 bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between overflow-x-auto">
-            {STEPS.map((step, index) => {
+            {STEPS.map((step) => {
               const Icon = step.icon;
               const isActive = currentStep === step.id;
               const isCompleted = currentStep > step.id;
@@ -734,7 +706,7 @@ export default function BuildResumePage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {formData.education.map((edu, index) => (
+                  {formData.education.map((edu) => (
                     <div key={edu.id} className="p-6 border-2 border-gray-200 rounded-xl relative">
                       <button
                         onClick={() => removeEducation(edu.id)}
@@ -877,7 +849,7 @@ export default function BuildResumePage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {formData.experience.map((exp, index) => (
+                  {formData.experience.map((exp) => (
                     <div key={exp.id} className="p-6 border-2 border-gray-200 rounded-xl relative">
                       <button
                         onClick={() => removeExperience(exp.id)}
@@ -932,15 +904,13 @@ export default function BuildResumePage() {
                           </div>
                           <div className="flex-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="month"
-                                value={exp.endDate}
-                                onChange={(e) => updateExperience(exp.id, 'endDate', e.target.value)}
-                                disabled={exp.current}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
-                              />
-                            </div>
+                            <input
+                              type="month"
+                              value={exp.endDate}
+                              onChange={(e) => updateExperience(exp.id, 'endDate', e.target.value)}
+                              disabled={exp.current}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
+                            />
                           </div>
                         </div>
 
@@ -1029,7 +999,6 @@ export default function BuildResumePage() {
                 </div>
               </div>
 
-              {/* Technical Skills */}
               <SkillSection
                 title="Technical Skills"
                 skills={formData.skills.technical}
@@ -1038,7 +1007,6 @@ export default function BuildResumePage() {
                 placeholder="e.g., Excel, Python, Photoshop..."
               />
 
-              {/* Soft Skills */}
               <SkillSection
                 title="Soft Skills"
                 skills={formData.skills.soft}
@@ -1047,7 +1015,6 @@ export default function BuildResumePage() {
                 placeholder="e.g., Leadership, Communication, Problem Solving..."
               />
 
-              {/* Languages */}
               <SkillSection
                 title="Languages"
                 skills={formData.skills.languages}
@@ -1056,7 +1023,6 @@ export default function BuildResumePage() {
                 placeholder="e.g., English (Fluent), Spanish (Intermediate)..."
               />
 
-              {/* Certifications */}
               <SkillSection
                 title="Certifications"
                 skills={formData.skills.certifications}
@@ -1225,27 +1191,26 @@ export default function BuildResumePage() {
                   </div>
 
                   {/* Download Options */}
-                 // Then replace the download buttons with:
-{canDownload ? (
-  <div className="flex gap-4 justify-center">
-    <button
-      onClick={() => handleDownload('pdf')}
-      disabled={isDownloading}
-      className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
-    >
-      {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-      Download PDF
-    </button>
-    <button
-      onClick={() => handleDownload('docx')}
-      disabled={isDownloading}
-      className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
-    >
-      {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-      Download DOCX
-    </button>
-  </div>
-) : (
+                  {canDownload ? (
+                    <div className="flex gap-4 justify-center">
+                      <button
+                        onClick={() => handleDownload('pdf')}
+                        disabled={isDownloading}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                        Download PDF
+                      </button>
+                      <button
+                        onClick={() => handleDownload('docx')}
+                        disabled={isDownloading}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                        Download DOCX
+                      </button>
+                    </div>
+                  ) : (
                     <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
                       <Lock className="w-8 h-8 text-blue-600 mx-auto mb-3" />
                       <h3 className="font-semibold text-gray-900 mb-2">Upgrade to Download</h3>
