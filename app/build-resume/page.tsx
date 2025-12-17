@@ -1480,18 +1480,19 @@ export default function BuildResumePage() {
                         return false;
                       }}
                       onMouseDown={(e) => {
-                        if (!canDownload) {
-                          e.preventDefault();
-                        }
+                        e.preventDefault();
                       }}
                     >
-                      {/* Lock overlay for non-subscribers */}
+                      {/* Watermark for non-subscribers - subtle but visible */}
                       {!canDownload && (
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/60 to-white z-10 flex items-end justify-center pb-8">
-                          <div className="text-center p-4 bg-white rounded-xl shadow-lg border">
-                            <Lock className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                            <p className="text-gray-900 font-semibold text-sm">Subscribe to Unlock</p>
-                            <p className="text-gray-500 text-xs">Full access to download</p>
+                        <div
+                          className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center"
+                          style={{
+                            background: 'repeating-linear-gradient(45deg, transparent, transparent 100px, rgba(59, 130, 246, 0.03) 100px, rgba(59, 130, 246, 0.03) 200px)',
+                          }}
+                        >
+                          <div className="transform -rotate-45 opacity-10 text-blue-600 font-bold text-6xl whitespace-nowrap">
+                            SUBSCRIBE TO DOWNLOAD
                           </div>
                         </div>
                       )}
@@ -1510,8 +1511,8 @@ export default function BuildResumePage() {
                             </div>
                           </div>
 
-                          {/* Resume Content - Blurred for non-subscribers */}
-                          <div className={`p-6 space-y-4 max-h-96 overflow-y-auto ${!canDownload ? 'blur-sm' : ''}`}>
+                          {/* Resume Content - Fully visible to show quality */}
+                          <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
                             {generatedResume.split('\n').map((line, idx) => {
                               const trimmedLine = line.trim();
                               if (!trimmedLine) return null;
@@ -1556,7 +1557,7 @@ export default function BuildResumePage() {
                             </div>
                           </div>
 
-                          <div className={`space-y-3 max-h-96 overflow-y-auto ${!canDownload ? 'blur-sm' : ''}`}>
+                          <div className="space-y-3 max-h-96 overflow-y-auto">
                             {generatedResume.split('\n').map((line, idx) => {
                               const trimmedLine = line.trim();
                               if (!trimmedLine) return null;
@@ -1589,7 +1590,7 @@ export default function BuildResumePage() {
                             </p>
                           </div>
 
-                          <div className={`space-y-2 max-h-96 overflow-y-auto ${!canDownload ? 'blur-sm' : ''}`}>
+                          <div className="space-y-2 max-h-96 overflow-y-auto">
                             {generatedResume.split('\n').map((line, idx) => {
                               const trimmedLine = line.trim();
                               if (!trimmedLine) return null;
