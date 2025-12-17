@@ -1,7 +1,6 @@
-import { getCurrentUser } from './auth';
-
 export type ApplicationStatus = 'saved' | 'applied' | 'interview' | 'offer' | 'rejected';
 export type Priority = 'low' | 'medium' | 'high';
+export type JobSource = 'linkedin' | 'indeed' | 'company_website' | 'referral' | 'recruiter' | 'other';
 
 export interface Application {
   id: string;
@@ -15,7 +14,7 @@ export interface Application {
   isRemote: boolean;
   jobUrl: string;
   notes: string;
-  resumeVersion: string;
+  jobSource: JobSource;
   followUpDate: number | null;
   priority: Priority;
   contactPerson: string;
@@ -43,10 +42,28 @@ export interface Statistics {
 
 const isBrowser = typeof window !== 'undefined';
 
+// Get user ID from localStorage (set by the tracker page when authenticated)
+function getUserId(): string | null {
+  if (!isBrowser) return null;
+  return localStorage.getItem('applypro_current_user_id');
+}
+
+// Set user ID (called from tracker page when session is available)
+export function setCurrentUserId(userId: string): void {
+  if (!isBrowser) return;
+  localStorage.setItem('applypro_current_user_id', userId);
+}
+
+// Clear user ID (called on logout)
+export function clearCurrentUserId(): void {
+  if (!isBrowser) return;
+  localStorage.removeItem('applypro_current_user_id');
+}
+
 function getUserKey(): string | null {
-  const user = getCurrentUser();
-  if (!user) return null;
-  return `applypro_applications_${user.id}`;
+  const userId = getUserId();
+  if (!userId) return null;
+  return `applypro_applications_${userId}`;
 }
 
 export function getAllApplications(): Application[] {
@@ -73,28 +90,41 @@ export function getApplicationById(id: string): Application | null {
 export function addApplication(data: Omit<Application, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'history'>): { success: boolean; id?: string; error?: string } {
   if (!isBrowser) return { success: false, error: 'Not in browser environment' };
 
-  const user = getCurrentUser();
-  if (!user) {
+  const userId = getUserId();
+  if (!userId) {
     return { success: false, error: 'Not authenticated' };
   }
 
   const applications = getAllApplications();
 
-  // Check limit (25 for free tier)
-  if (applications.length >= 25) {
-    return { success: false, error: 'Application limit reached (25). Upgrade to add more.' };
+  // Check limit (100 applications - generous limit)
+  if (applications.length >= 100) {
+    return { success: false, error: 'Application limit reached (100).' };
   }
 
   const now = Date.now();
   const newApplication: Application = {
     id: crypto.randomUUID(),
-    userId: user.id,
-    ...data,
+    userId: userId,
+    companyName: data.companyName || '',
+    positionTitle: data.positionTitle || '',
+    status: data.status || 'saved',
+    appliedDate: data.appliedDate || null,
+    salary: data.salary || '',
+    location: data.location || '',
+    isRemote: data.isRemote || false,
+    jobUrl: data.jobUrl || '',
+    notes: data.notes || '',
+    jobSource: data.jobSource || 'other',
+    followUpDate: data.followUpDate || null,
+    priority: data.priority || 'medium',
+    contactPerson: data.contactPerson || '',
+    contactEmail: data.contactEmail || '',
     createdAt: now,
     updatedAt: now,
     history: [
       {
-        status: data.status,
+        status: data.status || 'saved',
         date: now,
         note: 'Application created'
       }
@@ -297,6 +327,7 @@ export function exportToCSV(): string {
     'Location',
     'Remote',
     'Job URL',
+    'Job Source',
     'Priority',
     'Contact Person',
     'Contact Email',
@@ -312,6 +343,7 @@ export function exportToCSV(): string {
     app.location,
     app.isRemote ? 'Yes' : 'No',
     app.jobUrl,
+    app.jobSource || 'other',
     app.priority,
     app.contactPerson,
     app.contactEmail,
@@ -328,8 +360,8 @@ export function exportToCSV(): string {
 export function importFromBackup(jsonData: string): { success: boolean; imported: number; error?: string } {
   if (!isBrowser) return { success: false, imported: 0, error: 'Not in browser environment' };
 
-  const user = getCurrentUser();
-  if (!user) {
+  const userId = getUserId();
+  if (!userId) {
     return { success: false, imported: 0, error: 'Not authenticated' };
   }
 
@@ -343,7 +375,7 @@ export function importFromBackup(jsonData: string): { success: boolean; imported
     // Update userId for all applications
     const updatedApplications = applications.map(app => ({
       ...app,
-      userId: user.id
+      userId: userId
     }));
 
     const key = getUserKey();

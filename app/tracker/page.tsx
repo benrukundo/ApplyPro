@@ -9,9 +9,11 @@ import {
   addApplication,
   updateApplication,
   deleteApplication,
+  setCurrentUserId,
   Application,
   ApplicationStatus,
   Priority,
+  JobSource,
 } from "@/lib/tracker";
 import {
   Plus,
@@ -62,7 +64,7 @@ function TrackerContent() {
     isRemote: false,
     jobUrl: "",
     notes: "",
-    resumeVersion: "",
+    jobSource: "other" as JobSource,
     followUpDate: "",
     priority: "medium" as Priority,
     contactPerson: "",
@@ -82,9 +84,10 @@ function TrackerContent() {
     }
   }, [status, router]);
 
-  // Load applications and check URL params
+  // Set user ID for tracker when authenticated
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && session?.user?.id) {
+      setCurrentUserId(session.user.id);
       loadApplications();
 
       // Check for URL params
@@ -104,7 +107,7 @@ function TrackerContent() {
         }
       }
     }
-  }, [status, searchParams]);
+  }, [status, session?.user?.id, searchParams]);
 
   const loadApplications = () => {
     const apps = getAllApplications();
@@ -122,7 +125,7 @@ function TrackerContent() {
       isRemote: false,
       jobUrl: "",
       notes: "",
-      resumeVersion: "",
+      jobSource: "other",
       followUpDate: "",
       priority: "medium",
       contactPerson: "",
@@ -150,7 +153,7 @@ function TrackerContent() {
       isRemote: app.isRemote,
       jobUrl: app.jobUrl,
       notes: app.notes,
-      resumeVersion: app.resumeVersion,
+      jobSource: app.jobSource || "other",
       followUpDate: app.followUpDate
         ? new Date(app.followUpDate).toISOString().split("T")[0]
         : "",
@@ -193,7 +196,7 @@ function TrackerContent() {
         isRemote: formData.isRemote,
         jobUrl: formData.jobUrl.trim(),
         notes: formData.notes.trim(),
-        resumeVersion: formData.resumeVersion.trim(),
+        jobSource: formData.jobSource,
         followUpDate: formData.followUpDate
           ? new Date(formData.followUpDate).getTime()
           : null,
@@ -203,7 +206,6 @@ function TrackerContent() {
       };
 
       if (isEditMode && selectedApp) {
-        // Update existing application
         const result = updateApplication(selectedApp.id, appData);
         if (!result.success) {
           setFormError(result.error || "Failed to update application");
@@ -211,7 +213,6 @@ function TrackerContent() {
           return;
         }
       } else {
-        // Add new application
         const result = addApplication(appData);
         if (!result.success) {
           setFormError(result.error || "Failed to add application");
@@ -220,7 +221,6 @@ function TrackerContent() {
         }
       }
 
-      // Success
       loadApplications();
       setShowAddModal(false);
       resetForm();
@@ -266,41 +266,58 @@ function TrackerContent() {
   const getStatusColor = (status: ApplicationStatus) => {
     switch (status) {
       case "saved":
-        return "bg-gray-100 border-gray-300 dark:bg-gray-800 dark:border-gray-700";
+        return "bg-gray-100 border-gray-300";
       case "applied":
-        return "bg-blue-50 border-blue-300 dark:bg-blue-950/20 dark:border-blue-800";
+        return "bg-blue-50 border-blue-300";
       case "interview":
-        return "bg-purple-50 border-purple-300 dark:bg-purple-950/20 dark:border-purple-800";
+        return "bg-purple-50 border-purple-300";
       case "offer":
-        return "bg-green-50 border-green-300 dark:bg-green-950/20 dark:border-green-800";
+        return "bg-green-50 border-green-300";
       case "rejected":
-        return "bg-red-50 border-red-300 dark:bg-red-950/20 dark:border-red-800";
+        return "bg-red-50 border-red-300";
     }
   };
 
   const getStatusIcon = (status: ApplicationStatus) => {
     switch (status) {
       case "saved":
-        return <Save className="h-5 w-5 text-gray-600 dark:text-gray-400" />;
+        return <Save className="h-5 w-5 text-gray-600" />;
       case "applied":
-        return <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />;
+        return <Clock className="h-5 w-5 text-blue-600" />;
       case "interview":
-        return <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />;
+        return <Target className="h-5 w-5 text-purple-600" />;
       case "offer":
-        return <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />;
+        return <CheckCircle2 className="h-5 w-5 text-green-600" />;
       case "rejected":
-        return <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />;
+        return <XCircle className="h-5 w-5 text-red-600" />;
     }
   };
 
   const getPriorityColor = (priority: Priority) => {
     switch (priority) {
       case "high":
-        return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400";
+        return "bg-red-100 text-red-700";
       case "medium":
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
+        return "bg-yellow-100 text-yellow-700";
       case "low":
-        return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+        return "bg-green-100 text-green-700";
+    }
+  };
+
+  const getJobSourceLabel = (source: JobSource) => {
+    switch (source) {
+      case "linkedin":
+        return "LinkedIn";
+      case "indeed":
+        return "Indeed";
+      case "company_website":
+        return "Company Website";
+      case "referral":
+        return "Referral";
+      case "recruiter":
+        return "Recruiter";
+      case "other":
+        return "Other";
     }
   };
 
@@ -340,7 +357,7 @@ function TrackerContent() {
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <Loader2 className="inline-block h-8 w-8 animate-spin text-blue-600" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -352,28 +369,28 @@ function TrackerContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Page Header */}
         <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Application Tracker
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               {filteredApplications.length} applications
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             {/* View Toggle */}
-            <div className="flex rounded-lg border border-gray-300 dark:border-gray-700">
+            <div className="flex rounded-lg border border-gray-300">
               <button
                 onClick={() => setViewMode("board")}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-l-lg ${
                   viewMode === "board"
                     ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 <LayoutGrid className="h-4 w-4" />
@@ -381,10 +398,10 @@ function TrackerContent() {
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-r-lg ${
                   viewMode === "list"
                     ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 <List className="h-4 w-4" />
@@ -412,7 +429,7 @@ function TrackerContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search applications..."
-              className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-4 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+              className="w-full rounded-lg border border-gray-300 bg-white py-3 pl-10 pr-4 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -428,15 +445,15 @@ function TrackerContent() {
                 onDrop={() => handleDrop(column.status)}
               >
                 {/* Column Header */}
-                <div className="mb-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-800">
+                <div className="mb-3 rounded-lg bg-gray-100 p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(column.status)}
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
+                      <h3 className="font-semibold text-gray-900">
                         {column.title}
                       </h3>
                     </div>
-                    <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                    <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-700">
                       {applicationsByStatus[column.status].length}
                     </span>
                   </div>
@@ -445,10 +462,8 @@ function TrackerContent() {
                 {/* Column Cards */}
                 <div className="space-y-3 flex-1">
                   {applicationsByStatus[column.status].length === 0 ? (
-                    <div className="rounded-lg border-2 border-dashed border-gray-300 p-4 text-center dark:border-gray-700">
-                      <p className="text-sm text-gray-500 dark:text-gray-500">
-                        No applications
-                      </p>
+                    <div className="rounded-lg border-2 border-dashed border-gray-300 p-4 text-center">
+                      <p className="text-sm text-gray-500">No applications</p>
                     </div>
                   ) : (
                     applicationsByStatus[column.status].map((app) => (
@@ -464,16 +479,14 @@ function TrackerContent() {
                           app.status
                         )} ${draggedApp?.id === app.id ? "opacity-50" : ""}`}
                       >
-                        {/* Company & Position */}
-                        <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+                        <h4 className="font-semibold text-gray-900 mb-1">
                           {app.companyName}
                         </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        <p className="text-sm text-gray-600 mb-3">
                           {app.positionTitle}
                         </p>
 
-                        {/* Meta Info */}
-                        <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                        <div className="space-y-2 text-xs text-gray-600">
                           {app.appliedDate && (
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
@@ -488,14 +501,11 @@ function TrackerContent() {
                               <MapPin className="h-3 w-3" />
                               <span>{app.location}</span>
                               {app.isRemote && (
-                                <span className="ml-1 text-green-600 dark:text-green-400">
-                                  (Remote)
-                                </span>
+                                <span className="ml-1 text-green-600">(Remote)</span>
                               )}
                             </div>
                           )}
 
-                          {/* Priority Badge */}
                           <div className="flex items-center gap-2">
                             <span
                               className={`rounded-full px-2 py-0.5 text-xs font-medium ${getPriorityColor(
@@ -503,14 +513,6 @@ function TrackerContent() {
                               )}`}
                             >
                               {app.priority}
-                            </span>
-
-                            {/* Days ago */}
-                            <span className="text-gray-500 dark:text-gray-500">
-                              {Math.floor(
-                                (Date.now() - app.updatedAt) / (1000 * 60 * 60 * 24)
-                              )}{" "}
-                              days ago
                             </span>
                           </div>
                         </div>
@@ -525,13 +527,11 @@ function TrackerContent() {
 
         {/* List View */}
         {viewMode === "list" && (
-          <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+          <div className="rounded-xl border border-gray-200 bg-white">
             {filteredApplications.length === 0 ? (
               <div className="py-12 text-center">
                 <Briefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  No applications found
-                </p>
+                <p className="text-gray-600 mb-4">No applications found</p>
                 <button
                   onClick={handleOpenAddModal}
                   className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
@@ -543,40 +543,37 @@ function TrackerContent() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="border-b border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800">
+                  <thead className="border-b border-gray-200 bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                         Company / Position
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                        Priority
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Source
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                         Applied Date
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                         Location
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-700">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                  <tbody className="divide-y divide-gray-200">
                     {filteredApplications.map((app) => (
-                      <tr
-                        key={app.id}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                      >
+                      <tr key={app.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-white">
+                            <p className="font-medium text-gray-900">
                               {app.companyName}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <p className="text-sm text-gray-600">
                               {app.positionTitle}
                             </p>
                           </div>
@@ -584,31 +581,23 @@ function TrackerContent() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             {getStatusIcon(app.status)}
-                            <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
+                            <span className="text-sm text-gray-700 capitalize">
                               {app.status}
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${getPriorityColor(
-                              app.priority
-                            )}`}
-                          >
-                            {app.priority}
-                          </span>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {getJobSourceLabel(app.jobSource || 'other')}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                        <td className="px-6 py-4 text-sm text-gray-600">
                           {app.appliedDate
                             ? new Date(app.appliedDate).toLocaleDateString()
                             : "—"}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                        <td className="px-6 py-4 text-sm text-gray-600">
                           {app.location || "—"}
                           {app.isRemote && (
-                            <span className="ml-1 text-green-600 dark:text-green-400">
-                              (Remote)
-                            </span>
+                            <span className="ml-1 text-green-600">(Remote)</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -617,13 +606,13 @@ function TrackerContent() {
                               setSelectedApp(app);
                               setShowDetailsModal(true);
                             }}
-                            className="text-blue-600 hover:underline dark:text-blue-400 mr-3"
+                            className="text-blue-600 hover:underline mr-3"
                           >
                             View
                           </button>
                           <button
                             onClick={() => handleOpenEditModal(app)}
-                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mr-3"
+                            className="text-gray-600 hover:text-gray-900 mr-3"
                           >
                             <Edit className="inline h-4 w-4" />
                           </button>
@@ -632,7 +621,7 @@ function TrackerContent() {
                               setSelectedApp(app);
                               setShowDeleteModal(true);
                             }}
-                            className="text-red-600 hover:text-red-700 dark:text-red-400"
+                            className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="inline h-4 w-4" />
                           </button>
@@ -649,10 +638,10 @@ function TrackerContent() {
         {/* Add/Edit Application Modal */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white dark:bg-gray-900">
-              <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white">
+              <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <h2 className="text-2xl font-bold text-gray-900">
                     {isEditMode ? "Edit Application" : "Add Application"}
                   </h2>
                   <button
@@ -660,7 +649,7 @@ function TrackerContent() {
                       setShowAddModal(false);
                       resetForm();
                     }}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    className="text-gray-400 hover:text-gray-600"
                   >
                     <X className="h-6 w-6" />
                   </button>
@@ -670,7 +659,7 @@ function TrackerContent() {
               <form onSubmit={handleSubmitApplication} className="p-6 space-y-6">
                 {/* Company Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Company Name *
                   </label>
                   <input
@@ -679,7 +668,7 @@ function TrackerContent() {
                     onChange={(e) =>
                       setFormData({ ...formData, companyName: e.target.value })
                     }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Google, Apple, etc."
                     disabled={isSubmitting}
                   />
@@ -687,7 +676,7 @@ function TrackerContent() {
 
                 {/* Position Title */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Position Title *
                   </label>
                   <input
@@ -696,17 +685,16 @@ function TrackerContent() {
                     onChange={(e) =>
                       setFormData({ ...formData, positionTitle: e.target.value })
                     }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Senior Software Engineer"
                     disabled={isSubmitting}
                   />
                 </div>
 
-                {/* Two Column Layout */}
-                <div className="grid gap-6 md:grid-cols-2">
-                  {/* Status */}
+                {/* Status, Priority, Job Source */}
+                <div className="grid gap-6 md:grid-cols-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Status *
                     </label>
                     <select
@@ -717,7 +705,7 @@ function TrackerContent() {
                           status: e.target.value as ApplicationStatus,
                         })
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={isSubmitting}
                     >
                       <option value="saved">Saved</option>
@@ -728,9 +716,8 @@ function TrackerContent() {
                     </select>
                   </div>
 
-                  {/* Priority */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Priority
                     </label>
                     <select
@@ -741,7 +728,7 @@ function TrackerContent() {
                           priority: e.target.value as Priority,
                         })
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={isSubmitting}
                     >
                       <option value="low">Low</option>
@@ -750,9 +737,35 @@ function TrackerContent() {
                     </select>
                   </div>
 
-                  {/* Applied Date */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Job Source
+                    </label>
+                    <select
+                      value={formData.jobSource}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          jobSource: e.target.value as JobSource,
+                        })
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isSubmitting}
+                    >
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="indeed">Indeed</option>
+                      <option value="company_website">Company Website</option>
+                      <option value="referral">Referral</option>
+                      <option value="recruiter">Recruiter</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Dates */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Applied Date
                     </label>
                     <input
@@ -761,14 +774,13 @@ function TrackerContent() {
                       onChange={(e) =>
                         setFormData({ ...formData, appliedDate: e.target.value })
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={isSubmitting}
                     />
                   </div>
 
-                  {/* Follow-up Date */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Follow-up Date
                     </label>
                     <input
@@ -777,7 +789,7 @@ function TrackerContent() {
                       onChange={(e) =>
                         setFormData({ ...formData, followUpDate: e.target.value })
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={isSubmitting}
                     />
                   </div>
@@ -786,7 +798,7 @@ function TrackerContent() {
                 {/* Location and Salary */}
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Location
                     </label>
                     <input
@@ -795,14 +807,14 @@ function TrackerContent() {
                       onChange={(e) =>
                         setFormData({ ...formData, location: e.target.value })
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="San Francisco, CA"
                       disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Salary Range
                     </label>
                     <input
@@ -811,7 +823,7 @@ function TrackerContent() {
                       onChange={(e) =>
                         setFormData({ ...formData, salary: e.target.value })
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="$100k - $150k"
                       disabled={isSubmitting}
                     />
@@ -830,18 +842,15 @@ function TrackerContent() {
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                     disabled={isSubmitting}
                   />
-                  <label
-                    htmlFor="remote"
-                    className="ml-2 text-sm text-gray-700 dark:text-gray-300"
-                  >
+                  <label htmlFor="remote" className="ml-2 text-sm text-gray-700">
                     Remote position
                   </label>
                 </div>
 
                 {/* Job URL */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Job Description URL
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Job Posting URL
                   </label>
                   <input
                     type="url"
@@ -849,7 +858,7 @@ function TrackerContent() {
                     onChange={(e) =>
                       setFormData({ ...formData, jobUrl: e.target.value })
                     }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="https://..."
                     disabled={isSubmitting}
                   />
@@ -858,7 +867,7 @@ function TrackerContent() {
                 {/* Contact Info */}
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contact Person
                     </label>
                     <input
@@ -867,14 +876,14 @@ function TrackerContent() {
                       onChange={(e) =>
                         setFormData({ ...formData, contactPerson: e.target.value })
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                      placeholder="Jane Doe"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Jane Doe (Recruiter)"
                       disabled={isSubmitting}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contact Email
                     </label>
                     <input
@@ -883,33 +892,16 @@ function TrackerContent() {
                       onChange={(e) =>
                         setFormData({ ...formData, contactEmail: e.target.value })
                       }
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="jane@company.com"
                       disabled={isSubmitting}
                     />
                   </div>
                 </div>
 
-                {/* Resume Version */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Resume Version Used
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.resumeVersion}
-                    onChange={(e) =>
-                      setFormData({ ...formData, resumeVersion: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    placeholder="Modern Template v1"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
                 {/* Notes */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Notes
                   </label>
                   <textarea
@@ -917,25 +909,23 @@ function TrackerContent() {
                     onChange={(e) =>
                       setFormData({ ...formData, notes: e.target.value })
                     }
-                    rows={4}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    placeholder="Additional notes about this application..."
+                    rows={3}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Interview notes, requirements, etc..."
                     disabled={isSubmitting}
                   />
                 </div>
 
                 {/* Error Message */}
                 {formError && (
-                  <div className="flex items-start gap-2 rounded-lg bg-red-50 p-4 dark:bg-red-950/20">
-                    <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {formError}
-                    </p>
+                  <div className="flex items-start gap-2 rounded-lg bg-red-50 p-4">
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600" />
+                    <p className="text-sm text-red-600">{formError}</p>
                   </div>
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => {
@@ -943,7 +933,7 @@ function TrackerContent() {
                       resetForm();
                     }}
                     disabled={isSubmitting}
-                    className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750 disabled:opacity-50"
+                    className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -960,7 +950,7 @@ function TrackerContent() {
                     ) : (
                       <>
                         <Save className="h-5 w-5" />
-                        {isEditMode ? "Update Application" : "Save Application"}
+                        {isEditMode ? "Update" : "Save"}
                       </>
                     )}
                   </button>
@@ -973,10 +963,10 @@ function TrackerContent() {
         {/* Details Modal */}
         {showDetailsModal && selectedApp && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white dark:bg-gray-900">
-              <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white">
+              <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <h2 className="text-2xl font-bold text-gray-900">
                     Application Details
                   </h2>
                   <button
@@ -984,7 +974,7 @@ function TrackerContent() {
                       setShowDetailsModal(false);
                       setSelectedApp(null);
                     }}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    className="text-gray-400 hover:text-gray-600"
                   >
                     <X className="h-6 w-6" />
                   </button>
@@ -992,129 +982,76 @@ function TrackerContent() {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Company and Position */}
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
                     {selectedApp.companyName}
                   </h3>
-                  <p className="text-lg text-gray-600 dark:text-gray-400">
-                    {selectedApp.positionTitle}
-                  </p>
+                  <p className="text-lg text-gray-600">{selectedApp.positionTitle}</p>
                 </div>
 
-                {/* Status and Priority */}
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     {getStatusIcon(selectedApp.status)}
-                    <span className="font-medium text-gray-900 dark:text-white capitalize">
+                    <span className="font-medium text-gray-900 capitalize">
                       {selectedApp.status}
                     </span>
                   </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-sm font-medium ${getPriorityColor(
-                      selectedApp.priority
-                    )}`}
-                  >
+                  <span className={`rounded-full px-3 py-1 text-sm font-medium ${getPriorityColor(selectedApp.priority)}`}>
                     {selectedApp.priority} priority
                   </span>
                 </div>
 
-                {/* Details Grid */}
                 <div className="grid gap-4 md:grid-cols-2">
                   {selectedApp.appliedDate && (
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        Applied Date
-                      </p>
-                      <p className="text-gray-900 dark:text-white">
-                        {new Date(selectedApp.appliedDate).toLocaleDateString()}
-                      </p>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Applied Date</p>
+                      <p className="text-gray-900">{new Date(selectedApp.appliedDate).toLocaleDateString()}</p>
                     </div>
                   )}
-
                   {selectedApp.followUpDate && (
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        Follow-up Date
-                      </p>
-                      <p className="text-gray-900 dark:text-white">
-                        {new Date(selectedApp.followUpDate).toLocaleDateString()}
-                      </p>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Follow-up Date</p>
+                      <p className="text-gray-900">{new Date(selectedApp.followUpDate).toLocaleDateString()}</p>
                     </div>
                   )}
-
                   {selectedApp.location && (
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        Location
-                      </p>
-                      <p className="text-gray-900 dark:text-white">
+                      <p className="text-sm font-medium text-gray-500 mb-1">Location</p>
+                      <p className="text-gray-900">
                         {selectedApp.location}
-                        {selectedApp.isRemote && (
-                          <span className="ml-2 text-green-600 dark:text-green-400">
-                            (Remote)
-                          </span>
-                        )}
+                        {selectedApp.isRemote && <span className="ml-2 text-green-600">(Remote)</span>}
                       </p>
                     </div>
                   )}
-
                   {selectedApp.salary && (
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        Salary Range
-                      </p>
-                      <p className="text-gray-900 dark:text-white">
-                        {selectedApp.salary}
-                      </p>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Salary Range</p>
+                      <p className="text-gray-900">{selectedApp.salary}</p>
                     </div>
                   )}
-
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">Job Source</p>
+                    <p className="text-gray-900">{getJobSourceLabel(selectedApp.jobSource || 'other')}</p>
+                  </div>
                   {selectedApp.contactPerson && (
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        Contact Person
-                      </p>
-                      <p className="text-gray-900 dark:text-white">
-                        {selectedApp.contactPerson}
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedApp.contactEmail && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        Contact Email
-                      </p>
-                      <p className="text-gray-900 dark:text-white">
-                        {selectedApp.contactEmail}
-                      </p>
-                    </div>
-                  )}
-
-                  {selectedApp.resumeVersion && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        Resume Version
-                      </p>
-                      <p className="text-gray-900 dark:text-white">
-                        {selectedApp.resumeVersion}
-                      </p>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Contact</p>
+                      <p className="text-gray-900">{selectedApp.contactPerson}</p>
+                      {selectedApp.contactEmail && (
+                        <p className="text-sm text-gray-600">{selectedApp.contactEmail}</p>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Job URL */}
                 {selectedApp.jobUrl && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                      Job Posting
-                    </p>
+                    <p className="text-sm font-medium text-gray-500 mb-2">Job Posting</p>
                     <a
                       href={selectedApp.jobUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-blue-600 hover:underline dark:text-blue-400"
+                      className="inline-flex items-center gap-2 text-blue-600 hover:underline"
                     >
                       View Job Posting
                       <ExternalLink className="h-4 w-4" />
@@ -1122,45 +1059,33 @@ function TrackerContent() {
                   </div>
                 )}
 
-                {/* Notes */}
                 {selectedApp.notes && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                      Notes
-                    </p>
-                    <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {selectedApp.notes}
-                      </p>
+                    <p className="text-sm font-medium text-gray-500 mb-2">Notes</p>
+                    <div className="rounded-lg bg-gray-50 p-4">
+                      <p className="text-gray-700 whitespace-pre-wrap">{selectedApp.notes}</p>
                     </div>
                   </div>
                 )}
 
-                {/* Timeline */}
                 {selectedApp.history && selectedApp.history.length > 0 && (
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
-                      Application Timeline
-                    </p>
+                    <p className="text-sm font-medium text-gray-500 mb-3">Timeline</p>
                     <div className="space-y-3">
                       {selectedApp.history.map((entry, index) => (
                         <div key={index} className="flex gap-3">
                           <div className="flex flex-col items-center">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
                               {getStatusIcon(entry.status)}
                             </div>
                             {index < selectedApp.history.length - 1 && (
-                              <div className="h-full w-0.5 bg-gray-200 dark:bg-gray-700 my-1" />
+                              <div className="h-full w-0.5 bg-gray-200 my-1" />
                             )}
                           </div>
                           <div className="flex-1 pb-4">
-                            <p className="font-medium text-gray-900 dark:text-white capitalize">
-                              {entry.status}
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              {entry.note}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                            <p className="font-medium text-gray-900 capitalize">{entry.status}</p>
+                            <p className="text-sm text-gray-600">{entry.note}</p>
+                            <p className="text-xs text-gray-500 mt-1">
                               {new Date(entry.date).toLocaleString()}
                             </p>
                           </div>
@@ -1170,14 +1095,13 @@ function TrackerContent() {
                   </div>
                 )}
 
-                {/* Action Buttons */}
-                <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+                <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-200">
                   <button
                     onClick={() => {
                       setShowDetailsModal(false);
                       setShowDeleteModal(true);
                     }}
-                    className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-6 py-3 font-semibold text-red-600 hover:bg-red-50 dark:border-red-800 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-950/20"
+                    className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-6 py-3 font-semibold text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="h-5 w-5" />
                     Delete
@@ -1190,7 +1114,7 @@ function TrackerContent() {
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
                   >
                     <Edit className="h-5 w-5" />
-                    Edit Application
+                    Edit
                   </button>
                 </div>
               </div>
@@ -1201,22 +1125,18 @@ function TrackerContent() {
         {/* Delete Confirmation Modal */}
         {showDeleteModal && selectedApp && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 dark:bg-gray-900">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6">
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                  <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Delete Application
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    This action cannot be undone
-                  </p>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete Application</h3>
+                  <p className="text-sm text-gray-600">This action cannot be undone</p>
                 </div>
               </div>
 
-              <p className="text-gray-700 dark:text-gray-300 mb-6">
+              <p className="text-gray-700 mb-6">
                 Are you sure you want to delete the application for{" "}
                 <strong>{selectedApp.positionTitle}</strong> at{" "}
                 <strong>{selectedApp.companyName}</strong>?
@@ -1225,7 +1145,7 @@ function TrackerContent() {
               <div className="flex items-center justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750"
+                  className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
@@ -1233,7 +1153,7 @@ function TrackerContent() {
                   onClick={handleDeleteApplication}
                   className="rounded-lg bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700"
                 >
-                  Delete Application
+                  Delete
                 </button>
               </div>
             </div>
@@ -1249,10 +1169,7 @@ export default function TrackerPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="inline-block h-8 w-8 animate-spin text-blue-600" />
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading tracker...</p>
-          </div>
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
       }
     >
