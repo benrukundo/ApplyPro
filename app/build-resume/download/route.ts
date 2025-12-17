@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
-import prisma from '@/lib/prisma';
+import { authOptions } from '@/lib/authOptions';
+import { prisma } from '@/lib/prisma';
 
 // This endpoint checks if user can download
 export async function GET(request: NextRequest) {

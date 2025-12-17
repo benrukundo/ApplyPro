@@ -156,7 +156,7 @@ model BuilderResume {
   // Step 1: Target Job
   targetJobTitle    String?
   targetIndustry    String?
-  experienceLevel   String?  // entry, mid, senior, executive
+  experienceLevel   String?
   
   // Step 2: Personal Info
   fullName      String?
@@ -167,13 +167,13 @@ model BuilderResume {
   portfolio     String?
   
   // Step 3: Education (JSON array)
-  education     String?  @db.Text  // JSON: [{school, degree, field, startDate, endDate, gpa, highlights}]
+  education     String?  @db.Text
   
   // Step 4: Work Experience (JSON array)
-  experience    String?  @db.Text  // JSON: [{company, title, location, startDate, endDate, current, description}]
+  experience    String?  @db.Text
   
   // Step 5: Skills (JSON array)
-  skills        String?  @db.Text  // JSON: {technical: [], soft: [], languages: [], certifications: []}
+  skills        String?  @db.Text
   
   // Step 6: Summary (AI generated or custom)
   summary       String?  @db.Text

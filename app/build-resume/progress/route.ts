@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
-import prisma from '@/lib/prisma';
+import { authOptions } from '@/lib/authOptions';
+import { prisma } from '@/lib/prisma';
 
 // GET - Load saved progress
 export async function GET(request: NextRequest) {
@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
         userId: session.user.id,
       },
       orderBy: [
-        { isComplete: 'asc' }, // Incomplete first
-        { updatedAt: 'desc' }, // Most recent
+        { isComplete: 'asc' },
+        { updatedAt: 'desc' },
       ],
     });
 
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       builderResume = await prisma.builderResume.update({
         where: {
           id,
-          userId: session.user.id, // Security: ensure user owns this
+          userId: session.user.id,
         },
         data: {
           currentStep,
