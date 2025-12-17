@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, PenTool } from "lucide-react";
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -67,6 +67,17 @@ export default function Navbar() {
                   Generate Resume
                 </Link>
                 <Link
+                  href="/build-resume"
+                  className={`text-sm font-medium transition-colors hover:text-purple-600 dark:hover:text-purple-400 flex items-center gap-1 ${
+                    pathname === "/build-resume"
+                      ? "text-purple-600 dark:text-purple-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <PenTool className="w-4 h-4" />
+                  Build Resume
+                </Link>
+                <Link
                   href="/ats-checker"
                   className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
                     pathname === "/ats-checker"
@@ -108,6 +119,17 @@ export default function Navbar() {
                   }`}
                 >
                   Pricing
+                </Link>
+                <Link
+                  href="/build-resume"
+                  className={`text-sm font-medium transition-colors hover:text-purple-600 dark:hover:text-purple-400 flex items-center gap-1 ${
+                    pathname === "/build-resume"
+                      ? "text-purple-600 dark:text-purple-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <PenTool className="w-4 h-4" />
+                  Build Resume
                 </Link>
                 <Link
                   href="/ats-checker"
@@ -212,6 +234,18 @@ export default function Navbar() {
                     Generate Resume
                   </Link>
                   <Link
+                    href="/build-resume"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-purple-600 dark:hover:text-purple-400 flex items-center gap-1 ${
+                      pathname === "/build-resume"
+                        ? "text-purple-600 dark:text-purple-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    <PenTool className="w-4 h-4" />
+                    Build Resume
+                  </Link>
+                  <Link
                     href="/ats-checker"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
@@ -272,6 +306,18 @@ export default function Navbar() {
                     }`}
                   >
                     Pricing
+                  </Link>
+                  <Link
+                    href="/build-resume"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`text-sm font-medium transition-colors hover:text-purple-600 dark:hover:text-purple-400 flex items-center gap-1 ${
+                      pathname === "/build-resume"
+                        ? "text-purple-600 dark:text-purple-400"
+                        : "text-gray-700 dark:text-gray-300"
+                    }`}
+                  >
+                    <PenTool className="w-4 h-4" />
+                    Build Resume
                   </Link>
                   <Link
                     href="/ats-checker"

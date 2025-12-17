@@ -482,6 +482,26 @@ export default function GeneratePage() {
            Free analysis available  no sign-up required
         </p>
 
+        {/* Build From Scratch Option */}
+<div className="max-w-2xl mx-auto mb-12">
+  <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-2xl p-6 text-center">
+    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+      Don't have a resume yet?
+    </h3>
+    <p className="text-gray-600 mb-4">
+      No problem! We'll guide you step-by-step to create a professional resume from scratch.
+    </p>
+    <Link
+      href="/build-resume"
+      className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all"
+    >
+      <Sparkles className="w-5 h-5" />
+      Build Resume From Scratch
+    </Link>
+  </div>
+</div>
+
+
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left: Upload & Input */}
           <div className="space-y-6">

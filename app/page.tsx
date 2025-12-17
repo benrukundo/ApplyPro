@@ -12,6 +12,7 @@ import {
   Shield,
   TrendingUp,
   Star,
+  PenTool,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -48,6 +49,11 @@ export default function Home() {
       question: "Is my data secure?",
       answer:
         "Yes! We take privacy seriously. Your resume and job description are processed in real-time through encrypted connections and are NOT stored in any database. Once you close your session, your data is gone. Read our Privacy Policy for full details.",
+    },
+    {
+      question: "What if I don't have a resume yet?",
+      answer:
+        "No problem! We offer a free Resume Builder that guides you step-by-step to create a professional resume from scratch. Just click 'Build Resume' in the navigation or the button on this page.",
     },
   ];
 
@@ -128,6 +134,39 @@ export default function Home() {
         </div>
       </section>
 
+      {/* No Resume? Build From Scratch Section */}
+      <section className="py-12 bg-gradient-to-r from-purple-600 to-indigo-600">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 rounded-full mb-4">
+              <PenTool className="w-5 h-5 text-white" />
+              <span className="text-sm font-semibold text-white">
+                New Feature  Step-by-Step Guidance
+              </span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Don't Have a Resume Yet? No Problem!
+            </h2>
+            <p className="text-lg text-purple-100 mb-6 max-w-2xl mx-auto">
+              Our AI-powered Resume Builder guides you step-by-step to create a professional resume from scratch. Perfect for first-time job seekers, career changers, or anyone starting fresh.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/build-resume"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-600 text-lg font-semibold rounded-xl hover:shadow-xl hover:scale-105 transition-all duration-300"
+              >
+                <PenTool className="w-5 h-5" />
+                Build My Resume From Scratch
+              </Link>
+              <div className="flex items-center gap-2 text-purple-200 text-sm">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Free to create & preview</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Free ATS Checker Banner */}
       <section className="py-12 bg-gradient-to-r from-green-600 to-emerald-600">
         <div className="container mx-auto px-4">
@@ -135,7 +174,7 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 rounded-full mb-4">
               <Target className="w-5 h-5 text-white" />
               <span className="text-sm font-semibold text-white">
-                100% Free • No Signup Required
+                100% Free  No Signup Required
               </span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
@@ -167,7 +206,19 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 max-w-6xl mx-auto">
+            <div className="group p-8 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fadeInUp">
+              <div className="w-14 h-14 bg-purple-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <PenTool className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Build From Scratch
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                No resume? No problem. Our step-by-step wizard helps you create a professional resume from scratch with AI assistance.
+              </p>
+            </div>
+
             <div className="group p-8 bg-gradient-to-br from-blue-50 to-white rounded-2xl border border-blue-100 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fadeInUp">
               <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Target className="w-7 h-7 text-white" />
@@ -196,8 +247,8 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="group p-8 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fadeInUp delay-200">
-              <div className="w-14 h-14 bg-purple-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+            <div className="group p-8 bg-gradient-to-br from-green-50 to-white rounded-2xl border border-green-100 hover:shadow-xl hover:scale-105 transition-all duration-300 animate-fadeInUp delay-200">
+              <div className="w-14 h-14 bg-green-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Download className="w-7 h-7 text-white" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">
@@ -240,6 +291,9 @@ export default function Home() {
                 <p className="text-gray-600 leading-relaxed">
                   Paste your current resume text or upload your file. We accept
                   all formats and extract the relevant information automatically.
+                </p>
+                <p className="text-sm text-purple-600 mt-4 font-medium">
+                  No resume? <Link href="/build-resume" className="underline hover:text-purple-700">Build one from scratch →</Link>
                 </p>
               </div>
             </div>
@@ -298,7 +352,7 @@ export default function Home() {
             <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <span><strong>Free:</strong> ATS Checker, Tracker</span>
+                <span><strong>Free:</strong> ATS Checker, Tracker, Resume Builder</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -327,6 +381,10 @@ export default function Home() {
                   <li className="flex items-start">
                     <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
                     <span className="text-gray-700">Free ATS Resume Checker</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700">Resume Builder (from scratch)</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle2 className="w-6 h-6 text-green-500 mr-3 flex-shrink-0" />
@@ -600,14 +658,15 @@ export default function Home() {
                 <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               </Link>
               <Link
-                href="/contact"
-                className="px-10 py-5 bg-transparent text-white text-lg font-semibold rounded-xl border-2 border-white hover:bg-white hover:text-blue-600 transition-all duration-300"
+                href="/build-resume"
+                className="px-10 py-5 bg-transparent text-white text-lg font-semibold rounded-xl border-2 border-white hover:bg-white hover:text-purple-600 transition-all duration-300 inline-flex items-center gap-2"
               >
-                Contact Us
+                <PenTool className="w-5 h-5" />
+                Build From Scratch
               </Link>
             </div>
             <p className="mt-6 text-blue-100 text-sm animate-fadeInUp delay-300">
-              No signup required • Instant results • Money-back guarantee
+              No signup required · Instant results · Money-back guarantee
             </p>
           </div>
         </div>
