@@ -961,7 +961,7 @@ function generateModernDOCX(
     }
   }
 
-  // Create two-column table
+  // Create two-column table with no borders
   const table = new Table({
     rows: [
       new TableRow({
@@ -972,18 +972,38 @@ function generateModernDOCX(
             verticalAlign: VerticalAlign.TOP,
             shading: { fill: lightHex },
             margins: { top: 100, bottom: 100, left: 80, right: 80 },
+            borders: {
+              top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            },
           }),
           new TableCell({
             children: rightContent,
             width: { size: 72, type: WidthType.PERCENTAGE },
             verticalAlign: VerticalAlign.TOP,
             margins: { top: 100, bottom: 100, left: 120, right: 80 },
+            borders: {
+              top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+              right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            },
           }),
         ],
       }),
     ],
     width: { size: 100, type: WidthType.PERCENTAGE },
     layout: TableLayoutType.FIXED,
+    borders: {
+      top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    },
   });
 
   return [table];
