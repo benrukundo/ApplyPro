@@ -18,6 +18,8 @@ export interface SubscriptionInfo {
   daysUntilReset: number;
   isActive: boolean;
   remainingGenerations?: number;
+  currentPeriodEnd?: string;
+  cancelledAt?: string;
 }
 
 /**
@@ -82,6 +84,8 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionI
       daysUntilReset,
       isActive: subscription.status === 'active',
       remainingGenerations,
+      currentPeriodEnd: subscription.currentPeriodEnd?.toISOString(),
+      cancelledAt: subscription.cancelledAt?.toISOString(),
     };
   } catch (error) {
     console.error('Error getting subscription:', error);

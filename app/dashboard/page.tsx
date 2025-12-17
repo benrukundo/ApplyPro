@@ -27,6 +27,7 @@ import {
   Sparkles,
   Calendar,
 } from 'lucide-react';
+import CancelSubscriptionModal from '@/components/CancelSubscriptionModal';
 
 interface SubscriptionInfo {
   plan: 'free' | 'monthly' | 'yearly' | 'pay-per-use' | null;
@@ -35,6 +36,8 @@ interface SubscriptionInfo {
   monthlyLimit: number;
   daysUntilReset: number;
   isActive: boolean;
+  currentPeriodEnd?: string;
+  cancelledAt?: string;
 }
 
 export default function DashboardPage() {
@@ -45,6 +48,8 @@ export default function DashboardPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -83,6 +88,23 @@ export default function DashboardPage() {
 
   const stats = getStatistics();
   const upcomingFollowUps = getUpcomingFollowUps();
+
+  const handleCancelSuccess = (message: string, effectiveDate: string) => {
+    setCancelMessage(message);
+    // Reload subscription info
+    const loadSubscription = async () => {
+      try {
+        const response = await fetch('/api/user/subscription');
+        const data = await response.json();
+        if (response.ok) {
+          setSubscription(data.subscription);
+        }
+      } catch (err) {
+        console.error('Error loading subscription:', err);
+      }
+    };
+    loadSubscription();
+  };
 
   // Filter applications
   const filteredApplications = applications
@@ -152,11 +174,18 @@ export default function DashboardPage() {
           <p className="text-xl text-gray-600">Track your job applications and manage your account</p>
         </div>
 
+        {/* Success Message */}
+        {cancelMessage && (
+          <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl">
+            <p className="text-green-800 font-medium">{cancelMessage}</p>
+          </div>
+        )}
+
         {/* Subscription Card */}
         {!isLoadingSubscription && (
           <div className="mb-8 bg-white rounded-2xl shadow-lg p-8 border-2 border-blue-100">
             <div className="flex items-start justify-between">
-              <div>
+              <div className="flex-1">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Sparkles className="w-6 h-6 text-blue-600" />
                   Your Plan
@@ -178,6 +207,23 @@ export default function DashboardPage() {
                           : 'Pay per resume'}
                       </p>
                     </div>
+
+                    {/* Cancellation Warning */}
+                    {subscription.cancelledAt && subscription.currentPeriodEnd && (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-amber-900 font-semibold mb-1">
+                          Subscription Cancelled
+                        </p>
+                        <p className="text-sm text-amber-800">
+                          Access until{' '}
+                          {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </p>
+                      </div>
+                    )}
 
                     {(subscription.plan === 'monthly' || subscription.plan === 'yearly') && (
                       <div>
@@ -215,15 +261,36 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              <Link
-                href={subscription?.isActive ? '/coming-soon' : '/pricing'}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                {subscription?.isActive ? 'Manage Subscription' : 'Upgrade Plan'}
-              </Link>
+              <div className="flex flex-col gap-3 ml-6">
+                <Link
+                  href={subscription?.isActive ? '/coming-soon' : '/pricing'}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
+                >
+                  {subscription?.isActive ? 'Manage Subscription' : 'Upgrade Plan'}
+                </Link>
+
+                {/* Cancel Button - Only show if active and not already cancelled */}
+                {subscription?.isActive && !subscription?.cancelledAt && (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="px-6 py-3 bg-white border-2 border-red-200 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors"
+                  >
+                    Cancel Subscription
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
+
+        {/* Cancel Subscription Modal */}
+        <CancelSubscriptionModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          onSuccess={handleCancelSuccess}
+          plan={subscription?.plan || 'free'}
+          currentPeriodEnd={subscription?.currentPeriodEnd}
+        />
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-12">
