@@ -1700,68 +1700,86 @@ export default function BuildResumePage() {
 
                               {/* AI Enhanced Content OR Form Data */}
                               {(enhancedPreview || generatedResume) ? (
-                                // Show AI-enhanced content
+                                // Show AI-enhanced content (filter out sidebar sections)
                                 <div className="space-y-3">
-                                  {(enhancedPreview || generatedResume)!.split('\n').map((line, idx) => {
-                                    const trimmedLine = line.trim();
-                                    if (!trimmedLine) return null;
+                                  {(() => {
+                                    const lines = (enhancedPreview || generatedResume)!.split('\n');
+                                    let skipSection = false;
+                                    const sectionsToSkip = ['SKILLS', 'SKILL', 'EDUCATION', 'CERTIFICATIONS', 'CERTIFICATION', 'LANGUAGES', 'LANGUAGE', 'CONTACT'];
 
-                                    // Remove markdown and bullets
-                                    const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
+                                    return lines.map((line, idx) => {
+                                      const trimmedLine = line.trim();
+                                      if (!trimmedLine) return null;
 
-                                    // Skip if this line is the person's name or title (already shown in header)
-                                    if (cleanLine.toLowerCase().includes(formData.fullName.toLowerCase()) && cleanLine.length < 100) {
+                                      const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
+
+                                      // Check if this is a section header we should skip
+                                      const isHeader = trimmedLine.startsWith('##') ||
+                                                      (trimmedLine.toUpperCase() === trimmedLine &&
+                                                       trimmedLine.length > 5 &&
+                                                       trimmedLine.length < 60 &&
+                                                       !trimmedLine.includes('@') &&
+                                                       !trimmedLine.match(/^\d/));
+
+                                      if (isHeader) {
+                                        const headerUpper = cleanLine.toUpperCase();
+                                        // Check if this is a sidebar section
+                                        skipSection = sectionsToSkip.some(s => headerUpper.includes(s));
+
+                                        if (skipSection) {
+                                          return null; // Skip this header
+                                        }
+
+                                        // Valid section header (SUMMARY or EXPERIENCE)
+                                        return (
+                                          <h3
+                                            key={idx}
+                                            className="text-sm font-bold mt-4 mb-2 uppercase tracking-wider pb-1 border-b"
+                                            style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
+                                          >
+                                            {cleanLine}
+                                          </h3>
+                                        );
+                                      }
+
+                                      // Skip content if we're in a skipped section
+                                      if (skipSection) {
+                                        return null;
+                                      }
+
+                                      // Skip name, title, contact (already in header/sidebar)
+                                      if (cleanLine.toLowerCase().includes(formData.fullName.toLowerCase()) && cleanLine.length < 100) {
+                                        return null;
+                                      }
+                                      if (cleanLine.toLowerCase() === formData.targetJobTitle.toLowerCase()) {
+                                        return null;
+                                      }
+                                      if (cleanLine.includes('@') || cleanLine.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/)) {
+                                        return null;
+                                      }
+
+                                      // Bullet points
+                                      if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+                                        return (
+                                          <div key={idx} className="flex items-start text-xs text-gray-700 leading-relaxed mb-1">
+                                            <span className="mr-2 mt-0.5">•</span>
+                                            <span>{cleanLine.replace(/^[•\-*]\s*/, '')}</span>
+                                          </div>
+                                        );
+                                      }
+
+                                      // Regular paragraphs
+                                      if (cleanLine.length > 3) {
+                                        return (
+                                          <p key={idx} className="text-xs text-gray-700 leading-relaxed mb-2">
+                                            {cleanLine}
+                                          </p>
+                                        );
+                                      }
+
                                       return null;
-                                    }
-                                    if (cleanLine.toLowerCase() === formData.targetJobTitle.toLowerCase()) {
-                                      return null;
-                                    }
-                                    // Skip contact info lines (already in sidebar)
-                                    if (cleanLine.includes('@') || cleanLine.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/)) {
-                                      return null;
-                                    }
-
-                                    // Section headers (all caps or starts with ##)
-                                    const isHeader = trimmedLine.startsWith('##') ||
-                                                    (trimmedLine.toUpperCase() === trimmedLine &&
-                                                     trimmedLine.length > 5 &&
-                                                     trimmedLine.length < 60 &&
-                                                     !trimmedLine.includes('@') &&
-                                                     !trimmedLine.match(/^\d/));
-
-                                    if (isHeader) {
-                                      return (
-                                        <h3
-                                          key={idx}
-                                          className="text-sm font-bold mt-4 mb-2 uppercase tracking-wider pb-1 border-b"
-                                          style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
-                                        >
-                                          {cleanLine}
-                                        </h3>
-                                      );
-                                    }
-
-                                    // Bullet points
-                                    if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
-                                      return (
-                                        <div key={idx} className="flex items-start text-xs text-gray-700 leading-relaxed mb-1">
-                                          <span className="mr-2 mt-0.5">•</span>
-                                          <span>{cleanLine.replace(/^[•\-*]\s*/, '')}</span>
-                                        </div>
-                                      );
-                                    }
-
-                                    // Regular paragraphs (skip very short lines)
-                                    if (cleanLine.length > 3) {
-                                      return (
-                                        <p key={idx} className="text-xs text-gray-700 leading-relaxed mb-2">
-                                          {cleanLine}
-                                        </p>
-                                      );
-                                    }
-
-                                    return null;
-                                  })}
+                                    });
+                                  })()}
                                 </div>
                               ) : (
                                 // Show form data as fallback (before AI generation)

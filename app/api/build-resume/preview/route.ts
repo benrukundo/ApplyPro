@@ -54,11 +54,14 @@ export async function POST(request: NextRequest) {
       throw new Error('No content generated');
     }
 
+    // Post-process: Remove sections that should only appear in sidebar
+    const filteredContent = filterSidebarSections(enhancedContent);
+
     console.log('[PREVIEW] Enhanced preview generated successfully');
 
     return NextResponse.json({
       success: true,
-      content: enhancedContent,
+      content: filteredContent,
     });
   } catch (error) {
     console.error('[PREVIEW] Error generating preview:', error);
@@ -191,6 +194,49 @@ ${allSkills.join(', ')}
 Output ONLY the enhanced content with these two sections. No explanations or meta-commentary.`;
 
   return prompt;
+}
+
+/**
+ * Filter out sections that should only appear in sidebar
+ * Keeps only: PROFESSIONAL SUMMARY, EXPERIENCE, and any other narrative sections
+ */
+function filterSidebarSections(content: string): string {
+  const lines = content.split('\n');
+  const sectionsToSkip = ['SKILLS', 'SKILL', 'EDUCATION', 'CERTIFICATIONS', 'CERTIFICATION', 'LANGUAGES', 'LANGUAGE', 'CONTACT'];
+
+  let skipSection = false;
+  const filteredLines: string[] = [];
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // Check if this is a section header
+    const isHeader =
+      trimmedLine.startsWith('##') ||
+      trimmedLine.startsWith('**') ||
+      (trimmedLine === trimmedLine.toUpperCase() &&
+       trimmedLine.length > 5 &&
+       trimmedLine.length < 60);
+
+    if (isHeader) {
+      const cleanHeader = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '').toUpperCase();
+
+      // Check if this is a section we should skip
+      if (sectionsToSkip.some(s => cleanHeader.includes(s))) {
+        skipSection = true;
+        continue; // Skip this header
+      } else {
+        // This is a valid section (SUMMARY or EXPERIENCE)
+        skipSection = false;
+        filteredLines.push(line);
+      }
+    } else if (!skipSection) {
+      // Only add content if we're not in a skipped section
+      filteredLines.push(line);
+    }
+  }
+
+  return filteredLines.join('\n');
 }
 
 export async function GET() {
