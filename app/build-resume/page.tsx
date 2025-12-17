@@ -219,12 +219,20 @@ export default function BuildResumePage() {
       const response = await fetch('/api/user/subscription');
       if (response.ok) {
         const data = await response.json();
+        console.log('[BUILD-RESUME] Subscription loaded:', {
+          isActive: data.subscription?.isActive,
+          plan: data.subscription?.plan,
+          remainingGenerations: data.subscription?.remainingGenerations,
+          monthlyUsageCount: data.subscription?.monthlyUsageCount,
+          monthlyLimit: data.subscription?.monthlyLimit,
+        });
         setSubscription(data.subscription);
       } else {
+        console.error('[BUILD-RESUME] Failed to load subscription:', response.status);
         setSubscription({ plan: null, isActive: false });
       }
     } catch (err) {
-      console.error('Error loading subscription:', err);
+      console.error('[BUILD-RESUME] Error loading subscription:', err);
       setSubscription({ plan: null, isActive: false });
     } finally {
       setIsLoadingSubscription(false);
@@ -400,43 +408,102 @@ export default function BuildResumePage() {
   };
 
   const handleDownload = async (format: 'pdf' | 'docx') => {
-  // STRICT subscription check - must be explicitly true
-  if (subscription?.isActive !== true) {
-    setError('Please subscribe to download your resume. Visit the pricing page to get started.');
-    return;
-  }
+    console.log('[BUILD-RESUME] handleDownload called:', {
+      format,
+      hasSession: !!session?.user?.id,
+      subscription,
+      canDownload,
+      isLoadingSubscription,
+    });
 
-  if (!generatedResume) {
-    setError('No resume to download. Please generate first.');
-    return;
-  }
-
-  setIsDownloading(true);
-  setError('');
-
-  try {
-    const timestamp = new Date().toISOString().split('T')[0];
-    const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
-
-    if (format === 'pdf') {
-      await generatePDF(generatedResume, `${fileName}.pdf`, selectedTemplate, selectedColor.key);
-    } else {
-      await generateDOCX(generatedResume, `${fileName}.docx`, selectedTemplate, selectedColor.key);
+    // STRICT subscription check - multiple layers of validation
+    if (!session?.user?.id) {
+      setError('Please sign in to download your resume.');
+      router.push('/login?callbackUrl=/build-resume');
+      return;
     }
 
-    trackEvent('builder_resume_downloaded', {
-      format,
-      template: selectedTemplate,
-      color: selectedColor.key,
-      target_job: formData.targetJobTitle,
-    });
-  } catch (err) {
-    console.error('Download error:', err);
-    setError('Failed to download. Please try again.');
-  } finally {
-    setIsDownloading(false);
-  }
-};
+    if (isLoadingSubscription) {
+      setError('Loading subscription info. Please wait...');
+      return;
+    }
+
+    if (!subscription || subscription.isActive !== true) {
+      setError('No active subscription found. Please subscribe to download your resume.');
+      return;
+    }
+
+    if ((subscription.remainingGenerations ?? 0) <= 0) {
+      setError('You have used all your resume generations. Please upgrade or wait for your limit to reset.');
+      return;
+    }
+
+    if (!generatedResume) {
+      setError('No resume to download. Please generate first.');
+      return;
+    }
+
+    // Additional check: Verify subscription on server before allowing download
+    setIsDownloading(true);
+    setError('');
+
+    try {
+      // Verify subscription server-side
+      const verifyResponse = await fetch('/api/user/subscription');
+      if (!verifyResponse.ok) {
+        throw new Error('Failed to verify subscription. Please try again.');
+      }
+
+      const verifyData = await verifyResponse.json();
+      if (
+        !verifyData.subscription?.isActive ||
+        (verifyData.subscription?.remainingGenerations ?? 0) <= 0
+      ) {
+        setError('Your subscription is not active or you have no remaining generations. Please upgrade.');
+        setIsDownloading(false);
+        return;
+      }
+
+      // Proceed with download
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
+
+      if (format === 'pdf') {
+        await generatePDF(
+          generatedResume,
+          `${fileName}.pdf`,
+          selectedTemplate,
+          selectedColor.key
+        );
+      } else {
+        await generateDOCX(
+          generatedResume,
+          `${fileName}.docx`,
+          selectedTemplate,
+          selectedColor.key
+        );
+      }
+
+      trackEvent('builder_resume_downloaded', {
+        format,
+        template: selectedTemplate,
+        color: selectedColor.key,
+        target_job: formData.targetJobTitle,
+      });
+
+      // Reload subscription to update remaining generations
+      await loadSubscription();
+    } catch (err) {
+      console.error('Download error:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to download. Please try again or contact support.'
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const addEducation = () => {
     const newEntry: Education = {
@@ -521,7 +588,19 @@ export default function BuildResumePage() {
     });
   };
 
-  const canDownload = subscription?.isActive === true;
+  // Strict check: Must have active subscription AND remaining generations
+  const canDownload =
+    subscription?.isActive === true &&
+    (subscription?.remainingGenerations ?? 0) > 0 &&
+    !isLoadingSubscription;
+
+  // Debug logging
+  console.log('[BUILD-RESUME] canDownload check:', {
+    canDownload,
+    isActive: subscription?.isActive,
+    remainingGenerations: subscription?.remainingGenerations,
+    isLoadingSubscription,
+  });
 
   // Parse resume sections for template preview
   const parseResumeForPreview = (resumeText: string) => {
@@ -595,19 +674,33 @@ export default function BuildResumePage() {
             <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
               canDownload
                 ? 'bg-green-100 text-green-700'
-                : 'bg-amber-100 text-amber-700'
+                : 'bg-red-100 text-red-700'
             }`}>
               {canDownload ? (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>Active Subscription - Downloads enabled</span>
+                  <span>
+                    Active Subscription - {subscription?.remainingGenerations ?? 0} downloads remaining
+                  </span>
                 </>
               ) : (
                 <>
                   <Lock className="w-4 h-4" />
-                  <span>Free Preview - <Link href="/pricing" className="underline font-medium">Upgrade to download</Link></span>
+                  <span>
+                    {subscription?.isActive
+                      ? `No remaining downloads (${subscription?.monthlyUsageCount ?? 0}/${subscription?.monthlyLimit ?? 0} used)`
+                      : 'No active subscription'}{' '}
+                    - <Link href="/pricing" className="underline font-medium">Subscribe now</Link>
+                  </span>
                 </>
               )}
+            </div>
+          )}
+
+          {isLoadingSubscription && session?.user && (
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm bg-blue-100 text-blue-700">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Loading subscription...</span>
             </div>
           )}
         </div>
@@ -1367,13 +1460,30 @@ export default function BuildResumePage() {
                     </div>
 
                     <div
-                      className={`bg-white relative ${!canDownload ? 'select-none' : ''}`}
-                      style={{ userSelect: canDownload ? 'auto' : 'none' }}
+                      className="bg-white relative select-none"
+                      style={{
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        MozUserSelect: 'none',
+                        msUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                      }}
                       onCopy={(e) => {
+                        e.preventDefault();
+                        setError('Please subscribe to download your resume. Copying is not allowed.');
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        return false;
+                      }}
+                      onMouseDown={(e) => {
                         if (!canDownload) {
                           e.preventDefault();
-                          setError('Please subscribe to copy or download your resume.');
                         }
+                      }}
+                      onSelectStart={(e) => {
+                        e.preventDefault();
+                        return false;
                       }}
                     >
                       {/* Lock overlay for non-subscribers */}
