@@ -1698,86 +1698,33 @@ export default function BuildResumePage() {
                                 </h2>
                               </div>
 
-                              {/* Summary Section */}
-                              {formData.summary && (
-                                <div className="mb-6">
-                                  <h3
-                                    className="text-sm font-bold mb-2 uppercase tracking-wider"
-                                    style={{ color: selectedColor.hex }}
-                                  >
-                                    PROFESSIONAL SUMMARY
-                                  </h3>
-                                  <p className="text-xs text-gray-700 leading-relaxed">
-                                    {formData.summary}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Experience Section */}
-                              {formData.experience.length > 0 && (
-                                <div className="mb-6">
-                                  <h3
-                                    className="text-sm font-bold mb-3 uppercase tracking-wider pb-1 border-b"
-                                    style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
-                                  >
-                                    EXPERIENCE
-                                  </h3>
-                                  <div className="space-y-4">
-                                    {formData.experience.map((exp, idx) => (
-                                      <div key={idx}>
-                                        <div className="flex justify-between items-start mb-1">
-                                          <div>
-                                            <h4 className="text-sm font-bold text-gray-900">{exp.title}</h4>
-                                            <p className="text-xs font-medium" style={{ color: selectedColor.hex }}>
-                                              {exp.company}
-                                            </p>
-                                          </div>
-                                          <span className="text-[10px] text-gray-500 whitespace-nowrap ml-2">
-                                            {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
-                                          </span>
-                                        </div>
-                                        {exp.location && (
-                                          <p className="text-[10px] text-gray-500 mb-2">{exp.location}</p>
-                                        )}
-                                        {exp.description && (
-                                          <div className="text-xs text-gray-700 leading-relaxed">
-                                            {exp.description.split('\n').map((line, i) => (
-                                              <p key={i} className="mb-1">
-                                                {line.startsWith('•') || line.startsWith('-') ? (
-                                                  <span className="flex items-start">
-                                                    <span className="mr-2">•</span>
-                                                    <span>{line.replace(/^[•-]\s*/, '')}</span>
-                                                  </span>
-                                                ) : (
-                                                  line
-                                                )}
-                                              </p>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* AI Enhanced Summary - Parse and display */}
-                              {(enhancedPreview || generatedResume) && (
-                                <div className="space-y-4">
+                              {/* AI Enhanced Content OR Form Data */}
+                              {(enhancedPreview || generatedResume) ? (
+                                // Show AI-enhanced content
+                                <div className="space-y-3">
                                   {(enhancedPreview || generatedResume)!.split('\n').map((line, idx) => {
                                     const trimmedLine = line.trim();
                                     if (!trimmedLine) return null;
 
+                                    // Remove markdown and bullets
+                                    const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
+
                                     // Section headers (all caps or starts with ##)
-                                    if ((trimmedLine.toUpperCase() === trimmedLine && trimmedLine.length > 5 && !trimmedLine.includes('@')) || trimmedLine.startsWith('##')) {
-                                      const headerText = trimmedLine.replace(/^#+\s*/, '');
+                                    const isHeader = trimmedLine.startsWith('##') ||
+                                                    (trimmedLine.toUpperCase() === trimmedLine &&
+                                                     trimmedLine.length > 5 &&
+                                                     trimmedLine.length < 60 &&
+                                                     !trimmedLine.includes('@') &&
+                                                     !trimmedLine.match(/^\d/));
+
+                                    if (isHeader) {
                                       return (
                                         <h3
                                           key={idx}
                                           className="text-sm font-bold mt-4 mb-2 uppercase tracking-wider pb-1 border-b"
                                           style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
                                         >
-                                          {headerText}
+                                          {cleanLine}
                                         </h3>
                                       );
                                     }
@@ -1785,18 +1732,18 @@ export default function BuildResumePage() {
                                     // Bullet points
                                     if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
                                       return (
-                                        <p key={idx} className="text-xs text-gray-700 leading-relaxed flex items-start">
-                                          <span className="mr-2">•</span>
-                                          <span>{trimmedLine.replace(/^[•\-*]\s*/, '')}</span>
-                                        </p>
+                                        <div key={idx} className="flex items-start text-xs text-gray-700 leading-relaxed mb-1">
+                                          <span className="mr-2 mt-0.5">•</span>
+                                          <span>{cleanLine.replace(/^[•\-*]\s*/, '')}</span>
+                                        </div>
                                       );
                                     }
 
-                                    // Regular paragraphs (skip very short lines that might be spacing)
-                                    if (trimmedLine.length > 3) {
+                                    // Regular paragraphs (skip very short lines)
+                                    if (cleanLine.length > 3) {
                                       return (
-                                        <p key={idx} className="text-xs text-gray-700 leading-relaxed">
-                                          {trimmedLine.replace(/\*\*/g, '')}
+                                        <p key={idx} className="text-xs text-gray-700 leading-relaxed mb-2">
+                                          {cleanLine}
                                         </p>
                                       );
                                     }
@@ -1804,6 +1751,72 @@ export default function BuildResumePage() {
                                     return null;
                                   })}
                                 </div>
+                              ) : (
+                                // Show form data as fallback (before AI generation)
+                                <>
+                                  {/* Summary Section */}
+                                  {formData.summary && (
+                                    <div className="mb-6">
+                                      <h3
+                                        className="text-sm font-bold mb-2 uppercase tracking-wider"
+                                        style={{ color: selectedColor.hex }}
+                                      >
+                                        PROFESSIONAL SUMMARY
+                                      </h3>
+                                      <p className="text-xs text-gray-700 leading-relaxed">
+                                        {formData.summary}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {/* Experience Section */}
+                                  {formData.experience.length > 0 && (
+                                    <div className="mb-6">
+                                      <h3
+                                        className="text-sm font-bold mb-3 uppercase tracking-wider pb-1 border-b"
+                                        style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
+                                      >
+                                        EXPERIENCE
+                                      </h3>
+                                      <div className="space-y-4">
+                                        {formData.experience.map((exp, idx) => (
+                                          <div key={idx}>
+                                            <div className="flex justify-between items-start mb-1">
+                                              <div>
+                                                <h4 className="text-sm font-bold text-gray-900">{exp.title}</h4>
+                                                <p className="text-xs font-medium" style={{ color: selectedColor.hex }}>
+                                                  {exp.company}
+                                                </p>
+                                              </div>
+                                              <span className="text-[10px] text-gray-500 whitespace-nowrap ml-2">
+                                                {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
+                                              </span>
+                                            </div>
+                                            {exp.location && (
+                                              <p className="text-[10px] text-gray-500 mb-2">{exp.location}</p>
+                                            )}
+                                            {exp.description && (
+                                              <div className="text-xs text-gray-700 leading-relaxed">
+                                                {exp.description.split('\n').map((line, i) => (
+                                                  <p key={i} className="mb-1">
+                                                    {line.startsWith('•') || line.startsWith('-') ? (
+                                                      <span className="flex items-start">
+                                                        <span className="mr-2">•</span>
+                                                        <span>{line.replace(/^[•-]\s*/, '')}</span>
+                                                      </span>
+                                                    ) : (
+                                                      line
+                                                    )}
+                                                  </p>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
