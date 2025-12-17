@@ -2,8 +2,8 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { isAuthenticated, getCurrentUser, logout, User } from "@/lib/auth";
 import {
   getAllApplications,
   addApplication,
@@ -18,8 +18,6 @@ import {
   Search,
   LayoutGrid,
   List,
-  LogOut,
-  Menu,
   X,
   Briefcase,
   CheckCircle2,
@@ -32,22 +30,19 @@ import {
   Trash2,
   Save,
   MapPin,
-  DollarSign,
-  User as UserIcon,
-  Mail,
-  StickyNote,
   AlertCircle,
   Loader2,
 } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 function TrackerContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [user, setUser] = useState<User | null>(null);
+  const { data: session, status } = useSession();
   const [applications, setApplications] = useState<Application[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -80,44 +75,40 @@ function TrackerContent() {
   // Drag and drop state
   const [draggedApp, setDraggedApp] = useState<Application | null>(null);
 
+  // Redirect if not authenticated
   useEffect(() => {
-    // Check authentication
-    if (!isAuthenticated()) {
-      router.push("/login");
-      return;
+    if (status === 'unauthenticated') {
+      router.push('/login?callbackUrl=/tracker');
     }
+  }, [status, router]);
 
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
+  // Load applications and check URL params
+  useEffect(() => {
+    if (status === 'authenticated') {
+      loadApplications();
 
-    // Load applications
-    loadApplications();
+      // Check for URL params
+      const action = searchParams.get('action');
+      const id = searchParams.get('id');
 
-    // Check for URL params
-    const action = searchParams.get("action");
-    const id = searchParams.get("id");
+      if (action === 'add') {
+        setShowAddModal(true);
+      }
 
-    if (action === "add") {
-      setShowAddModal(true);
-    }
-
-    if (id) {
-      const app = applications.find((a) => a.id === id);
-      if (app) {
-        setSelectedApp(app);
-        setShowDetailsModal(true);
+      if (id) {
+        const apps = getAllApplications();
+        const app = apps.find((a) => a.id === id);
+        if (app) {
+          setSelectedApp(app);
+          setShowDetailsModal(true);
+        }
       }
     }
-  }, [router, searchParams]);
+  }, [status, searchParams]);
 
   const loadApplications = () => {
     const apps = getAllApplications();
     setApplications(apps);
-  };
-
-  const handleLogout = () => {
-    logout();
-    router.push("/");
   };
 
   const resetForm = () => {
@@ -335,15 +326,16 @@ function TrackerContent() {
     rejected: filteredApplications.filter((app) => app.status === "rejected"),
   };
 
-  const statusColumns: { status: ApplicationStatus; title: string; icon: string }[] = [
-    { status: "saved", title: "Saved", icon: "📝" },
-    { status: "applied", title: "Applied", icon: "📤" },
-    { status: "interview", title: "Interview", icon: "📞" },
-    { status: "offer", title: "Offer", icon: "🎉" },
-    { status: "rejected", title: "Rejected", icon: "❌" },
+  const statusColumns: { status: ApplicationStatus; title: string }[] = [
+    { status: "saved", title: "Saved" },
+    { status: "applied", title: "Applied" },
+    { status: "interview", title: "Interview" },
+    { status: "offer", title: "Offer" },
+    { status: "rejected", title: "Rejected" },
   ];
 
-  if (!user) {
+  // Loading state
+  if (status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -352,6 +344,11 @@ function TrackerContent() {
         </div>
       </div>
     );
+  }
+
+  // Not authenticated
+  if (!session?.user) {
+    return null;
   }
 
   return (
@@ -434,7 +431,7 @@ function TrackerContent() {
                 <div className="mb-3 rounded-lg bg-gray-100 p-3 dark:bg-gray-800">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">{column.icon}</span>
+                      {getStatusIcon(column.status)}
                       <h3 className="font-semibold text-gray-900 dark:text-white">
                         {column.title}
                       </h3>
@@ -649,613 +646,616 @@ function TrackerContent() {
           </div>
         )}
 
-      {/* Add/Edit Application Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white dark:bg-gray-900">
-            <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {isEditMode ? "Edit Application" : "Add Application"}
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowAddModal(false);
-                    resetForm();
-                  }}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <X className="h-6 w-6" />
-                </button>
+        {/* Add/Edit Application Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white dark:bg-gray-900">
+              <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {isEditMode ? "Edit Application" : "Add Application"}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false);
+                      resetForm();
+                    }}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
               </div>
+
+              <form onSubmit={handleSubmitApplication} className="p-6 space-y-6">
+                {/* Company Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Company Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.companyName}
+                    onChange={(e) =>
+                      setFormData({ ...formData, companyName: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    placeholder="Google, Apple, etc."
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {/* Position Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Position Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.positionTitle}
+                    onChange={(e) =>
+                      setFormData({ ...formData, positionTitle: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    placeholder="Senior Software Engineer"
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {/* Two Column Layout */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Status *
+                    </label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          status: e.target.value as ApplicationStatus,
+                        })
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      disabled={isSubmitting}
+                    >
+                      <option value="saved">Saved</option>
+                      <option value="applied">Applied</option>
+                      <option value="interview">Interview</option>
+                      <option value="offer">Offer</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+
+                  {/* Priority */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Priority
+                    </label>
+                    <select
+                      value={formData.priority}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          priority: e.target.value as Priority,
+                        })
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      disabled={isSubmitting}
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+
+                  {/* Applied Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Applied Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.appliedDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, appliedDate: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  {/* Follow-up Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Follow-up Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.followUpDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, followUpDate: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                {/* Location and Salary */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Location
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) =>
+                        setFormData({ ...formData, location: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      placeholder="San Francisco, CA"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Salary Range
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.salary}
+                      onChange={(e) =>
+                        setFormData({ ...formData, salary: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      placeholder="$100k - $150k"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                {/* Remote Checkbox */}
+                <div className="flex items-center">
+                  <input
+                    id="remote"
+                    type="checkbox"
+                    checked={formData.isRemote}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isRemote: e.target.checked })
+                    }
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                    disabled={isSubmitting}
+                  />
+                  <label
+                    htmlFor="remote"
+                    className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+                  >
+                    Remote position
+                  </label>
+                </div>
+
+                {/* Job URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Job Description URL
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.jobUrl}
+                    onChange={(e) =>
+                      setFormData({ ...formData, jobUrl: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    placeholder="https://..."
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {/* Contact Info */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Contact Person
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.contactPerson}
+                      onChange={(e) =>
+                        setFormData({ ...formData, contactPerson: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      placeholder="Jane Doe"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Contact Email
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.contactEmail}
+                      onChange={(e) =>
+                        setFormData({ ...formData, contactEmail: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                      placeholder="jane@company.com"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                {/* Resume Version */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Resume Version Used
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.resumeVersion}
+                    onChange={(e) =>
+                      setFormData({ ...formData, resumeVersion: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    placeholder="Modern Template v1"
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
+                    rows={4}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    placeholder="Additional notes about this application..."
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {/* Error Message */}
+                {formError && (
+                  <div className="flex items-start gap-2 rounded-lg bg-red-50 p-4 dark:bg-red-950/20">
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {formError}
+                    </p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddModal(false);
+                      resetForm();
+                    }}
+                    disabled={isSubmitting}
+                    className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-5 w-5" />
+                        {isEditMode ? "Update Application" : "Save Application"}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
+          </div>
+        )}
 
-            <form onSubmit={handleSubmitApplication} className="p-6 space-y-6">
-              {/* Company Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Company Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.companyName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, companyName: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  placeholder="Google, Apple, etc."
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* Position Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Position Title *
-                </label>
-                <input
-                  type="text"
-                  value={formData.positionTitle}
-                  onChange={(e) =>
-                    setFormData({ ...formData, positionTitle: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  placeholder="Senior Software Engineer"
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* Two Column Layout */}
-              <div className="grid gap-6 md:grid-cols-2">
-                {/* Status */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Status *
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        status: e.target.value as ApplicationStatus,
-                      })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    disabled={isSubmitting}
+        {/* Details Modal */}
+        {showDetailsModal && selectedApp && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white dark:bg-gray-900">
+              <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Application Details
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      setSelectedApp(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   >
-                    <option value="saved">Saved</option>
-                    <option value="applied">Applied</option>
-                    <option value="interview">Interview</option>
-                    <option value="offer">Offer</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-
-                {/* Priority */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Priority
-                  </label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        priority: e.target.value as Priority,
-                      })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    disabled={isSubmitting}
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-
-                {/* Applied Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Applied Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.appliedDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, appliedDate: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                {/* Follow-up Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Follow-up Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.followUpDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, followUpDate: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    disabled={isSubmitting}
-                  />
+                    <X className="h-6 w-6" />
+                  </button>
                 </div>
               </div>
 
-              {/* Location and Salary */}
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="p-6 space-y-6">
+                {/* Company and Position */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) =>
-                      setFormData({ ...formData, location: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    placeholder="San Francisco, CA"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Salary Range
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.salary}
-                    onChange={(e) =>
-                      setFormData({ ...formData, salary: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    placeholder="$100k - $150k"
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </div>
-
-              {/* Remote Checkbox */}
-              <div className="flex items-center">
-                <input
-                  id="remote"
-                  type="checkbox"
-                  checked={formData.isRemote}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isRemote: e.target.checked })
-                  }
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                  disabled={isSubmitting}
-                />
-                <label
-                  htmlFor="remote"
-                  className="ml-2 text-sm text-gray-700 dark:text-gray-300"
-                >
-                  Remote position
-                </label>
-              </div>
-
-              {/* Job URL */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Job Description URL
-                </label>
-                <input
-                  type="url"
-                  value={formData.jobUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, jobUrl: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  placeholder="https://..."
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* Contact Info */}
-              <div className="grid gap-6 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Contact Person
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.contactPerson}
-                    onChange={(e) =>
-                      setFormData({ ...formData, contactPerson: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    placeholder="Jane Doe"
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Contact Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) =>
-                      setFormData({ ...formData, contactEmail: e.target.value })
-                    }
-                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                    placeholder="jane@company.com"
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </div>
-
-              {/* Resume Version */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Resume Version Used
-                </label>
-                <input
-                  type="text"
-                  value={formData.resumeVersion}
-                  onChange={(e) =>
-                    setFormData({ ...formData, resumeVersion: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  placeholder="Modern Template v1"
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Notes
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) =>
-                    setFormData({ ...formData, notes: e.target.value })
-                  }
-                  rows={4}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                  placeholder="Additional notes about this application..."
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* Error Message */}
-              {formError && (
-                <div className="flex items-start gap-2 rounded-lg bg-red-50 p-4 dark:bg-red-950/20">
-                  <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {formError}
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    {selectedApp.companyName}
+                  </h3>
+                  <p className="text-lg text-gray-600 dark:text-gray-400">
+                    {selectedApp.positionTitle}
                   </p>
                 </div>
-              )}
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+                {/* Status and Priority */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(selectedApp.status)}
+                    <span className="font-medium text-gray-900 dark:text-white capitalize">
+                      {selectedApp.status}
+                    </span>
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-sm font-medium ${getPriorityColor(
+                      selectedApp.priority
+                    )}`}
+                  >
+                    {selectedApp.priority} priority
+                  </span>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  {selectedApp.appliedDate && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Applied Date
+                      </p>
+                      <p className="text-gray-900 dark:text-white">
+                        {new Date(selectedApp.appliedDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedApp.followUpDate && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Follow-up Date
+                      </p>
+                      <p className="text-gray-900 dark:text-white">
+                        {new Date(selectedApp.followUpDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedApp.location && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Location
+                      </p>
+                      <p className="text-gray-900 dark:text-white">
+                        {selectedApp.location}
+                        {selectedApp.isRemote && (
+                          <span className="ml-2 text-green-600 dark:text-green-400">
+                            (Remote)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedApp.salary && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Salary Range
+                      </p>
+                      <p className="text-gray-900 dark:text-white">
+                        {selectedApp.salary}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedApp.contactPerson && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Contact Person
+                      </p>
+                      <p className="text-gray-900 dark:text-white">
+                        {selectedApp.contactPerson}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedApp.contactEmail && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Contact Email
+                      </p>
+                      <p className="text-gray-900 dark:text-white">
+                        {selectedApp.contactEmail}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedApp.resumeVersion && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Resume Version
+                      </p>
+                      <p className="text-gray-900 dark:text-white">
+                        {selectedApp.resumeVersion}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Job URL */}
+                {selectedApp.jobUrl && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                      Job Posting
+                    </p>
+                    <a
+                      href={selectedApp.jobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      View Job Posting
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {selectedApp.notes && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                      Notes
+                    </p>
+                    <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                        {selectedApp.notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Timeline */}
+                {selectedApp.history && selectedApp.history.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+                      Application Timeline
+                    </p>
+                    <div className="space-y-3">
+                      {selectedApp.history.map((entry, index) => (
+                        <div key={index} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                              {getStatusIcon(entry.status)}
+                            </div>
+                            {index < selectedApp.history.length - 1 && (
+                              <div className="h-full w-0.5 bg-gray-200 dark:bg-gray-700 my-1" />
+                            )}
+                          </div>
+                          <div className="flex-1 pb-4">
+                            <p className="font-medium text-gray-900 dark:text-white capitalize">
+                              {entry.status}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {entry.note}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                              {new Date(entry.date).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <button
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      setShowDeleteModal(true);
+                    }}
+                    className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-6 py-3 font-semibold text-red-600 hover:bg-red-50 dark:border-red-800 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-950/20"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDetailsModal(false);
+                      handleOpenEditModal(selectedApp);
+                    }}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
+                  >
+                    <Edit className="h-5 w-5" />
+                    Edit Application
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && selectedApp && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 dark:bg-gray-900">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                  <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Delete Application
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                Are you sure you want to delete the application for{" "}
+                <strong>{selectedApp.positionTitle}</strong> at{" "}
+                <strong>{selectedApp.companyName}</strong>?
+              </p>
+
+              <div className="flex items-center justify-end gap-3">
                 <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    resetForm();
-                  }}
-                  disabled={isSubmitting}
-                  className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750 disabled:opacity-50"
+                  onClick={() => setShowDeleteModal(false)}
+                  className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  onClick={handleDeleteApplication}
+                  className="rounded-lg bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-5 w-5" />
-                      {isEditMode ? "Update Application" : "Save Application"}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Details Modal - Coming next */}
-      {showDetailsModal && selectedApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white dark:bg-gray-900">
-            <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Application Details
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowDetailsModal(false);
-                    setSelectedApp(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Company and Position */}
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  {selectedApp.companyName}
-                </h3>
-                <p className="text-lg text-gray-600 dark:text-gray-400">
-                  {selectedApp.positionTitle}
-                </p>
-              </div>
-
-              {/* Status and Priority */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(selectedApp.status)}
-                  <span className="font-medium text-gray-900 dark:text-white capitalize">
-                    {selectedApp.status}
-                  </span>
-                </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-sm font-medium ${getPriorityColor(
-                    selectedApp.priority
-                  )}`}
-                >
-                  {selectedApp.priority} priority
-                </span>
-              </div>
-
-              {/* Details Grid */}
-              <div className="grid gap-4 md:grid-cols-2">
-                {selectedApp.appliedDate && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Applied Date
-                    </p>
-                    <p className="text-gray-900 dark:text-white">
-                      {new Date(selectedApp.appliedDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-
-                {selectedApp.followUpDate && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Follow-up Date
-                    </p>
-                    <p className="text-gray-900 dark:text-white">
-                      {new Date(selectedApp.followUpDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-
-                {selectedApp.location && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Location
-                    </p>
-                    <p className="text-gray-900 dark:text-white">
-                      {selectedApp.location}
-                      {selectedApp.isRemote && (
-                        <span className="ml-2 text-green-600 dark:text-green-400">
-                          (Remote)
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                )}
-
-                {selectedApp.salary && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Salary Range
-                    </p>
-                    <p className="text-gray-900 dark:text-white">
-                      {selectedApp.salary}
-                    </p>
-                  </div>
-                )}
-
-                {selectedApp.contactPerson && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Contact Person
-                    </p>
-                    <p className="text-gray-900 dark:text-white">
-                      {selectedApp.contactPerson}
-                    </p>
-                  </div>
-                )}
-
-                {selectedApp.contactEmail && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Contact Email
-                    </p>
-                    <p className="text-gray-900 dark:text-white">
-                      {selectedApp.contactEmail}
-                    </p>
-                  </div>
-                )}
-
-                {selectedApp.resumeVersion && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      Resume Version
-                    </p>
-                    <p className="text-gray-900 dark:text-white">
-                      {selectedApp.resumeVersion}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Job URL */}
-              {selectedApp.jobUrl && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Job Posting
-                  </p>
-                  <a
-                    href={selectedApp.jobUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    View Job Posting
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </div>
-              )}
-
-              {/* Notes */}
-              {selectedApp.notes && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Notes
-                  </p>
-                  <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-                    <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                      {selectedApp.notes}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Timeline */}
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
-                  Application Timeline
-                </p>
-                <div className="space-y-3">
-                  {selectedApp.history.map((entry, index) => (
-                    <div key={index} className="flex gap-3">
-                      <div className="flex flex-col items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                          {getStatusIcon(entry.status)}
-                        </div>
-                        {index < selectedApp.history.length - 1 && (
-                          <div className="h-full w-0.5 bg-gray-200 dark:bg-gray-700 my-1" />
-                        )}
-                      </div>
-                      <div className="flex-1 pb-4">
-                        <p className="font-medium text-gray-900 dark:text-white capitalize">
-                          {entry.status}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {entry.note}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                          {new Date(entry.date).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
-                <button
-                  onClick={() => {
-                    setShowDetailsModal(false);
-                    setShowDeleteModal(true);
-                  }}
-                  className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-6 py-3 font-semibold text-red-600 hover:bg-red-50 dark:border-red-800 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-950/20"
-                >
-                  <Trash2 className="h-5 w-5" />
-                  Delete
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDetailsModal(false);
-                    handleOpenEditModal(selectedApp);
-                  }}
-                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
-                >
-                  <Edit className="h-5 w-5" />
-                  Edit Application
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 dark:bg-gray-900">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Delete Application
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  This action cannot be undone
-                </p>
+                </button>
               </div>
             </div>
-
-            <p className="text-gray-700 dark:text-gray-300 mb-6">
-              Are you sure you want to delete the application for{" "}
-              <strong>{selectedApp.positionTitle}</strong> at{" "}
-              <strong>{selectedApp.companyName}</strong>?
-            </p>
-
-            <div className="flex items-center justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteApplication}
-                className="rounded-lg bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700"
-              >
-                Delete Application
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );
 }
 
-
 export default function TrackerPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading tracker...</p>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="inline-block h-8 w-8 animate-spin text-blue-600" />
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading tracker...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <TrackerContent />
     </Suspense>
   );

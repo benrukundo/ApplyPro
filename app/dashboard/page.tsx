@@ -28,6 +28,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  CreditCard,
 } from 'lucide-react';
 import CancelSubscriptionModal from '@/components/CancelSubscriptionModal';
 import {
@@ -152,7 +153,6 @@ function DashboardContent() {
             setIsLoadingSubscription(false);
             setIsPolling(false);
 
-            // Clear the query parameter
             window.history.replaceState({}, '', '/dashboard');
             return;
           }
@@ -316,6 +316,10 @@ function DashboardContent() {
     }
   };
 
+  // Check if credits/usage exhausted
+  const isCreditsExhausted = subscription?.isActive && 
+    subscription.monthlyUsageCount >= subscription.monthlyLimit;
+
   if (!session?.user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -357,8 +361,8 @@ function DashboardContent() {
         {/* Subscription Card */}
         {!isLoadingSubscription && (
           <div className="mb-8 bg-white rounded-2xl shadow-lg p-8 border-2 border-blue-100">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
+            <div className="flex items-start justify-between flex-wrap gap-6">
+              <div className="flex-1 min-w-[300px]">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Sparkles className="w-6 h-6 text-blue-600" />
                   Your Plan
@@ -374,7 +378,7 @@ function DashboardContent() {
                         {subscription?.plan === 'monthly' || subscription?.plan === 'yearly'
                           ? `${subscription.monthlyLimit} resumes per month`
                           : subscription?.plan === 'pay-per-use'
-                            ? `${subscription.monthlyLimit - subscription.monthlyUsageCount} credits remaining`
+                            ? `${Math.max(0, subscription.monthlyLimit - subscription.monthlyUsageCount)} credits remaining`
                             : 'Limited access'}
                       </p>
                     </div>
@@ -394,7 +398,7 @@ function DashboardContent() {
                       </div>
                     )}
 
-                    {/* Usage Progress */}
+                    {/* Usage Progress for Monthly/Yearly */}
                     {(subscription?.plan === 'monthly' || subscription?.plan === 'yearly') &&
                       !subscription?.cancelledAt && (
                         <div>
@@ -406,7 +410,9 @@ function DashboardContent() {
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3">
                             <div
-                              className="bg-blue-600 h-3 rounded-full transition-all"
+                              className={`h-3 rounded-full transition-all ${
+                                isCreditsExhausted ? 'bg-red-500' : 'bg-blue-600'
+                              }`}
                               style={{
                                 width: `${Math.min(100, (subscription.monthlyUsageCount / subscription.monthlyLimit) * 100)}%`,
                               }}
@@ -416,6 +422,16 @@ function DashboardContent() {
                             <Calendar className="w-3 h-3 inline mr-1" />
                             Resets in {subscription.daysUntilReset} days
                           </p>
+
+                          {/* Monthly/Yearly Limit Reached */}
+                          {isCreditsExhausted && (
+                            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                              <p className="text-amber-900 font-semibold mb-1">Monthly Limit Reached</p>
+                              <p className="text-sm text-amber-800 mb-3">
+                                You've used all {subscription.monthlyLimit} resumes this month. Resets in {subscription.daysUntilReset} days.
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -430,12 +446,43 @@ function DashboardContent() {
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-3">
                           <div
-                            className="bg-green-600 h-3 rounded-full transition-all"
+                            className={`h-3 rounded-full transition-all ${
+                              isCreditsExhausted ? 'bg-red-500' : 'bg-green-600'
+                            }`}
                             style={{
                               width: `${(subscription.monthlyUsageCount / subscription.monthlyLimit) * 100}%`,
                             }}
                           />
                         </div>
+
+                        {/* Credits Exhausted Warning */}
+                        {isCreditsExhausted && (
+                          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                            <div className="flex items-start gap-3">
+                              <CreditCard className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <p className="text-amber-900 font-semibold mb-1">All Credits Used</p>
+                                <p className="text-sm text-amber-800 mb-3">
+                                  Purchase more credits or upgrade to a monthly plan for more generations.
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  <Link
+                                    href="/pricing"
+                                    className="px-4 py-2 bg-amber-600 text-white text-sm rounded-lg font-medium hover:bg-amber-700 transition-colors"
+                                  >
+                                    Buy More Credits
+                                  </Link>
+                                  <Link
+                                    href="/pricing"
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                                  >
+                                    Upgrade to Pro
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -452,21 +499,40 @@ function DashboardContent() {
                 )}
               </div>
 
-              <div className="flex flex-col gap-3 ml-6">
+              <div className="flex flex-col gap-3">
                 {subscription?.isActive && !subscription?.cancelledAt ? (
                   <>
-                    <Link
-                      href="/generate"
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
-                    >
-                      Generate Resume
-                    </Link>
-                    <button
-                      onClick={() => setShowCancelModal(true)}
-                      className="px-6 py-3 bg-white border-2 border-red-200 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors"
-                    >
-                      Cancel Subscription
-                    </button>
+                    {isCreditsExhausted ? (
+                      <>
+                        <Link
+                          href="/pricing"
+                          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-colors text-center"
+                        >
+                          {subscription.plan === 'pay-per-use' ? 'Buy More Credits' : 'View Plans'}
+                        </Link>
+                        <button
+                          onClick={() => setShowCancelModal(true)}
+                          className="px-6 py-3 bg-white border-2 border-red-200 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors"
+                        >
+                          Cancel Subscription
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          href="/generate"
+                          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
+                        >
+                          Generate Resume
+                        </Link>
+                        <button
+                          onClick={() => setShowCancelModal(true)}
+                          className="px-6 py-3 bg-white border-2 border-red-200 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors"
+                        >
+                          Cancel Subscription
+                        </button>
+                      </>
+                    )}
                   </>
                 ) : subscription?.cancelledAt ? (
                   <>
