@@ -10,6 +10,7 @@ import { sendUsageAlertEmail, sendLimitReachedEmail } from '@/lib/emailTemplates
  * - Requires active subscription
  * - NO character limits on resume or job description (sends full content to AI)
  * - Uses Claude Sonnet 4 for highest quality output
+ * - Saves generation history to database
  * - Free preview at /api/preview has 1500 char limits
  */
 
@@ -43,6 +44,45 @@ function sanitizeInput(text: string): string {
     .replace(/\b(you\s+are|act\s+as|pretend\s+to\s+be|roleplay\s+as)\b/gi, '[REMOVED]')
     .replace(/<\/?[a-z]+>/gi, '')
     .trim();
+}
+
+// Extract job title and company from job description
+function extractJobInfo(jobDescription: string): { jobTitle: string | null; company: string | null } {
+  let jobTitle: string | null = null;
+  let company: string | null = null;
+
+  // Common patterns for job titles
+  const titlePatterns = [
+    /(?:job\s*title|position|role)\s*[:\-]?\s*([^\n,]+)/i,
+    /(?:we(?:'re| are)\s+(?:looking|hiring|seeking)\s+(?:for\s+)?(?:a|an)\s+)([^\n,\.]+)/i,
+    /^([A-Z][a-zA-Z\s]+(?:Engineer|Developer|Manager|Designer|Analyst|Specialist|Coordinator|Director|Lead|Senior|Junior|Associate))/m,
+  ];
+
+  for (const pattern of titlePatterns) {
+    const match = jobDescription.match(pattern);
+    if (match && match[1]) {
+      jobTitle = match[1].trim().substring(0, 100);
+      break;
+    }
+  }
+
+  // Common patterns for company names
+  const companyPatterns = [
+    /(?:company|organization|employer)\s*[:\-]?\s*([^\n,]+)/i,
+    /(?:at|@)\s+([A-Z][a-zA-Z0-9\s&]+(?:Inc|LLC|Ltd|Corp|Company|Co)?\.?)/,
+    /(?:about\s+)([A-Z][a-zA-Z0-9\s&]+)(?:\s+is\s+)/,
+    /^([A-Z][a-zA-Z0-9\s&]+)(?:\s+is\s+(?:looking|hiring|seeking))/m,
+  ];
+
+  for (const pattern of companyPatterns) {
+    const match = jobDescription.match(pattern);
+    if (match && match[1]) {
+      company = match[1].trim().substring(0, 100);
+      break;
+    }
+  }
+
+  return { jobTitle, company };
 }
 
 // Initialize Anthropic client
@@ -144,6 +184,10 @@ export async function POST(request: NextRequest) {
     const body: GenerateRequest = await request.json();
     let { resumeText, jobDescription } = body;
 
+    // Store original inputs for history (before sanitization)
+    const originalResumeSnippet = resumeText.substring(0, 500);
+    const originalJobDescSnippet = jobDescription.substring(0, 500);
+
     // Validate inputs
     if (!resumeText || typeof resumeText !== "string") {
       return NextResponse.json(
@@ -158,6 +202,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Extract job info before sanitization
+    const { jobTitle, company } = extractJobInfo(jobDescription);
 
     // Sanitize inputs
     resumeText = sanitizeInput(resumeText);
@@ -284,6 +331,27 @@ Create:
         { error: "Generated content too short. Please try again with more details." },
         { status: 500 }
       );
+    }
+
+    // Save generation to history
+    try {
+      await prisma.generatedResume.create({
+        data: {
+          userId: session.user.id,
+          jobTitle: jobTitle,
+          company: company,
+          fullResume: parsedResponse.fullResume,
+          atsResume: parsedResponse.atsOptimizedResume,
+          coverLetter: parsedResponse.coverLetter,
+          matchScore: parsedResponse.matchScore,
+          originalResumeSnippet: originalResumeSnippet,
+          jobDescriptionSnippet: originalJobDescSnippet,
+        },
+      });
+      console.log(`Generation saved to history for user ${session.user.id}`);
+    } catch (historyError) {
+      // Log error but don't fail the request - user still gets their resume
+      console.error('Failed to save generation to history:', historyError);
     }
 
     // Update usage count in database

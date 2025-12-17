@@ -23,8 +23,19 @@ import {
   Calendar,
   TrendingUp,
   RefreshCw,
+  FileText,
+  Download,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import CancelSubscriptionModal from '@/components/CancelSubscriptionModal';
+import {
+  generatePDF,
+  generateDOCX,
+  generateCoverLetterPDF,
+  generateCoverLetterDOCX,
+} from '@/lib/documentGenerator';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +50,17 @@ interface SubscriptionInfo {
   cancelledAt?: string;
 }
 
+interface GenerationHistory {
+  id: string;
+  jobTitle: string | null;
+  company: string | null;
+  matchScore: number;
+  createdAt: string;
+  fullResume: string;
+  atsResume: string;
+  coverLetter: string;
+}
+
 function DashboardContent() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -51,6 +73,13 @@ function DashboardContent() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelMessage, setCancelMessage] = useState('');
   const [isPolling, setIsPolling] = useState(false);
+
+  // Generation history state
+  const [generations, setGenerations] = useState<GenerationHistory[]>([]);
+  const [isLoadingGenerations, setIsLoadingGenerations] = useState(true);
+  const [expandedGeneration, setExpandedGeneration] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -77,40 +106,57 @@ function DashboardContent() {
     return null;
   };
 
+  // Load generation history
+  const loadGenerations = async () => {
+    try {
+      const response = await fetch('/api/user/generations?limit=10');
+      const data = await response.json();
+
+      if (response.ok) {
+        setGenerations(data.generations);
+      }
+    } catch (err) {
+      console.error('Error loading generations:', err);
+    } finally {
+      setIsLoadingGenerations(false);
+    }
+  };
+
   useEffect(() => {
     if (session?.user?.id) {
       loadSubscription();
+      loadGenerations();
     }
   }, [session?.user?.id]);
 
   // Handle post-payment polling
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
-    
+
     if (paymentStatus === 'success' && session?.user?.id) {
       let attempts = 0;
       const maxAttempts = 10;
-      
+
       setIsPolling(true);
       setIsLoadingSubscription(true);
-      
+
       const pollSubscription = async () => {
         attempts++;
-        
+
         try {
           const response = await fetch('/api/user/subscription');
           const data = await response.json();
-          
+
           if (response.ok && data.subscription?.isActive && !data.subscription?.cancelledAt) {
             setSubscription(data.subscription);
             setIsLoadingSubscription(false);
             setIsPolling(false);
-            
+
             // Clear the query parameter
             window.history.replaceState({}, '', '/dashboard');
             return;
           }
-          
+
           if (attempts < maxAttempts) {
             setTimeout(pollSubscription, 1500);
           } else {
@@ -127,7 +173,7 @@ function DashboardContent() {
           }
         }
       };
-      
+
       pollSubscription();
     }
   }, [searchParams, session?.user?.id]);
@@ -146,7 +192,65 @@ function DashboardContent() {
     loadSubscription();
   };
 
- 
+  // Handle download from history
+  const handleDownload = async (
+    generation: GenerationHistory,
+    type: 'resume' | 'ats' | 'cover',
+    format: 'pdf' | 'docx'
+  ) => {
+    setDownloadingId(generation.id);
+
+    try {
+      const timestamp = new Date(generation.createdAt).toISOString().split('T')[0];
+      const companySlug = generation.company?.replace(/[^a-zA-Z0-9]/g, '_') || 'Resume';
+
+      if (type === 'cover') {
+        const content = generation.coverLetter;
+        if (format === 'pdf') {
+          await generateCoverLetterPDF(content, `Cover_Letter_${companySlug}_${timestamp}.pdf`);
+        } else {
+          await generateCoverLetterDOCX(content, `Cover_Letter_${companySlug}_${timestamp}.docx`);
+        }
+      } else {
+        const content = type === 'ats' ? generation.atsResume : generation.fullResume;
+        const baseName = type === 'ats' ? 'ATS_Resume' : 'Resume';
+        const template = type === 'ats' ? 'ats' : 'modern';
+
+        if (format === 'pdf') {
+          await generatePDF(content, `${baseName}_${companySlug}_${timestamp}.pdf`, template);
+        } else {
+          await generateDOCX(content, `${baseName}_${companySlug}_${timestamp}.docx`, template);
+        }
+      }
+    } catch (err) {
+      console.error('Error downloading:', err);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  // Handle delete generation
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this generation? This cannot be undone.')) {
+      return;
+    }
+
+    setDeletingId(id);
+
+    try {
+      const response = await fetch(`/api/user/generations?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setGenerations((prev) => prev.filter((g) => g.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting generation:', err);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Filter applications
   const filteredApplications = applications
@@ -233,7 +337,7 @@ function DashboardContent() {
         {cancelMessage && (
           <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between">
             <p className="text-green-800 font-medium">{cancelMessage}</p>
-            <button 
+            <button
               onClick={() => setCancelMessage('')}
               className="text-green-600 hover:text-green-800"
             >
@@ -278,9 +382,7 @@ function DashboardContent() {
                     {/* Cancellation Warning */}
                     {subscription?.cancelledAt && subscription?.currentPeriodEnd && (
                       <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p className="text-amber-900 font-semibold mb-1">
-                          Subscription Cancelled
-                        </p>
+                        <p className="text-amber-900 font-semibold mb-1">Subscription Cancelled</p>
                         <p className="text-sm text-amber-800">
                           Access until{' '}
                           {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
@@ -293,28 +395,29 @@ function DashboardContent() {
                     )}
 
                     {/* Usage Progress */}
-                    {(subscription?.plan === 'monthly' || subscription?.plan === 'yearly') && !subscription?.cancelledAt && (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">Usage This Month</span>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {subscription.monthlyUsageCount} / {subscription.monthlyLimit}
-                          </span>
+                    {(subscription?.plan === 'monthly' || subscription?.plan === 'yearly') &&
+                      !subscription?.cancelledAt && (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-700">Usage This Month</span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {subscription.monthlyUsageCount} / {subscription.monthlyLimit}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div
+                              className="bg-blue-600 h-3 rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, (subscription.monthlyUsageCount / subscription.monthlyLimit) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-600 mt-2">
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            Resets in {subscription.daysUntilReset} days
+                          </p>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-3">
-                          <div
-                            className="bg-blue-600 h-3 rounded-full transition-all"
-                            style={{
-                              width: `${Math.min(100, (subscription.monthlyUsageCount / subscription.monthlyLimit) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-600 mt-2">
-                          <Calendar className="w-3 h-3 inline mr-1" />
-                          Resets in {subscription.daysUntilReset} days
-                        </p>
-                      </div>
-                    )}
+                      )}
 
                     {/* Pay-per-use credits */}
                     {subscription?.plan === 'pay-per-use' && (
@@ -412,6 +515,179 @@ function DashboardContent() {
           currentPeriodEnd={subscription?.currentPeriodEnd}
         />
 
+        {/* Generation History */}
+        <div className="mb-8 bg-white rounded-2xl shadow-lg p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <FileText className="w-6 h-6 text-blue-600" />
+              Recent Generations
+            </h2>
+            <Link
+              href="/generate"
+              className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+            >
+              Generate New →
+            </Link>
+          </div>
+
+          {isLoadingGenerations ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            </div>
+          ) : generations.length > 0 ? (
+            <div className="space-y-4">
+              {generations.map((gen) => (
+                <div
+                  key={gen.id}
+                  className="border border-gray-200 rounded-xl overflow-hidden"
+                >
+                  {/* Generation Header */}
+                  <div
+                    className="p-4 bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() =>
+                      setExpandedGeneration(expandedGeneration === gen.id ? null : gen.id)
+                    }
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {gen.jobTitle || 'Resume'}{' '}
+                          {gen.company && (
+                            <span className="text-gray-500 font-normal">at {gen.company}</span>
+                          )}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(gen.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm text-gray-500">Match Score</p>
+                        <p className="font-bold text-blue-600">{gen.matchScore}%</p>
+                      </div>
+                      {expandedGeneration === gen.id ? (
+                        <ChevronUp className="w-5 h-5 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded Content */}
+                  {expandedGeneration === gen.id && (
+                    <div className="p-4 border-t border-gray-200">
+                      <div className="grid md:grid-cols-3 gap-4 mb-4">
+                        {/* Tailored Resume */}
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <p className="font-medium text-gray-900 mb-2">Tailored Resume</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleDownload(gen, 'resume', 'pdf')}
+                              disabled={downloadingId === gen.id}
+                              className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center gap-1"
+                            >
+                              <Download className="w-4 h-4" />
+                              PDF
+                            </button>
+                            <button
+                              onClick={() => handleDownload(gen, 'resume', 'docx')}
+                              disabled={downloadingId === gen.id}
+                              className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center gap-1"
+                            >
+                              <Download className="w-4 h-4" />
+                              DOCX
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* ATS Resume */}
+                        <div className="p-4 bg-green-50 rounded-lg">
+                          <p className="font-medium text-gray-900 mb-2">ATS-Optimized</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleDownload(gen, 'ats', 'pdf')}
+                              disabled={downloadingId === gen.id}
+                              className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-1"
+                            >
+                              <Download className="w-4 h-4" />
+                              PDF
+                            </button>
+                            <button
+                              onClick={() => handleDownload(gen, 'ats', 'docx')}
+                              disabled={downloadingId === gen.id}
+                              className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:bg-gray-400 flex items-center justify-center gap-1"
+                            >
+                              <Download className="w-4 h-4" />
+                              DOCX
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Cover Letter */}
+                        <div className="p-4 bg-purple-50 rounded-lg">
+                          <p className="font-medium text-gray-900 mb-2">Cover Letter</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleDownload(gen, 'cover', 'pdf')}
+                              disabled={downloadingId === gen.id}
+                              className="flex-1 px-3 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:bg-gray-400 flex items-center justify-center gap-1"
+                            >
+                              <Download className="w-4 h-4" />
+                              PDF
+                            </button>
+                            <button
+                              onClick={() => handleDownload(gen, 'cover', 'docx')}
+                              disabled={downloadingId === gen.id}
+                              className="flex-1 px-3 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:bg-gray-400 flex items-center justify-center gap-1"
+                            >
+                              <Download className="w-4 h-4" />
+                              DOCX
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Delete Button */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleDelete(gen.id)}
+                          disabled={deletingId === gen.id}
+                          className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {deletingId === gen.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-600 mb-2">No generations yet</p>
+              <Link href="/generate" className="text-blue-600 hover:text-blue-700 font-medium">
+                Generate your first resume →
+              </Link>
+            </div>
+          )}
+        </div>
+
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-12">
           <div className="bg-white rounded-xl shadow-md p-6">
@@ -451,10 +727,7 @@ function DashboardContent() {
               <div>
                 <p className="text-gray-600 text-sm font-medium">Success Rate</p>
                 <p className="text-3xl font-bold text-green-600 mt-2">
-                  {stats.total > 0
-                    ? ((stats.offer / stats.total) * 100).toFixed(1)
-                    : 0}
-                  %
+                  {stats.total > 0 ? ((stats.offer / stats.total) * 100).toFixed(1) : 0}%
                 </p>
               </div>
               <TrendingUp className="w-12 h-12 text-green-600 opacity-10" />
@@ -475,8 +748,7 @@ function DashboardContent() {
                       <p className="text-sm text-gray-600">{app.positionTitle}</p>
                     </div>
                     <span className="text-sm text-yellow-700 font-medium">
-                      Follow up on{' '}
-                      {new Date(app.followUpDate || 0).toLocaleDateString()}
+                      Follow up on {new Date(app.followUpDate || 0).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
@@ -551,9 +823,7 @@ function DashboardContent() {
                       <td className="px-6 py-4 text-gray-700">{app.positionTitle}</td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                            app.status
-                          )}`}
+                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(app.status)}`}
                         >
                           {getStatusIcon(app.status)}
                           {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
@@ -571,11 +841,8 @@ function DashboardContent() {
             <div className="text-center py-12">
               <Briefcase className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 mb-4">No applications found</p>
-              <Link
-                href="/tracker"
-                className="text-blue-600 hover:text-blue-700 font-semibold"
-              >
-                Start tracking applications →
+              <Link href="/tracker" className="text-blue-600 hover:text-blue-700 font-semibold">
+                Start tracking applications
               </Link>
             </div>
           )}
@@ -588,11 +855,13 @@ function DashboardContent() {
 // Main export with Suspense wrapper
 export default function DashboardPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        </div>
+      }
+    >
       <DashboardContent />
     </Suspense>
   );
