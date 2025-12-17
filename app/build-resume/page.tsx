@@ -1497,49 +1497,230 @@ export default function BuildResumePage() {
                         </div>
                       )}
 
-                      {/* Modern Template Preview */}
+                      {/* Modern Template Preview - Matches PDF exactly */}
                       {selectedTemplate === 'modern' && (
-                        <div className="font-sans">
-                          {/* Colored Header */}
-                          <div className="p-6 text-white" style={{ backgroundColor: selectedColor.hex }}>
-                            <h1 className="text-2xl font-bold mb-1">{formData.fullName}</h1>
-                            <p className="text-lg opacity-90 mb-3">{formData.targetJobTitle}</p>
-                            <div className="flex flex-wrap gap-4 text-sm opacity-80">
-                              {formData.email && <span className="flex items-center gap-1"><Mail className="w-4 h-4" /> {formData.email}</span>}
-                              {formData.phone && <span className="flex items-center gap-1"><Phone className="w-4 h-4" /> {formData.phone}</span>}
-                              {formData.location && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {formData.location}</span>}
-                            </div>
+                        <div className="font-sans flex" style={{ minHeight: '800px', maxHeight: '800px' }}>
+                          {/* LEFT SIDEBAR - Colored background matching PDF */}
+                          <div
+                            className="w-64 p-5 flex-shrink-0 overflow-y-auto"
+                            style={{
+                              backgroundColor: `${selectedColor.hex}15`, // 15 is hex for ~8% opacity
+                            }}
+                          >
+                            {/* Contact Section */}
+                            {(formData.email || formData.phone || formData.location || formData.linkedin) && (
+                              <div className="mb-6">
+                                <h3
+                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
+                                  style={{ color: selectedColor.hex }}
+                                >
+                                  CONTACT
+                                </h3>
+                                <div className="space-y-2 text-xs text-gray-700">
+                                  {formData.email && (
+                                    <div className="flex items-start gap-2">
+                                      <Mail className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: selectedColor.hex }} />
+                                      <span className="break-all">{formData.email}</span>
+                                    </div>
+                                  )}
+                                  {formData.phone && (
+                                    <div className="flex items-start gap-2">
+                                      <Phone className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: selectedColor.hex }} />
+                                      <span>{formData.phone}</span>
+                                    </div>
+                                  )}
+                                  {formData.location && (
+                                    <div className="flex items-start gap-2">
+                                      <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: selectedColor.hex }} />
+                                      <span>{formData.location}</span>
+                                    </div>
+                                  )}
+                                  {formData.linkedin && (
+                                    <div className="text-xs break-all">{formData.linkedin}</div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Skills Section */}
+                            {(formData.skills.technical.length > 0 || formData.skills.soft.length > 0) && (
+                              <div className="mb-6">
+                                <h3
+                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
+                                  style={{ color: selectedColor.hex }}
+                                >
+                                  SKILLS
+                                </h3>
+                                <ul className="space-y-1.5 text-xs text-gray-700">
+                                  {[...formData.skills.technical, ...formData.skills.soft].slice(0, 15).map((skill, idx) => (
+                                    <li key={idx} className="flex items-start">
+                                      <span className="mr-2">•</span>
+                                      <span>{skill}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Education Section */}
+                            {formData.education.length > 0 && (
+                              <div className="mb-6">
+                                <h3
+                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
+                                  style={{ color: selectedColor.hex }}
+                                >
+                                  EDUCATION
+                                </h3>
+                                <div className="space-y-3 text-xs text-gray-700">
+                                  {formData.education.map((edu, idx) => (
+                                    <div key={idx}>
+                                      <div className="font-semibold">{edu.degree} {edu.field && `in ${edu.field}`}</div>
+                                      <div className="text-gray-600">{edu.school}</div>
+                                      {edu.startDate && (
+                                        <div className="text-gray-500 text-[10px]">
+                                          {edu.startDate} - {edu.current ? 'Present' : edu.endDate}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Certifications */}
+                            {formData.skills.certifications.length > 0 && (
+                              <div className="mb-6">
+                                <h3
+                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
+                                  style={{ color: selectedColor.hex }}
+                                >
+                                  CERTIFICATIONS
+                                </h3>
+                                <ul className="space-y-1.5 text-xs text-gray-700">
+                                  {formData.skills.certifications.map((cert, idx) => (
+                                    <li key={idx} className="flex items-start">
+                                      <span className="mr-2">•</span>
+                                      <span>{cert}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {/* Languages */}
+                            {formData.skills.languages.length > 0 && (
+                              <div className="mb-6">
+                                <h3
+                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
+                                  style={{ color: selectedColor.hex }}
+                                >
+                                  LANGUAGES
+                                </h3>
+                                <ul className="space-y-1.5 text-xs text-gray-700">
+                                  {formData.skills.languages.map((lang, idx) => (
+                                    <li key={idx} className="flex items-start">
+                                      <span className="mr-2">•</span>
+                                      <span>{lang}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
 
-                          {/* Resume Content - Fully visible to show quality */}
-                          <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
-                            {generatedResume.split('\n').map((line, idx) => {
-                              const trimmedLine = line.trim();
-                              if (!trimmedLine) return null;
+                          {/* RIGHT COLUMN - Main content */}
+                          <div className="flex-1 relative">
+                            {/* Top accent bar */}
+                            <div
+                              className="h-8 w-full absolute top-0 left-0"
+                              style={{ backgroundColor: selectedColor.hex }}
+                            />
 
-                              if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
-                                const headerText = trimmedLine.replace(/\*\*/g, '');
-                                return (
-                                  <h2 key={idx} className="text-lg font-bold mt-4 mb-2 pb-1 border-b-2" style={{ borderColor: selectedColor.hex, color: selectedColor.hex }}>
-                                    {headerText}
-                                  </h2>
-                                );
-                              }
+                            {/* Main content area */}
+                            <div className="pt-12 px-6 pb-6 overflow-y-auto" style={{ maxHeight: '800px' }}>
+                              {/* Name and Title */}
+                              <div className="mb-6">
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                                  {formData.fullName || 'Your Name'}
+                                </h1>
+                                <h2
+                                  className="text-lg font-medium"
+                                  style={{ color: selectedColor.hex }}
+                                >
+                                  {formData.targetJobTitle || 'Your Title'}
+                                </h2>
+                              </div>
 
-                              if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-')) {
-                                return (
-                                  <li key={idx} className="text-sm text-gray-700 ml-4 list-disc">
-                                    {trimmedLine.replace(/^[•-]\s*/, '')}
-                                  </li>
-                                );
-                              }
+                              {/* Summary Section */}
+                              {formData.summary && (
+                                <div className="mb-6">
+                                  <h3
+                                    className="text-sm font-bold mb-2 uppercase tracking-wider"
+                                    style={{ color: selectedColor.hex }}
+                                  >
+                                    PROFESSIONAL SUMMARY
+                                  </h3>
+                                  <p className="text-xs text-gray-700 leading-relaxed">
+                                    {formData.summary}
+                                  </p>
+                                </div>
+                              )}
 
-                              return (
-                                <p key={idx} className="text-sm text-gray-700 leading-relaxed">
-                                  {trimmedLine.replace(/\*\*/g, '')}
-                                </p>
-                              );
-                            })}
+                              {/* Experience Section */}
+                              {formData.experience.length > 0 && (
+                                <div className="mb-6">
+                                  <h3
+                                    className="text-sm font-bold mb-3 uppercase tracking-wider pb-1 border-b"
+                                    style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
+                                  >
+                                    EXPERIENCE
+                                  </h3>
+                                  <div className="space-y-4">
+                                    {formData.experience.map((exp, idx) => (
+                                      <div key={idx}>
+                                        <div className="flex justify-between items-start mb-1">
+                                          <div>
+                                            <h4 className="text-sm font-bold text-gray-900">{exp.title}</h4>
+                                            <p className="text-xs font-medium" style={{ color: selectedColor.hex }}>
+                                              {exp.company}
+                                            </p>
+                                          </div>
+                                          <span className="text-[10px] text-gray-500 whitespace-nowrap ml-2">
+                                            {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
+                                          </span>
+                                        </div>
+                                        {exp.location && (
+                                          <p className="text-[10px] text-gray-500 mb-2">{exp.location}</p>
+                                        )}
+                                        {exp.description && (
+                                          <div className="text-xs text-gray-700 leading-relaxed">
+                                            {exp.description.split('\n').map((line, i) => (
+                                              <p key={i} className="mb-1">
+                                                {line.startsWith('•') || line.startsWith('-') ? (
+                                                  <span className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>{line.replace(/^[•-]\s*/, '')}</span>
+                                                  </span>
+                                                ) : (
+                                                  line
+                                                )}
+                                              </p>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* AI Generated Content Preview */}
+                              {generatedResume && (
+                                <div className="text-xs text-gray-600 italic border-t pt-4 mt-4">
+                                  AI-enhanced content will appear here after generation...
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )}
