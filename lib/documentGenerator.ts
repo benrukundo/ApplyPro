@@ -1700,6 +1700,95 @@ export async function generateDOCX(
       return await generateModernDOCX(structure, color);
   }
 }
+// Cover Letter PDF Generator
+export async function generateCoverLetterPDF(
+  content: string,
+  template: 'modern' | 'traditional' | 'ats' = 'modern',
+  color: keyof typeof colorSchemes = 'blue'
+): Promise<Blob> {
+  const doc = new jsPDF();
+  const colors = colorSchemes[color];
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  let yPos = margin;
+
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
+  };
+
+  const primaryRgb = hexToRgb(colors.primary);
+
+  // Header line for modern template
+  if (template === 'modern') {
+    doc.setFillColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+    doc.rect(0, 0, pageWidth, 4, 'F');
+    yPos = 20;
+  }
+
+  // Set font based on template
+  const fontFamily = template === 'traditional' ? 'times' : 'helvetica';
+  
+  doc.setFontSize(11);
+  doc.setFont(fontFamily, 'normal');
+  doc.setTextColor(60, 60, 60);
+
+  // Split content into paragraphs and render
+  const paragraphs = content.split('\n\n').filter(p => p.trim());
+  
+  for (const paragraph of paragraphs) {
+    const lines = doc.splitTextToSize(paragraph.trim(), pageWidth - 2 * margin);
+    
+    if (yPos + lines.length * 6 > doc.internal.pageSize.getHeight() - margin) {
+      doc.addPage();
+      yPos = margin;
+    }
+    
+    doc.text(lines, margin, yPos);
+    yPos += lines.length * 6 + 8;
+  }
+
+  return doc.output('blob');
+}
+
+// Cover Letter DOCX Generator
+export async function generateCoverLetterDOCX(
+  content: string,
+  template: 'modern' | 'traditional' | 'ats' = 'modern',
+  color: keyof typeof colorSchemes = 'blue'
+): Promise<Blob> {
+  const colors = colorSchemes[color];
+  const fontFamily = template === 'traditional' ? 'Times New Roman' : undefined;
+
+  const paragraphs = content.split('\n\n').filter(p => p.trim());
+
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: paragraphs.map(paragraph => 
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: paragraph.trim(),
+              size: 22,
+              font: fontFamily,
+            }),
+          ],
+          spacing: { after: 200 },
+        })
+      ),
+    }],
+  });
+
+  return await Packer.toBlob(doc);
+}
+
+// Export ColorPreset type
+export type ColorPreset = keyof typeof colorSchemes;
 
 // Export types for use in other files
 export type { ResumeStructure };
