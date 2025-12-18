@@ -257,8 +257,7 @@ export default function GeneratePage() {
   };
 
   // Download handler using documentGenerator
-  // Download handler using documentGenerator
-const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 'docx') => {
+const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') => {
   console.log('=== DOWNLOAD DEBUG ===');
   console.log('Type:', type);
   console.log('Format:', format);
@@ -278,8 +277,6 @@ const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 
     let content = '';
     if (type === 'cover') {
       content = generatedResume?.coverLetter || '';
-    } else if (type === 'ats') {
-      content = generatedResume?.atsOptimizedResume || generatedResume?.fullResume || '';
     } else {
       content = generatedResume?.fullResume || '';
     }
@@ -301,16 +298,15 @@ const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 
         fileName = `Cover_Letter_${timestamp}.docx`;
       }
     } else {
-      // Resume (full or ats)
-      const baseName = type === 'ats' ? 'ATS_Optimized_Resume' : 'Tailored_Resume';
-      // ATS type always uses 'ats' template, full uses selected template
-      const template = type === 'ats' ? 'ats' : selectedTemplate;
+      // Resume with selected template
+      const templateName = selectedTemplate.charAt(0).toUpperCase() + selectedTemplate.slice(1);
+      const baseName = `${templateName}_Resume`;
 
       if (format === 'pdf') {
-        blob = await generatePDF(content, template, selectedColor.key);
+        blob = await generatePDF(content, selectedTemplate, selectedColor.key);
         fileName = `${baseName}_${timestamp}.pdf`;
       } else {
-        blob = await generateDOCX(content, template, selectedColor.key);
+        blob = await generateDOCX(content, selectedTemplate, selectedColor.key);
         fileName = `${baseName}_${timestamp}.docx`;
       }
     }
@@ -329,7 +325,7 @@ const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 
     trackEvent('resume_downloaded', {
       type: type,
       format: format,
-      template: type === 'ats' ? 'ats' : selectedTemplate,
+      template: selectedTemplate,
       color: selectedColor.key,
     });
 
@@ -861,12 +857,14 @@ const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-3 gap-8">
-              {/* Full Resume */}
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Resume with Selected Template */}
               <div className="bg-white rounded-2xl shadow-lg p-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                   <FileText className={`w-6 h-6 ${selectedColor.text}`} />
-                  Tailored Resume
+                  {selectedTemplate === 'modern' && 'Modern Resume'}
+                  {selectedTemplate === 'traditional' && 'Traditional Resume'}
+                  {selectedTemplate === 'ats' && 'ATS Resume'}
                 </h3>
                 <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
                   <div className="text-gray-800 whitespace-pre-wrap font-serif text-sm leading-relaxed">
@@ -877,36 +875,6 @@ const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 
                   onClick={() => handleDownload('resume', downloadFormat)}
                   disabled={isDownloading}
                   className={`mt-4 w-full px-6 py-3 ${selectedColor.accent} text-white rounded-lg font-semibold hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2`}
-                >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      Download as {downloadFormat.toUpperCase()}
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* ATS Optimized Resume */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <Target className="w-6 h-6 text-green-600" />
-                  ATS-Optimized Version
-                </h3>
-                <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
-                  <div className="text-gray-800 whitespace-pre-wrap font-mono text-sm leading-relaxed">
-                    {generatedResume.atsOptimizedResume}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDownload('ats', downloadFormat)}
-                  disabled={isDownloading}
-                  className="mt-4 w-full px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   {isDownloading ? (
                     <>
