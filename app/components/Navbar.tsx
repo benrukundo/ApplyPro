@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { Menu, X, LogOut, PenTool } from "lucide-react";
+import { Menu, X, LogOut, PenTool, Brain } from "lucide-react";
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -78,6 +78,28 @@ export default function Navbar() {
                   Build Resume
                 </Link>
                 <Link
+                  href="/interview-prep"
+                  className={`text-sm font-medium transition-colors hover:text-green-600 dark:hover:text-green-400 flex items-center gap-1 ${
+                    pathname === "/interview-prep"
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <Brain className="w-4 h-4" />
+                  Interview Prep
+                </Link>
+                <Link
+                  href="/interview-prep"
+                  className={`text-sm font-medium transition-colors hover:text-green-600 dark:hover:text-green-400 flex items-center gap-1 ${
+                    pathname === "/interview-prep"
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <Brain className="w-4 h-4" />
+                  Interview Prep
+                </Link>
+                <Link
                   href="/ats-checker"
                   className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
                     pathname === "/ats-checker"
@@ -130,6 +152,17 @@ export default function Navbar() {
                 >
                   <PenTool className="w-4 h-4" />
                   Build Resume
+                </Link>
+                <Link
+                  href="/interview-prep"
+                  className={`text-sm font-medium transition-colors hover:text-green-600 dark:hover:text-green-400 flex items-center gap-1 ${
+                    pathname === "/interview-prep"
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <Brain className="w-4 h-4" />
+                  Interview Prep
                 </Link>
                 <Link
                   href="/ats-checker"
