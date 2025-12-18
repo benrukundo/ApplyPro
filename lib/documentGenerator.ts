@@ -539,13 +539,19 @@ function parseSkillsSection(content: string, structure: ResumeStructure): void {
     
     if (technicalMatch) {
       cleanLine = cleanLine.replace(technicalMatch[0], '');
-      const skills = cleanLine.split(/[•]/).map(s => s.trim()).filter(s => s.length > 1);
-      
+      // Split by both bullets and commas to handle all formats
+      let skills: string[] = [];
+      if (cleanLine.includes('•')) {
+        skills = cleanLine.split(/[•]/).map(s => s.trim()).filter(s => s.length > 1);
+      } else if (cleanLine.includes(',')) {
+        skills = cleanLine.split(',').map(s => s.trim()).filter(s => s.length > 1);
+      } else if (cleanLine.trim()) {
+        skills = [cleanLine.trim()];
+      }
+
       for (const skill of skills) {
         // Check if it's a certification
         if (certificationPattern.test(skill)) {
-          // Add to a certifications array (we'll store in soft skills with a marker for now)
-          // Or we can add a certifications field to structure
           continue; // Skip certifications in technical
         }
         structure.skills.technical.push(skill);
@@ -553,14 +559,20 @@ function parseSkillsSection(content: string, structure: ResumeStructure): void {
     }
     else if (professionalMatch) {
       cleanLine = cleanLine.replace(professionalMatch[0], '');
-      const skills = cleanLine.split(/[•]/).map(s => s.trim()).filter(s => s.length > 1);
-      
+      // Split by both bullets and commas to handle all formats
+      let skills: string[] = [];
+      if (cleanLine.includes('•')) {
+        skills = cleanLine.split(/[•]/).map(s => s.trim()).filter(s => s.length > 1);
+      } else if (cleanLine.includes(',')) {
+        skills = cleanLine.split(',').map(s => s.trim()).filter(s => s.length > 1);
+      } else if (cleanLine.trim()) {
+        skills = [cleanLine.trim()];
+      }
+
       for (const skill of skills) {
         // Check if it's a certification (has year like (2023))
         if (certificationPattern.test(skill)) {
-          // Don't add certifications to professional skills
-          // We'll handle them separately
-          continue;
+          continue; // Skip certifications
         }
         structure.skills.soft.push(skill);
       }
