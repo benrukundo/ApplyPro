@@ -1143,29 +1143,49 @@ function generateTraditionalPDF(structure: ResumeStructure): jsPDF {
 
     if (structure.skills.technical.length > 0) {
       doc.setFont('times', 'bold');
-      doc.text('Technical Skills: ', margin, yPos);
+      doc.text('Technical Skills:', margin, yPos);
+      yPos += 5;
       doc.setFont('times', 'normal');
-      const techText = structure.skills.technical.join(', ');
-      const techLines = doc.splitTextToSize(techText, pageWidth - 2 * margin - 30);
-      doc.text(techLines, margin + 30, yPos);
-      yPos += techLines.length * 4 + 4;
+
+      for (const skill of structure.skills.technical) {
+        if (yPos > pageHeight - 20) break;
+        const skillLines = doc.splitTextToSize('• ' + skill, pageWidth - 2 * margin - 5);
+        skillLines.forEach((line: string) => {
+          doc.text(line, margin + 5, yPos);
+          yPos += 4;
+        });
+      }
+      yPos += 2;
     }
 
     if (structure.skills.soft.length > 0) {
       doc.setFont('times', 'bold');
-      doc.text('Professional Skills: ', margin, yPos);
+      doc.text('Professional Skills:', margin, yPos);
+      yPos += 5;
       doc.setFont('times', 'normal');
-      const softText = structure.skills.soft.join(', ');
-      const softLines = doc.splitTextToSize(softText, pageWidth - 2 * margin - 35);
-      doc.text(softLines, margin + 35, yPos);
-      yPos += softLines.length * 4 + 4;
+
+      for (const skill of structure.skills.soft) {
+        if (yPos > pageHeight - 20) break;
+        const skillLines = doc.splitTextToSize('• ' + skill, pageWidth - 2 * margin - 5);
+        skillLines.forEach((line: string) => {
+          doc.text(line, margin + 5, yPos);
+          yPos += 4;
+        });
+      }
+      yPos += 2;
     }
 
     if (structure.skills.languages && structure.skills.languages.length > 0) {
       doc.setFont('times', 'bold');
-      doc.text('Languages: ', margin, yPos);
+      doc.text('Languages:', margin, yPos);
+      yPos += 5;
       doc.setFont('times', 'normal');
-      doc.text(structure.skills.languages.join(', '), margin + 25, yPos);
+
+      for (const lang of structure.skills.languages) {
+        if (yPos > pageHeight - 20) break;
+        doc.text('• ' + lang, margin + 5, yPos);
+        yPos += 4;
+      }
     }
   }
 
@@ -1300,10 +1320,18 @@ function generateATSPDF(structure: ResumeStructure): jsPDF {
       ...structure.skills.soft,
       ...(structure.skills.languages || [])
     ];
-    
-    const skillsText = allSkills.join(', ');
-    const lines = doc.splitTextToSize(skillsText, pageWidth - 2 * margin);
-    doc.text(lines, margin, yPos);
+
+    for (const skill of allSkills) {
+      if (yPos > pageHeight - 20) {
+        doc.addPage();
+        yPos = margin;
+      }
+      const skillLines = doc.splitTextToSize('• ' + skill, pageWidth - 2 * margin - 5);
+      skillLines.forEach((line: string) => {
+        doc.text(line, margin + 5, yPos);
+        yPos += 5;
+      });
+    }
   }
 
   return doc;
@@ -1925,35 +1953,51 @@ async function generateTraditionalDOCX(structure: ResumeStructure): Promise<Blob
             new Paragraph({
               children: [
                 new TextRun({
-                  text: 'Technical Skills: ',
+                  text: 'Technical Skills:',
                   bold: true,
                   size: 22,
                   font: 'Times New Roman',
                 }),
-                new TextRun({
-                  text: structure.skills.technical.join(', '),
-                  size: 22,
-                  font: 'Times New Roman',
-                }),
               ],
+              spacing: { after: 100 },
             }),
+            ...structure.skills.technical.map(skill =>
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `• ${skill}`,
+                    size: 22,
+                    font: 'Times New Roman',
+                  }),
+                ],
+                spacing: { after: 50 },
+              })
+            ),
           ] : []),
           ...(structure.skills.soft.length > 0 ? [
             new Paragraph({
               children: [
                 new TextRun({
-                  text: 'Professional Skills: ',
+                  text: 'Professional Skills:',
                   bold: true,
                   size: 22,
                   font: 'Times New Roman',
                 }),
-                new TextRun({
-                  text: structure.skills.soft.join(', '),
-                  size: 22,
-                  font: 'Times New Roman',
-                }),
               ],
+              spacing: { after: 100 },
             }),
+            ...structure.skills.soft.map(skill =>
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `• ${skill}`,
+                    size: 22,
+                    font: 'Times New Roman',
+                  }),
+                ],
+                spacing: { after: 50 },
+              })
+            ),
           ] : []),
         ] : []),
       ],
@@ -2122,18 +2166,21 @@ async function generateATSDOCX(structure: ResumeStructure): Promise<Blob> {
             ],
             spacing: { before: 200, after: 100 },
           }),
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: [
-                  ...structure.skills.technical,
-                  ...structure.skills.soft,
-                  ...(structure.skills.languages || []),
-                ].join(', '),
-                size: 22,
-              }),
-            ],
-          }),
+          ...[
+            ...structure.skills.technical,
+            ...structure.skills.soft,
+            ...(structure.skills.languages || []),
+          ].map(skill =>
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `• ${skill}`,
+                  size: 22,
+                }),
+              ],
+              spacing: { after: 50 },
+            })
+          ),
         ] : []),
       ],
     }],
