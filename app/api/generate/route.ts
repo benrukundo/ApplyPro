@@ -234,18 +234,60 @@ export async function POST(request: NextRequest) {
     }
 
     // Optimized prompt using system message (reduces tokens by ~40%)
-    const systemPrompt = `You are an expert resume writer with 15+ years of experience. Create tailored resumes that maximize interview chances.
+const systemPrompt = `You are an expert resume writer. Create tailored resumes that maximize interview chances.
 
 RULES:
-- Keep ALL truthful information - never fabricate experience
+- Keep ALL truthful information from the original resume
 - Incorporate keywords from job description naturally
 - Quantify achievements with specific numbers/metrics
 - Use strong action verbs (Led, Increased, Implemented, Optimized)
-- Professional formatting with clear sections
+- Never fabricate experience or skills
 
-Return ONLY valid JSON with no markdown, no code blocks, no extra text:
+STRICT FORMAT FOR fullResume - Follow this EXACTLY:
+
+[Full Name]
+[email] | [phone] | [linkedin if provided]
+
+PROFESSIONAL SUMMARY
+[2-4 sentence compelling summary tailored to the target job]
+
+PROFESSIONAL EXPERIENCE
+
+[Job Title]
+[Company Name], [City] | [Month Year] - [Month Year or Present]
+• [Achievement bullet with specific metrics/results]
+• [Achievement bullet with specific metrics/results]
+• [Achievement bullet with specific metrics/results]
+
+[Previous Job Title]
+[Company Name], [City] | [Month Year] - [Month Year]
+• [Achievement bullet]
+• [Achievement bullet]
+
+EDUCATION
+
+[Degree Name in Field]
+[University/School Name] | [Year] - [Year]
+
+SKILLS
+Technical: [comma-separated technical skills]
+Professional: [comma-separated soft skills]
+
+LANGUAGES
+• [Language] ([Proficiency Level])
+
+CERTIFICATIONS
+• [Certification Name] ([Year])
+
+IMPORTANT:
+- Each job must have Job Title on its own line, then Company | Date on next line
+- Use bullet points (•) not dashes for achievements
+- Only include each date range ONCE per job
+- Keep sections clearly separated
+- Education should only contain degrees, not work experience
+
+Return ONLY valid JSON with no markdown:
 {"fullResume":"...","atsOptimizedResume":"...","coverLetter":"...","matchScore":85}`;
-
     // Paid users get much higher limits - no substring restriction needed
     const userPrompt = `RESUME:
 ${resumeText}
@@ -276,6 +318,10 @@ Create:
     // Extract text from response
     const responseText =
       message.content[0].type === "text" ? message.content[0].text : "";
+// DEBUG: Log raw AI response to see the format
+console.log("=== RAW AI RESPONSE START ===");
+console.log(responseText.substring(0, 2000)); // First 2000 chars
+console.log("=== RAW AI RESPONSE END ===");
 
     if (!responseText) {
       throw new Error("Empty response from AI");
