@@ -1787,6 +1787,48 @@ export async function generateCoverLetterDOCX(
   return await Packer.toBlob(doc);
 }
 
+// Add these new functions at the end of documentGenerator.ts, before the existing exports
+
+// Generate PDF from structured data (for builder flow - no parsing needed)
+export async function generatePDFFromStructure(
+  structure: ResumeStructure,
+  template: 'modern' | 'traditional' | 'ats' = 'modern',
+  color: keyof typeof colorSchemes = 'blue'
+): Promise<Blob> {
+  let doc: jsPDF;
+  
+  switch (template) {
+    case 'traditional':
+      doc = generateTraditionalPDF(structure);
+      break;
+    case 'ats':
+      doc = generateATSPDF(structure);
+      break;
+    case 'modern':
+    default:
+      doc = generateModernPDF(structure, color);
+      break;
+  }
+  
+  return doc.output('blob');
+}
+
+// Generate DOCX from structured data (for builder flow - no parsing needed)
+export async function generateDOCXFromStructure(
+  structure: ResumeStructure,
+  template: 'modern' | 'traditional' | 'ats' = 'modern',
+  color: keyof typeof colorSchemes = 'blue'
+): Promise<Blob> {
+  switch (template) {
+    case 'traditional':
+      return await generateTraditionalDOCX(structure);
+    case 'ats':
+      return await generateATSDOCX(structure);
+    case 'modern':
+    default:
+      return await generateModernDOCX(structure, color);
+  }
+}
 // Export ColorPreset type
 export type ColorPreset = keyof typeof colorSchemes;
 

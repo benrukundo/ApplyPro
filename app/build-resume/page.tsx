@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { generatePDF, generateDOCX, generatePDFFromStructure, generateDOCXFromStructure, type ColorPreset, type ResumeStructure } from '@/lib/documentGenerator';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -29,7 +30,6 @@ import {
   MapPin,
 } from 'lucide-react';
 import { trackEvent } from '@/components/PostHogProvider';
-import { generatePDF, generateDOCX, type ColorPreset } from '@/lib/documentGenerator';
 
 export const dynamic = 'force-dynamic';
 
@@ -447,7 +447,101 @@ export default function BuildResumePage() {
       setIsGenerating(false);
     }
   };
+// Build ResumeStructure directly from formData (bypasses text parsing entirely)
+const buildStructureFromFormData = (): ResumeStructure => {
+  // Extract AI-enhanced summary if available
+  let summary = formData.summary || '';
+  
+  if (enhancedPreview || generatedResume) {
+    const aiContent = enhancedPreview || generatedResume || '';
+    const summaryMatch = aiContent.match(/##\s*PROFESSIONAL\s*SUMMARY\s*\n([\s\S]*?)(?=##|$)/i);
+    if (summaryMatch) {
+      summary = summaryMatch[1].trim();
+    }
+  }
 
+  // Extract AI-enhanced experience achievements if available
+  const enhancedExperience = formData.experience.map(exp => {
+    let achievements: string[] = [];
+    
+    // Try to find AI-enhanced achievements for this job
+    if (enhancedPreview || generatedResume) {
+      const aiContent = enhancedPreview || generatedResume || '';
+      // Look for this job's section in AI content
+      const jobPattern = new RegExp(
+        `${exp.title}[\\s\\S]*?${exp.company}[\\s\\S]*?(?=\\n##|\\n\\*\\*[A-Z]|$)`,
+        'i'
+      );
+      const jobMatch = aiContent.match(jobPattern);
+      
+      if (jobMatch) {
+        // Extract bullet points from the AI content
+        const bullets = jobMatch[0].match(/[-•]\s*([^\n]+)/g);
+        if (bullets && bullets.length > 0) {
+          achievements = bullets.map(b => b.replace(/^[-•]\s*/, '').trim()).filter(b => b.length > 10);
+        }
+      }
+    }
+    
+    // Fallback to parsing description if no AI achievements found
+    if (achievements.length === 0 && exp.description) {
+      achievements = exp.description
+        .split(/[\n.]+/)
+        .map(line => line.trim())
+        .filter(line => line.length > 15);
+    }
+
+    // Format dates properly
+    const startFormatted = formatMonthYear(exp.startDate);
+    const endFormatted = exp.current ? 'Present' : formatMonthYear(exp.endDate);
+    const period = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
+
+    return {
+      title: exp.title,
+      company: exp.company,
+      location: exp.location,
+      period: period,
+      achievements: achievements,
+    };
+  });
+
+  // Build education entries
+  const education = formData.education.map(edu => {
+    const startFormatted = formatMonthYear(edu.startDate);
+    const endFormatted = edu.current ? 'Present' : formatMonthYear(edu.endDate);
+    const period = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
+
+    return {
+      degree: `${edu.degree}${edu.field ? ' in ' + edu.field : ''}`,
+      school: edu.school,
+      period: period,
+      details: edu.highlights || (edu.gpa ? `GPA: ${edu.gpa}` : undefined),
+    };
+  });
+
+  const structure: ResumeStructure = {
+    name: formData.fullName,
+    contact: {
+      email: formData.email,
+      phone: formData.phone,
+      location: formData.location,
+      linkedin: formData.linkedin,
+      portfolio: formData.portfolio,
+    },
+    summary: summary,
+    experience: enhancedExperience,
+    education: education,
+    skills: {
+      technical: formData.skills.technical,
+      soft: formData.skills.soft,
+      languages: formData.skills.languages,
+    },
+  };
+
+  console.log('[BUILD-RESUME] Built structure:', JSON.stringify(structure, null, 2).substring(0, 1000));
+
+  return structure;
+};
   // Build complete resume for download (combines formData with AI content)
   // Build complete resume for download (combines formData with AI content)
 const buildCompleteResume = (): string => {
@@ -672,7 +766,7 @@ const formatMonthYear = (dateStr: string): string => {
     return;
   }
 
-  // Check for content - FIXED: Check BOTH enhancedPreview AND generatedResume
+  // Check for content
   const resumeContent = enhancedPreview || generatedResume;
   
   if (!resumeContent) {
@@ -680,7 +774,6 @@ const formatMonthYear = (dateStr: string): string => {
     return;
   }
 
-  // Additional check: Verify subscription server-side before allowing download
   setIsDownloading(true);
   setError('');
 
@@ -701,17 +794,22 @@ const formatMonthYear = (dateStr: string): string => {
       return;
     }
 
-    // Build complete resume with all sections for PDF/DOCX parser
-    const completeResumeContent = buildCompleteResume();
-    console.log('[BUILD-RESUME] Complete resume built, length:', completeResumeContent.length);
+    // Build structured data directly from formData (NO TEXT PARSING!)
+    const structure = buildStructureFromFormData();
+    
+    console.log('[BUILD-RESUME] Structure built:', {
+      name: structure.name,
+      experienceCount: structure.experience.length,
+      educationCount: structure.education.length,
+      skillsCount: structure.skills.technical.length + structure.skills.soft.length,
+    });
 
     const timestamp = new Date().toISOString().split('T')[0];
     const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
 
-    // Use the complete resume content (which incorporates AI-enhanced content)
     if (format === 'pdf') {
-      const blob = await generatePDF(
-        completeResumeContent,
+      const blob = await generatePDFFromStructure(
+        structure,
         selectedTemplate,
         selectedColor.key
       );
@@ -725,8 +823,8 @@ const formatMonthYear = (dateStr: string): string => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } else {
-      const blob = await generateDOCX(
-        completeResumeContent,
+      const blob = await generateDOCXFromStructure(
+        structure,
         selectedTemplate,
         selectedColor.key
       );
@@ -761,7 +859,6 @@ const formatMonthYear = (dateStr: string): string => {
     setIsDownloading(false);
   }
 };
-
   const addEducation = () => {
     const newEntry: Education = {
       id: Date.now().toString(),
