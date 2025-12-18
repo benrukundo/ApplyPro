@@ -448,6 +448,7 @@ function parseResumeToStructure(content: string): ResumeStructure {
 
 // Generate Modern Template PDF
 // Generate Modern Template PDF
+// Generate Modern Template PDF
 function generateModernPDF(structure: ResumeStructure, color: keyof typeof colorSchemes): jsPDF {
   const doc = new jsPDF();
   const colors = colorSchemes[color];
@@ -469,7 +470,7 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
   const primaryRgb = hexToRgb(colors.primary);
   const lightRgb = hexToRgb(colors.light);
 
-  // Draw sidebar background
+  // Draw sidebar background for current page
   const drawSidebarBackground = () => {
     doc.setFillColor(lightRgb.r, lightRgb.g, lightRgb.b);
     doc.rect(0, 0, sidebarWidth, pageHeight, 'F');
@@ -488,7 +489,7 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
   // ============ SIDEBAR CONTENT ============
   let sideY = 15;
 
-  // Contact Section
+  // CONTACT Section
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
@@ -523,7 +524,7 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
 
   sideY += 8;
 
-  // Skills Section in Sidebar
+  // SKILLS Section
   if (structure.skills.technical.length > 0 || structure.skills.soft.length > 0) {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -540,7 +541,7 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
       sideY += 5;
       doc.setFont('helvetica', 'normal');
       structure.skills.technical.forEach(skill => {
-        doc.text(`• ${skill}`, margin, sideY, { maxWidth: sidebarWidth - margin - 5 });
+        doc.text('• ' + skill, margin, sideY, { maxWidth: sidebarWidth - margin - 5 });
         sideY += 4;
       });
       sideY += 3;
@@ -552,14 +553,14 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
       sideY += 5;
       doc.setFont('helvetica', 'normal');
       structure.skills.soft.forEach(skill => {
-        doc.text(`• ${skill}`, margin, sideY, { maxWidth: sidebarWidth - margin - 5 });
+        doc.text('• ' + skill, margin, sideY, { maxWidth: sidebarWidth - margin - 5 });
         sideY += 4;
       });
       sideY += 3;
     }
   }
 
-  // Languages Section in Sidebar
+  // LANGUAGES Section
   if (structure.skills.languages && structure.skills.languages.length > 0) {
     sideY += 5;
     doc.setFontSize(11);
@@ -572,12 +573,12 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(70, 70, 70);
     structure.skills.languages.forEach(lang => {
-      doc.text(`• ${lang}`, margin, sideY, { maxWidth: sidebarWidth - margin - 5 });
+      doc.text('• ' + lang, margin, sideY, { maxWidth: sidebarWidth - margin - 5 });
       sideY += 4;
     });
   }
 
-  // Education Section in Sidebar
+  // EDUCATION Section
   if (structure.education.length > 0) {
     sideY += 8;
     doc.setFontSize(11);
@@ -623,7 +624,7 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
   doc.text(structure.name || 'Your Name', mainX, yPos);
   yPos += 12;
 
-  // Professional Summary
+  // PROFESSIONAL SUMMARY
   if (structure.summary) {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -631,7 +632,6 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
     doc.text('PROFESSIONAL SUMMARY', mainX, yPos);
     yPos += 1;
     
-    // Underline
     doc.setDrawColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
     doc.setLineWidth(0.5);
     doc.line(mainX, yPos, mainX + 50, yPos);
@@ -645,7 +645,7 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
     yPos += summaryLines.length * 4 + 6;
   }
 
-  // Professional Experience
+  // PROFESSIONAL EXPERIENCE
   if (structure.experience.length > 0) {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -653,7 +653,6 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
     doc.text('PROFESSIONAL EXPERIENCE', mainX, yPos);
     yPos += 1;
     
-    // Underline
     doc.setDrawColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
     doc.setLineWidth(0.5);
     doc.line(mainX, yPos, mainX + 55, yPos);
@@ -663,38 +662,38 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
       // Calculate space needed for this job entry
       const spaceNeeded = 20 + (exp.achievements.length * 5);
       
-      // Check for page break - keep job title with at least 2 bullets
+      // Check for page break
       if (yPos > pageHeight - Math.min(spaceNeeded, 45)) {
         doc.addPage();
         drawSidebarBackground();
         yPos = 20;
       }
 
-      // Job Title (on its own line)
+      // Job Title
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(40, 40, 40);
       doc.text(exp.title, mainX, yPos);
       yPos += 4;
 
-      // Company, Location | Period (on second line)
+      // Company, Location | Period
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
       
       let companyLine = exp.company;
       if (exp.location) {
-        companyLine += `, ${exp.location}`;
+        companyLine += ', ' + exp.location;
       }
       
       doc.text(companyLine, mainX, yPos);
       
-      // Period on the right side
       if (exp.period) {
         doc.setTextColor(100, 100, 100);
         doc.setFont('helvetica', 'italic');
-        const periodWidth = doc.getTextWidth(exp.period);
-        doc.text(exp.period, mainX + mainWidth - periodWidth, yPos);
+        const periodText = ' | ' + exp.period;
+        const companyWidth = doc.getTextWidth(companyLine);
+        doc.text(periodText, mainX + companyWidth, yPos);
       }
       yPos += 5;
 
@@ -702,14 +701,13 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(60, 60, 60);
       for (const achievement of exp.achievements) {
-        // Check for page break before each bullet
         if (yPos > pageHeight - 15) {
           doc.addPage();
           drawSidebarBackground();
           yPos = 20;
         }
 
-        const bulletText = `• ${achievement}`;
+        const bulletText = '• ' + achievement;
         const achLines = doc.splitTextToSize(bulletText, mainWidth - 3);
         doc.text(achLines, mainX, yPos);
         yPos += achLines.length * 4 + 1;
