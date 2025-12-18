@@ -761,39 +761,50 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
     doc.setTextColor(70, 70, 70);
     doc.text('Technical:', margin, sideY);
     sideY += 4;
-    
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    
-    for (const skill of structure.skills.technical.slice(0, 15)) { // Limit to 15
-      // Truncate long skills
-      let displaySkill = skill.length > 25 ? skill.substring(0, 23) + '...' : skill;
-      doc.text('• ' + displaySkill, margin, sideY, { maxWidth: maxSkillWidth });
-      sideY += 3.5;
-      
+    doc.setTextColor(60, 60, 60);
+
+    // Display each skill on its own line with bullet
+    for (const skill of structure.skills.technical) {
       // Check if we're running out of space
-      if (sideY > pageHeight - 60) break;
+      if (sideY > pageHeight - 30) break;
+
+      // Split long skills across multiple lines if needed
+      const skillLines = doc.splitTextToSize('• ' + skill, maxSkillWidth);
+      skillLines.forEach((line: string) => {
+        doc.text(line, margin, sideY);
+        sideY += 3.5;
+      });
     }
-    sideY += 2;
+    sideY += 3;
   }
 
   if (structure.skills.soft.length > 0 && sideY < pageHeight - 40) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(70, 70, 70);
     doc.text('Professional:', margin, sideY);
     sideY += 4;
-    
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    
-    for (const skill of structure.skills.soft.slice(0, 10)) { // Limit to 10
-      let displaySkill = skill.length > 25 ? skill.substring(0, 23) + '...' : skill;
-      doc.text('• ' + displaySkill, margin, sideY, { maxWidth: maxSkillWidth });
-      sideY += 3.5;
-      
-      if (sideY > pageHeight - 40) break;
+    doc.setTextColor(60, 60, 60);
+
+    // Display each skill on its own line with bullet
+    for (const skill of structure.skills.soft) {
+      // Check if we're running out of space
+      if (sideY > pageHeight - 30) break;
+
+      // Split long skills across multiple lines if needed
+      const skillLines = doc.splitTextToSize('• ' + skill, maxSkillWidth);
+      skillLines.forEach((line: string) => {
+        doc.text(line, margin, sideY);
+        sideY += 3.5;
+      });
     }
-    sideY += 2;
+    sideY += 3;
   }
 }
 
