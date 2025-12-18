@@ -848,7 +848,7 @@ const buildCompleteResume = (): string => {
   }
 
   console.log('[BUILD-RESUME] Complete resume built, length:', resume.length);
-  console.log('[BUILD-RESUME] First 500 chars:', resume.substring(0, 500));
+  console.log('[BUILD-RESUME] Skills section preview:', resume.substring(resume.indexOf('## SKILLS'), resume.indexOf('## SKILLS') + 500));
 
   return resume;
 };
