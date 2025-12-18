@@ -453,41 +453,59 @@ export default function BuildResumePage() {
 const buildStructureFromFormData = (): ResumeStructure => {
   // Helper function to properly capitalize text
   const properCapitalize = (text: string): string => {
-    if (!text) return '';
-    
-    // Known acronyms that should stay uppercase
-    const acronyms = ['ICT', 'IT', 'CEO', 'CTO', 'CFO', 'MBA', 'PhD', 'MSc', 'BSc', 'BA', 'MA', 'HR', 'UI', 'UX', 'API', 'SQL', 'AWS', 'GCP', 'MVP', 'ULK', 'AUCA', 'SDG', 'USA', 'UK', 'UN'];
-    
-    // Words that should stay lowercase (unless at start)
-    const lowercaseWords = ['of', 'in', 'and', 'the', 'for', 'to', 'a', 'an', 'on', 'at', 'by', 'with'];
-    
-    return text.split(' ').map((word, index) => {
-      const upperWord = word.toUpperCase();
-      
-      // Check if it's a known acronym
-      if (acronyms.includes(upperWord)) {
-        return upperWord;
-      }
-      
-      // Handle hyphenated words like "e-health" -> "E-Health"
-      if (word.includes('-')) {
-        return word.split('-').map((part, i) => {
-          const upperPart = part.toUpperCase();
-          if (acronyms.includes(upperPart)) return upperPart;
-          return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
-        }).join('-');
-      }
-      
-      // Check if it should be lowercase (not at start of string)
-      if (index > 0 && lowercaseWords.includes(word.toLowerCase())) {
-        return word.toLowerCase();
-      }
-      
-      // Capitalize first letter
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    }).join(' ');
+  if (!text) return '';
+  
+  // Known acronyms that should stay uppercase
+  const acronyms = ['ICT', 'IT', 'CEO', 'CTO', 'CFO', 'MBA', 'PhD', 'MSc', 'BSc', 'BA', 'MA', 'HR', 'UI', 'UX', 'API', 'SQL', 'AWS', 'GCP', 'MVP', 'ULK', 'AUCA', 'SDG', 'USA', 'UK', 'UN'];
+  
+  // Words that should stay lowercase (unless at start)
+  const lowercaseWords = ['of', 'in', 'and', 'the', 'for', 'to', 'a', 'an', 'on', 'at', 'by', 'with'];
+  
+  // Special word replacements
+  const specialWords: Record<string, string> = {
+    'ehealth': 'E-Health',
+    'e-health': 'E-Health',
+    'healthcare': 'Healthcare',
+    'javascript': 'JavaScript',
+    'typescript': 'TypeScript',
+    'linkedin': 'LinkedIn',
+    'github': 'GitHub',
   };
-
+  
+  return text.split(' ').map((word, index) => {
+    const lowerWord = word.toLowerCase();
+    const upperWord = word.toUpperCase();
+    
+    // Check special words first
+    if (specialWords[lowerWord]) {
+      return specialWords[lowerWord];
+    }
+    
+    // Check if it's a known acronym
+    if (acronyms.includes(upperWord)) {
+      return upperWord;
+    }
+    
+    // Handle hyphenated words like "e-health" -> "E-Health"
+    if (word.includes('-')) {
+      return word.split('-').map((part, i) => {
+        const lowerPart = part.toLowerCase();
+        const upperPart = part.toUpperCase();
+        if (specialWords[lowerPart]) return specialWords[lowerPart];
+        if (acronyms.includes(upperPart)) return upperPart;
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+      }).join('-');
+    }
+    
+    // Check if it should be lowercase (not at start of string)
+    if (index > 0 && lowercaseWords.includes(lowerWord)) {
+      return lowerWord;
+    }
+    
+    // Capitalize first letter
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  }).join(' ');
+};
   // Helper to clean bullet points - remove garbage entries
   const cleanBulletPoints = (bullets: string[]): string[] => {
     return bullets.filter(bullet => {
@@ -582,10 +600,11 @@ const buildStructureFromFormData = (): ResumeStructure => {
     const period = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
 
     // Clean up degree formatting
-    let degree = properCapitalize(edu.degree);
-    if (edu.field) {
-      degree = `${degree} in ${properCapitalize(edu.field)}`;
-    }
+    // Clean up degree formatting - remove extra spaces
+let degree = properCapitalize(edu.degree.trim());
+if (edu.field && edu.field.trim()) {
+  degree = `${degree} in ${properCapitalize(edu.field.trim())}`;
+}
 
     return {
       degree: degree,

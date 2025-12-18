@@ -1002,228 +1002,376 @@ function generateATSPDF(structure: ResumeStructure): jsPDF {
 async function generateModernDOCX(structure: ResumeStructure, color: keyof typeof colorSchemes): Promise<Blob> {
   const colors = colorSchemes[color];
 
-  const doc = new Document({
-    sections: [{
-      properties: {},
+  // Build sidebar content (left column)
+  const sidebarChildren: Paragraph[] = [];
+  
+  // Contact Section
+  sidebarChildren.push(
+    new Paragraph({
       children: [
-        // Name
+        new TextRun({
+          text: 'CONTACT',
+          bold: true,
+          size: 22,
+          color: colors.primary.replace('#', ''),
+        }),
+      ],
+      spacing: { after: 150 },
+    })
+  );
+
+  if (structure.contact.email) {
+    sidebarChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: '✉ ', size: 18 }),
+          new TextRun({ text: structure.contact.email, size: 18, color: '4a4a4a' }),
+        ],
+        spacing: { after: 80 },
+      })
+    );
+  }
+
+  if (structure.contact.phone) {
+    sidebarChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: '✆ ', size: 18 }),
+          new TextRun({ text: structure.contact.phone, size: 18, color: '4a4a4a' }),
+        ],
+        spacing: { after: 80 },
+      })
+    );
+  }
+
+  if (structure.contact.location) {
+    sidebarChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: '⌂ ', size: 18 }),
+          new TextRun({ text: structure.contact.location, size: 18, color: '4a4a4a' }),
+        ],
+        spacing: { after: 80 },
+      })
+    );
+  }
+
+  if (structure.contact.linkedin) {
+    sidebarChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: structure.contact.linkedin, size: 18, color: '4a4a4a' }),
+        ],
+        spacing: { after: 80 },
+      })
+    );
+  }
+
+  // Skills Section in Sidebar
+  if (structure.skills.technical.length > 0 || structure.skills.soft.length > 0) {
+    sidebarChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'SKILLS',
+            bold: true,
+            size: 22,
+            color: colors.primary.replace('#', ''),
+          }),
+        ],
+        spacing: { before: 250, after: 150 },
+      })
+    );
+
+    if (structure.skills.technical.length > 0) {
+      sidebarChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: 'Technical:', bold: true, size: 18, color: '4a4a4a' }),
+          ],
+          spacing: { after: 50 },
+        })
+      );
+      structure.skills.technical.forEach(skill => {
+        sidebarChildren.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `• ${skill}`, size: 18, color: '4a4a4a' }),
+            ],
+            spacing: { after: 30 },
+          })
+        );
+      });
+    }
+
+    if (structure.skills.soft.length > 0) {
+      sidebarChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: 'Professional:', bold: true, size: 18, color: '4a4a4a' }),
+          ],
+          spacing: { before: 100, after: 50 },
+        })
+      );
+      structure.skills.soft.forEach(skill => {
+        sidebarChildren.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `• ${skill}`, size: 18, color: '4a4a4a' }),
+            ],
+            spacing: { after: 30 },
+          })
+        );
+      });
+    }
+  }
+
+  // Languages in Sidebar
+  if (structure.skills.languages && structure.skills.languages.length > 0) {
+    sidebarChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'LANGUAGES',
+            bold: true,
+            size: 22,
+            color: colors.primary.replace('#', ''),
+          }),
+        ],
+        spacing: { before: 250, after: 150 },
+      })
+    );
+    structure.skills.languages.forEach(lang => {
+      sidebarChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: `• ${lang}`, size: 18, color: '4a4a4a' }),
+          ],
+          spacing: { after: 30 },
+        })
+      );
+    });
+  }
+
+  // Education in Sidebar
+  if (structure.education.length > 0) {
+    sidebarChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'EDUCATION',
+            bold: true,
+            size: 22,
+            color: colors.primary.replace('#', ''),
+          }),
+        ],
+        spacing: { before: 250, after: 150 },
+      })
+    );
+
+    structure.education.forEach(edu => {
+      sidebarChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: edu.degree, bold: true, size: 18, color: '4a4a4a' }),
+          ],
+          spacing: { after: 30 },
+        })
+      );
+      if (edu.school) {
+        sidebarChildren.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: edu.school, size: 18, color: '666666' }),
+            ],
+            spacing: { after: 30 },
+          })
+        );
+      }
+      if (edu.period) {
+        sidebarChildren.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: edu.period, size: 16, italics: true, color: '888888' }),
+            ],
+            spacing: { after: 100 },
+          })
+        );
+      }
+    });
+  }
+
+  // Build main content (right column)
+  const mainChildren: Paragraph[] = [];
+
+  // Name
+  mainChildren.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: structure.name || 'Your Name',
+          bold: true,
+          size: 52,
+          color: colors.primary.replace('#', ''),
+        }),
+      ],
+      spacing: { after: 200 },
+    })
+  );
+
+  // Professional Summary
+  if (structure.summary) {
+    mainChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'PROFESSIONAL SUMMARY',
+            bold: true,
+            size: 24,
+            color: colors.primary.replace('#', ''),
+          }),
+        ],
+        spacing: { after: 100 },
+        border: {
+          bottom: { color: colors.primary.replace('#', ''), size: 6, style: BorderStyle.SINGLE },
+        },
+      })
+    );
+    mainChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: structure.summary, size: 20, color: '4a4a4a' }),
+        ],
+        spacing: { after: 250 },
+      })
+    );
+  }
+
+  // Professional Experience
+  if (structure.experience.length > 0) {
+    mainChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'PROFESSIONAL EXPERIENCE',
+            bold: true,
+            size: 24,
+            color: colors.primary.replace('#', ''),
+          }),
+        ],
+        spacing: { after: 100 },
+        border: {
+          bottom: { color: colors.primary.replace('#', ''), size: 6, style: BorderStyle.SINGLE },
+        },
+      })
+    );
+
+    structure.experience.forEach(exp => {
+      // Job Title
+      mainChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: exp.title, bold: true, size: 22, color: '2a2a2a' }),
+          ],
+          spacing: { before: 150 },
+        })
+      );
+
+      // Company, Location | Period
+      mainChildren.push(
         new Paragraph({
           children: [
             new TextRun({
-              text: structure.name || 'Your Name',
-              bold: true,
-              size: 48,
+              text: `${exp.company}${exp.location ? `, ${exp.location}` : ''}`,
+              size: 20,
               color: colors.primary.replace('#', ''),
             }),
-          ],
-          spacing: { after: 200 },
-        }),
-
-        // Contact Info
-        new Paragraph({
-          children: [
             new TextRun({
-              text: [
-                structure.contact.email,
-                structure.contact.phone ? `Phone: ${structure.contact.phone}` : '',
-                structure.contact.location ? `Location: ${structure.contact.location}` : '',
-                structure.contact.linkedin ? `LinkedIn: ${structure.contact.linkedin}` : '',
-              ].filter(Boolean).join(' | '),
+              text: exp.period ? ` | ${exp.period}` : '',
               size: 20,
-              color: '666666',
+              italics: true,
+              color: '888888',
             }),
           ],
-          spacing: { after: 300 },
+          spacing: { after: 80 },
+        })
+      );
+
+      // Achievements
+      exp.achievements.forEach(achievement => {
+        mainChildren.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `• ${achievement}`, size: 20, color: '4a4a4a' }),
+            ],
+            spacing: { after: 50 },
+          })
+        );
+      });
+    });
+  }
+
+  // Create two-column table layout
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: {
+          margin: {
+            top: convertInchesToTwip(0.5),
+            bottom: convertInchesToTwip(0.5),
+            left: convertInchesToTwip(0.3),
+            right: convertInchesToTwip(0.3),
+          },
+        },
+      },
+      children: [
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: {
+            top: { style: BorderStyle.NONE },
+            bottom: { style: BorderStyle.NONE },
+            left: { style: BorderStyle.NONE },
+            right: { style: BorderStyle.NONE },
+            insideHorizontal: { style: BorderStyle.NONE },
+            insideVertical: { style: BorderStyle.NONE },
+          },
+          rows: [
+            new TableRow({
+              children: [
+                // Left column (sidebar) - 30% width
+                new TableCell({
+                  width: { size: 28, type: WidthType.PERCENTAGE },
+                  shading: { fill: colors.light.replace('#', '') },
+                  margins: {
+                    top: convertInchesToTwip(0.2),
+                    bottom: convertInchesToTwip(0.2),
+                    left: convertInchesToTwip(0.2),
+                    right: convertInchesToTwip(0.15),
+                  },
+                  children: sidebarChildren,
+                }),
+                // Right column (main content) - 70% width
+                new TableCell({
+                  width: { size: 72, type: WidthType.PERCENTAGE },
+                  margins: {
+                    top: convertInchesToTwip(0.2),
+                    bottom: convertInchesToTwip(0.2),
+                    left: convertInchesToTwip(0.25),
+                    right: convertInchesToTwip(0.2),
+                  },
+                  children: mainChildren,
+                }),
+              ],
+            }),
+          ],
         }),
-
-        // Summary Section
-        ...(structure.summary ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: 'PROFESSIONAL SUMMARY',
-                bold: true,
-                size: 24,
-                color: colors.primary.replace('#', ''),
-              }),
-            ],
-            spacing: { before: 300, after: 100 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: structure.summary,
-                size: 22,
-              }),
-            ],
-            spacing: { after: 300 },
-          }),
-        ] : []),
-
-        // Experience Section
-        ...(structure.experience.length > 0 ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: 'PROFESSIONAL EXPERIENCE',
-                bold: true,
-                size: 24,
-                color: colors.primary.replace('#', ''),
-              }),
-            ],
-            spacing: { before: 300, after: 100 },
-          }),
-          ...structure.experience.flatMap(exp => [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: exp.title,
-                  bold: true,
-                  size: 24,
-                }),
-              ],
-              spacing: { before: 200 },
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `${exp.company}${exp.location ? `, ${exp.location}` : ''}`,
-                  size: 22,
-                  color: '666666',
-                }),
-                new TextRun({
-                  text: exp.period ? ` | ${exp.period}` : '',
-                  size: 22,
-                  italics: true,
-                  color: '666666',
-                }),
-              ],
-              spacing: { after: 100 },
-            }),
-            ...exp.achievements.map(ach => 
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: `• ${ach}`,
-                    size: 22,
-                  }),
-                ],
-                spacing: { after: 50 },
-              })
-            ),
-          ]),
-        ] : []),
-
-        // Education Section
-        ...(structure.education.length > 0 ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: 'EDUCATION',
-                bold: true,
-                size: 24,
-                color: colors.primary.replace('#', ''),
-              }),
-            ],
-            spacing: { before: 300, after: 100 },
-          }),
-          ...structure.education.flatMap(edu => [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: edu.degree,
-                  bold: true,
-                  size: 22,
-                }),
-                new TextRun({
-                  text: edu.school ? ` - ${edu.school}` : '',
-                  size: 22,
-                }),
-              ],
-            }),
-            ...(edu.period ? [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: edu.period,
-                    italics: true,
-                    size: 20,
-                    color: '666666',
-                  }),
-                ],
-                spacing: { after: 100 },
-              }),
-            ] : []),
-          ]),
-        ] : []),
-
-        // Skills Section
-        ...((structure.skills.technical.length > 0 || structure.skills.soft.length > 0 || (structure.skills.languages && structure.skills.languages.length > 0)) ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: 'SKILLS',
-                bold: true,
-                size: 24,
-                color: colors.primary.replace('#', ''),
-              }),
-            ],
-            spacing: { before: 300, after: 100 },
-          }),
-          ...(structure.skills.technical.length > 0 ? [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: 'Technical: ',
-                  bold: true,
-                  size: 22,
-                }),
-                new TextRun({
-                  text: structure.skills.technical.join(', '),
-                  size: 22,
-                }),
-              ],
-              spacing: { after: 50 },
-            }),
-          ] : []),
-          ...(structure.skills.soft.length > 0 ? [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: 'Professional: ',
-                  bold: true,
-                  size: 22,
-                }),
-                new TextRun({
-                  text: structure.skills.soft.join(', '),
-                  size: 22,
-                }),
-              ],
-              spacing: { after: 50 },
-            }),
-          ] : []),
-          ...((structure.skills.languages && structure.skills.languages.length > 0) ? [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: 'Languages: ',
-                  bold: true,
-                  size: 22,
-                }),
-                new TextRun({
-                  text: structure.skills.languages.join(', '),
-                  size: 22,
-                }),
-              ],
-            }),
-          ] : []),
-        ] : []),
       ],
     }],
   });
 
   return await Packer.toBlob(doc);
 }
+
 
 // Generate Traditional DOCX
 async function generateTraditionalDOCX(structure: ResumeStructure): Promise<Blob> {
