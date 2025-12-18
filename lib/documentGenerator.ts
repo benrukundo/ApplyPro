@@ -35,11 +35,14 @@ interface ResumeStructure {
 }
 
 // Color schemes for templates
+// Color schemes for templates
 const colorSchemes = {
   blue: { primary: '#2563eb', secondary: '#1e40af', accent: '#3b82f6', text: '#1f2937', light: '#eff6ff' },
-  green: { primary: '#059669', secondary: '#047857', accent: '#10b981', text: '#1f2937', light: '#ecfdf5' },
-  purple: { primary: '#7c3aed', secondary: '#6d28d9', accent: '#8b5cf6', text: '#1f2937', light: '#f5f3ff' },
+  green: { primary: '#16a34a', secondary: '#15803d', accent: '#22c55e', text: '#1f2937', light: '#f0fdf4' },
+  purple: { primary: '#9333ea', secondary: '#7e22ce', accent: '#a855f7', text: '#1f2937', light: '#faf5ff' },
   red: { primary: '#dc2626', secondary: '#b91c1c', accent: '#ef4444', text: '#1f2937', light: '#fef2f2' },
+  teal: { primary: '#0d9488', secondary: '#0f766e', accent: '#14b8a6', text: '#1f2937', light: '#f0fdfa' },
+  orange: { primary: '#ea580c', secondary: '#c2410c', accent: '#f97316', text: '#1f2937', light: '#fff7ed' },
   gray: { primary: '#4b5563', secondary: '#374151', accent: '#6b7280', text: '#1f2937', light: '#f9fafb' },
 };
 
