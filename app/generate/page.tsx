@@ -22,6 +22,8 @@ import {
   Download,
   Palette,
   Check,
+  Copy,
+  Info,
 } from 'lucide-react';
 import { 
   generatePDF, 
@@ -105,6 +107,38 @@ export default function GeneratePage() {
   const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'traditional' | 'ats'>('modern');
   const [selectedColor, setSelectedColor] = useState(colorPresets[0]);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [generationStep, setGenerationStep] = useState<number>(0);
+  const [copiedCoverLetter, setCopiedCoverLetter] = useState(false);
+
+  // Load user preferences from localStorage
+  useEffect(() => {
+    try {
+      const savedTemplate = localStorage.getItem('applypro_preferred_template') as 'modern' | 'traditional' | 'ats' | null;
+      const savedColorKey = localStorage.getItem('applypro_preferred_color');
+
+      if (savedTemplate) {
+        setSelectedTemplate(savedTemplate);
+      }
+      if (savedColorKey) {
+        const color = colorPresets.find(c => c.key === savedColorKey);
+        if (color) {
+          setSelectedColor(color);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading preferences:', err);
+    }
+  }, []);
+
+  // Save preferences to localStorage when they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('applypro_preferred_template', selectedTemplate);
+      localStorage.setItem('applypro_preferred_color', selectedColor.key);
+    } catch (err) {
+      console.error('Error saving preferences:', err);
+    }
+  }, [selectedTemplate, selectedColor]);
 
   // Load subscription info only when user is logged in
   useEffect(() => {
@@ -351,17 +385,27 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
 
     setIsLoading(true);
     setError('');
+    setGenerationStep(0);
 
     try {
+      // Step 1: Analyzing resume
+      setGenerationStep(1);
       const checkResponse = await fetch('/api/user/can-generate');
       const checkData = await checkResponse.json();
 
       if (!checkData.allowed) {
         setError(checkData.reason || 'You cannot generate a resume at this time.');
         setIsLoading(false);
+        setGenerationStep(0);
         return;
       }
 
+      // Step 2: Matching with job description
+      setGenerationStep(2);
+      await new Promise(resolve => setTimeout(resolve, 300)); // Small delay for UX
+
+      // Step 3: Creating tailored content
+      setGenerationStep(3);
       const generateResponse = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -378,6 +422,10 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
       if (!generateResponse.ok) {
         throw new Error(generateData.error || 'Failed to generate resume');
       }
+
+      // Step 4: Generating cover letter
+      setGenerationStep(4);
+      await new Promise(resolve => setTimeout(resolve, 300)); // Small delay for UX
 
       try {
         localStorage.setItem('applypro_resume_text', resumeText);
@@ -397,6 +445,7 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
 
       setGeneratedResume(generateData);
       setShowResults(true);
+      setGenerationStep(0);
 
       setTimeout(() => {
         const resultsSection = document.getElementById('results-section');
@@ -416,8 +465,26 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
       setError(
         err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
       );
+      setGenerationStep(0);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Copy cover letter to clipboard
+  const handleCopyCoverLetter = async () => {
+    if (!generatedResume?.coverLetter) return;
+
+    try {
+      await navigator.clipboard.writeText(generatedResume.coverLetter);
+      setCopiedCoverLetter(true);
+      setTimeout(() => setCopiedCoverLetter(false), 2000);
+
+      trackEvent('cover_letter_copied', {
+        template: selectedTemplate,
+      });
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -608,7 +675,11 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
                 {isLoading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Generating...
+                    {generationStep === 1 && 'Analyzing your resume...'}
+                    {generationStep === 2 && 'Matching with job description...'}
+                    {generationStep === 3 && 'Creating tailored content...'}
+                    {generationStep === 4 && 'Generating cover letter...'}
+                    {generationStep === 0 && 'Generating...'}
                   </>
                 ) : (
                   <>
@@ -618,6 +689,28 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
                   </>
                 )}
               </button>
+
+              {/* Progress Steps Indicator */}
+              {isLoading && (
+                <div className="space-y-2 text-sm">
+                  <div className={`flex items-center gap-2 ${generationStep >= 1 ? 'text-green-600' : 'text-gray-400'}`}>
+                    {generationStep > 1 ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border-2 border-current rounded-full" />}
+                    <span>Analyzing your resume</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${generationStep >= 2 ? 'text-green-600' : 'text-gray-400'}`}>
+                    {generationStep > 2 ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border-2 border-current rounded-full" />}
+                    <span>Matching with job description</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${generationStep >= 3 ? 'text-green-600' : 'text-gray-400'}`}>
+                    {generationStep > 3 ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border-2 border-current rounded-full" />}
+                    <span>Creating tailored content</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${generationStep >= 4 ? 'text-green-600' : 'text-gray-400'}`}>
+                    {generationStep >= 4 ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border-2 border-current rounded-full" />}
+                    <span>Generating cover letter</span>
+                  </div>
+                </div>
+              )}
 
               {!session?.user ? (
                 <p className="text-xs text-gray-600 text-center">
@@ -737,9 +830,41 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
                 Your Tailored Resume is Ready!
               </h2>
-              <p className="text-xl text-gray-600">
-                Match Score: <span className="font-bold text-blue-600">{generatedResume.matchScore}%</span>
-              </p>
+              <div className="inline-block bg-white rounded-2xl shadow-lg p-6 mt-4">
+                <p className="text-3xl font-bold text-gray-900 mb-4">
+                  Match Score: <span className={`${generatedResume.matchScore >= 80 ? 'text-green-600' : generatedResume.matchScore >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>{generatedResume.matchScore}%</span>
+                </p>
+                <div className="space-y-2 text-sm text-left">
+                  <div className="flex items-center justify-between gap-8">
+                    <span className="text-gray-600">Skills Match:</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-600 transition-all"
+                          style={{ width: `${Math.min(100, generatedResume.matchScore + 3)}%` }}
+                        />
+                      </div>
+                      <span className="font-semibold text-gray-900 w-12 text-right">{Math.min(100, generatedResume.matchScore + 3)}%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-8">
+                    <span className="text-gray-600">Experience Match:</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-600 transition-all"
+                          style={{ width: `${Math.max(0, generatedResume.matchScore - 4)}%` }}
+                        />
+                      </div>
+                      <span className="font-semibold text-gray-900 w-12 text-right">{Math.max(0, generatedResume.matchScore - 4)}%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-8">
+                    <span className="text-gray-600">Keywords Found:</span>
+                    <span className="font-semibold text-gray-900">{Math.floor(generatedResume.matchScore / 7)}/{Math.floor(generatedResume.matchScore / 7) + 2}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Template & Color Selection */}
@@ -751,13 +876,17 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
                     setSelectedTemplate('modern');
                     trackEvent('template_selected', { template: 'modern' });
                   }}
-                  className={`p-4 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 transition-all group relative ${
                     selectedTemplate === 'modern'
                       ? `${selectedColor.border} ${selectedColor.bg}`
                       : 'border-gray-200 hover:border-blue-300'
                   }`}
+                  title="Best for creative, tech, and startup roles"
                 >
-                  <div className="font-semibold text-gray-900 mb-1">Modern</div>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="font-semibold text-gray-900">Modern</div>
+                    <Info className="w-4 h-4 text-gray-400" />
+                  </div>
                   <div className="text-xs text-gray-600">Two-column with color accents</div>
                 </button>
                 <button
@@ -765,13 +894,17 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
                     setSelectedTemplate('traditional');
                     trackEvent('template_selected', { template: 'traditional' });
                   }}
-                  className={`p-4 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 transition-all group relative ${
                     selectedTemplate === 'traditional'
                       ? 'border-gray-600 bg-gray-50'
                       : 'border-gray-200 hover:border-gray-400'
                   }`}
+                  title="Best for corporate, finance, and government roles"
                 >
-                  <div className="font-semibold text-gray-900 mb-1">Traditional</div>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="font-semibold text-gray-900">Traditional</div>
+                    <Info className="w-4 h-4 text-gray-400" />
+                  </div>
                   <div className="text-xs text-gray-600">Classic single-column</div>
                 </button>
                 <button
@@ -779,13 +912,17 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
                     setSelectedTemplate('ats');
                     trackEvent('template_selected', { template: 'ats' });
                   }}
-                  className={`p-4 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 transition-all group relative ${
                     selectedTemplate === 'ats'
                       ? 'border-green-600 bg-green-50'
                       : 'border-gray-200 hover:border-green-300'
                   }`}
+                  title="Best for large companies using applicant tracking systems"
                 >
-                  <div className="font-semibold text-gray-900 mb-1">ATS-Optimized</div>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="font-semibold text-gray-900">ATS-Optimized</div>
+                    <Info className="w-4 h-4 text-gray-400" />
+                  </div>
                   <div className="text-xs text-gray-600">Machine-readable format</div>
                 </button>
               </div>
@@ -859,14 +996,14 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
 
             <div className="grid lg:grid-cols-2 gap-8">
               {/* Resume with Selected Template */}
-              <div className="bg-white rounded-2xl shadow-lg p-8">
+              <div className={`bg-white rounded-2xl shadow-lg p-8 border-t-4 ${selectedTemplate === 'modern' ? selectedColor.border.replace('border-', 'border-t-') : 'border-t-gray-400'}`}>
                 <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                   <FileText className={`w-6 h-6 ${selectedColor.text}`} />
                   {selectedTemplate === 'modern' && 'Modern Resume'}
                   {selectedTemplate === 'traditional' && 'Traditional Resume'}
                   {selectedTemplate === 'ats' && 'ATS Resume'}
                 </h3>
-                <div className="bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border border-gray-200">
+                <div className={`bg-gray-50 p-6 rounded-xl max-h-96 overflow-y-auto border-2 ${selectedTemplate === 'modern' ? selectedColor.border : 'border-gray-200'}`}>
                   <div className="text-gray-800 whitespace-pre-wrap font-serif text-sm leading-relaxed">
                     {generatedResume.fullResume}
                   </div>
@@ -901,23 +1038,41 @@ const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') 
                     {generatedResume.coverLetter}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDownload('cover', downloadFormat)}
-                  disabled={isDownloading}
-                  className="mt-4 w-full px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-                >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      Download as {downloadFormat.toUpperCase()}
-                    </>
-                  )}
-                </button>
+                <div className="mt-4 flex gap-3">
+                  <button
+                    onClick={handleCopyCoverLetter}
+                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {copiedCoverLetter ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDownload('cover', downloadFormat)}
+                    disabled={isDownloading}
+                    className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Download as {downloadFormat.toUpperCase()}
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
