@@ -704,21 +704,43 @@ const formatMonthYear = (dateStr: string): string => {
       const timestamp = new Date().toISOString().split('T')[0];
       const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
 
-      if (format === 'pdf') {
-        await generatePDF(
-          completeResumeContent,
-          `${fileName}.pdf`,
-          selectedTemplate,
-          selectedColor.key
-        );
-      } else {
-        await generateDOCX(
-          completeResumeContent,
-          `${fileName}.docx`,
-          selectedTemplate,
-          selectedColor.key
-        );
-      }
+if (!generatedResume) {
+  setError('No resume to download. Please generate a resume first.');
+  return;
+}
+
+if (format === 'pdf') {
+  const blob = await generatePDF(
+    generatedResume,
+    selectedTemplate,
+    selectedColor.key
+  );
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${fileName}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+} else {
+  const blob = await generateDOCX(
+    generatedResume,
+    selectedTemplate,
+    selectedColor.key
+  );
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${fileName}.docx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 
       trackEvent('builder_resume_downloaded', {
         format,
