@@ -25,6 +25,7 @@ import {
   PlayCircle,
   Sparkles,
   Info,
+  Eye,
 } from 'lucide-react';
 
 // Types
@@ -118,12 +119,34 @@ export default function InterviewPrepPage() {
   const [expandedQuestions, setExpandedQuestions] = useState<number[]>([0]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
+  // Saved preps count
+  const [savedPrepsCount, setSavedPrepsCount] = useState<number>(0);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login?callbackUrl=/interview-prep');
     }
   }, [status, router]);
+
+  // Load saved preps count
+  useEffect(() => {
+    const loadCount = async () => {
+      if (!session?.user?.id) return;
+
+      try {
+        const response = await fetch('/api/interview-prep/list');
+        if (response.ok) {
+          const data = await response.json();
+          setSavedPrepsCount(data.data.length);
+        }
+      } catch (err) {
+        console.error('Error loading saved preps count:', err);
+      }
+    };
+
+    loadCount();
+  }, [session?.user?.id]);
 
   // Extract text from PDF
   const extractPdfText = async (file: File): Promise<string> => {
@@ -305,9 +328,23 @@ export default function InterviewPrepPage() {
             <Brain className="w-10 h-10 text-blue-600" />
             Interview Preparation
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-600 mb-4">
             Get AI-powered interview questions and answers tailored to your experience
           </p>
+
+          {/* View Saved Preps Button */}
+          <Link
+            href="/interview-prep/saved"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm"
+          >
+            <Eye className="w-5 h-5" />
+            <span>View Saved Interview Preps</span>
+            {savedPrepsCount > 0 && (
+              <span className="px-2 py-0.5 bg-blue-600 text-white text-xs font-bold rounded-full">
+                {savedPrepsCount}
+              </span>
+            )}
+          </Link>
         </div>
 
         {!prepData ? (
