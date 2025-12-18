@@ -73,6 +73,14 @@ function properCapitalize(text: string): string {
     return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
   }).join(' ');
 }
+// Helper to clean markdown from text
+const cleanMarkdown = (text: string): string => {
+  return text
+    .replace(/^#+\s*/gm, '')  // Remove ## headers
+    .replace(/\*\*/g, '')      // Remove bold markers
+    .replace(/^\s*[-•]\s*/gm, '• ') // Normalize bullets
+    .trim();
+};
 
 // Helper function to clean and deduplicate job title
 function cleanJobTitle(title: string, company?: string): string {
@@ -382,13 +390,20 @@ function parseExperienceSection(content: string, structure: ResumeStructure): vo
         }
       }
       
-      currentJob = {
-        title: title,
-        company: company,
-        location: location,
-        period: period,
-        achievements: []
-      };
+      let cleanTitle = title;
+if (company && cleanTitle.toLowerCase().includes(company.toLowerCase())) {
+  cleanTitle = cleanTitle.replace(new RegExp(company, 'gi'), '').trim();
+}
+// Remove trailing pipes or commas
+cleanTitle = cleanTitle.replace(/[|,]\s*$/, '').trim();
+
+currentJob = {
+  title: cleanTitle,
+  company: company,
+  location: location,
+  period: period,
+  achievements: []
+};
     }
     // Non-bullet, non-date line - could be job title for next line
     else if (!isBullet && currentJob === null) {
@@ -500,40 +515,55 @@ function parseEducationSection(content: string, structure: ResumeStructure): voi
 }
 
 // Parse skills section
+// Parse skills section - ensure each skill is separate
 function parseSkillsSection(content: string, structure: ResumeStructure): void {
   const lines = content.split('\n').map(l => l.trim()).filter(l => l);
   
   for (const line of lines) {
-    const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
+    let cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
     
     if (!cleanLine) continue;
     
     // Check for category prefix
-    if (cleanLine.toLowerCase().startsWith('technical:') || 
-        cleanLine.toLowerCase().startsWith('technical skills:')) {
-      const skills = cleanLine.replace(/^technical\s*(skills)?:\s*/i, '').split(/[,;]/).map(s => s.trim()).filter(s => s);
+    const technicalMatch = cleanLine.match(/^technical\s*(skills)?:\s*/i);
+    const professionalMatch = cleanLine.match(/^(professional|soft\s*skills?):\s*/i);
+    
+    if (technicalMatch) {
+      cleanLine = cleanLine.replace(technicalMatch[0], '');
+      // Split by bullet points or commas
+      const skills = cleanLine.split(/[•,;]/).map(s => s.trim()).filter(s => s.length > 1);
       structure.skills.technical.push(...skills);
     }
-    else if (cleanLine.toLowerCase().startsWith('professional:') ||
-             cleanLine.toLowerCase().startsWith('soft skills:')) {
-      const skills = cleanLine.replace(/^(professional|soft\s*skills?):\s*/i, '').split(/[,;]/).map(s => s.trim()).filter(s => s);
+    else if (professionalMatch) {
+      cleanLine = cleanLine.replace(professionalMatch[0], '');
+      const skills = cleanLine.split(/[•,;]/).map(s => s.trim()).filter(s => s.length > 1);
       structure.skills.soft.push(...skills);
     }
-    // Check if line contains comma-separated skills
-    else if (cleanLine.includes(',')) {
-      const skills = cleanLine.split(',').map(s => s.trim()).filter(s => s.length > 1);
-      // Categorize based on content
+    // Line with bullets separating skills
+    else if (cleanLine.includes('•')) {
+      const skills = cleanLine.split('•').map(s => s.trim()).filter(s => s.length > 1);
       for (const skill of skills) {
-        if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker/i.test(skill)) {
+        if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql|windows|linux|server|network|dhis|openmrs|power bi/i.test(skill)) {
           structure.skills.technical.push(skill);
         } else {
           structure.skills.soft.push(skill);
         }
       }
     }
-    // Single skill as bullet point
-    else if (cleanLine.length > 2 && cleanLine.length < 50) {
-      if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql/i.test(cleanLine)) {
+    // Comma-separated skills
+    else if (cleanLine.includes(',')) {
+      const skills = cleanLine.split(',').map(s => s.trim()).filter(s => s.length > 1);
+      for (const skill of skills) {
+        if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql|windows|linux|server|network|dhis|openmrs|power bi/i.test(skill)) {
+          structure.skills.technical.push(skill);
+        } else {
+          structure.skills.soft.push(skill);
+        }
+      }
+    }
+    // Single skill
+    else if (cleanLine.length > 2 && cleanLine.length < 60) {
+      if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql|windows|linux|server|network|dhis|openmrs|power bi|virtualization|voip/i.test(cleanLine)) {
         structure.skills.technical.push(cleanLine);
       } else {
         structure.skills.soft.push(cleanLine);
