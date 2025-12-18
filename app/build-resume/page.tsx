@@ -758,8 +758,13 @@ const buildCompleteResume = (): string => {
   }
 
   // Skills section with smart categorization
-  const technicalSkills = formData.skills.technical;
-  const softSkills = formData.skills.soft;
+  // Split skills if they come as comma-separated strings
+  const technicalSkills = formData.skills.technical.flatMap((skill: string) =>
+    skill.includes(',') ? skill.split(',').map(s => s.trim()) : skill
+  );
+  const softSkills = formData.skills.soft.flatMap((skill: string) =>
+    skill.includes(',') ? skill.split(',').map(s => s.trim()) : skill
+  );
 
   if (technicalSkills.length > 0 || softSkills.length > 0) {
     resume += `## SKILLS\n`;
