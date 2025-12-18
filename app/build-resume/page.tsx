@@ -448,7 +448,63 @@ export default function BuildResumePage() {
     }
   };
 // Build ResumeStructure directly from formData (bypasses text parsing entirely)
+
+  // Build ResumeStructure directly from formData (bypasses text parsing entirely)
 const buildStructureFromFormData = (): ResumeStructure => {
+  // Helper function to properly capitalize text
+  const properCapitalize = (text: string): string => {
+    if (!text) return '';
+    
+    // Known acronyms that should stay uppercase
+    const acronyms = ['ICT', 'IT', 'CEO', 'CTO', 'CFO', 'MBA', 'PhD', 'MSc', 'BSc', 'BA', 'MA', 'HR', 'UI', 'UX', 'API', 'SQL', 'AWS', 'GCP', 'MVP', 'ULK', 'AUCA', 'SDG', 'USA', 'UK', 'UN'];
+    
+    // Words that should stay lowercase (unless at start)
+    const lowercaseWords = ['of', 'in', 'and', 'the', 'for', 'to', 'a', 'an', 'on', 'at', 'by', 'with'];
+    
+    return text.split(' ').map((word, index) => {
+      const upperWord = word.toUpperCase();
+      
+      // Check if it's a known acronym
+      if (acronyms.includes(upperWord)) {
+        return upperWord;
+      }
+      
+      // Handle hyphenated words like "e-health" -> "E-Health"
+      if (word.includes('-')) {
+        return word.split('-').map((part, i) => {
+          const upperPart = part.toUpperCase();
+          if (acronyms.includes(upperPart)) return upperPart;
+          return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+        }).join('-');
+      }
+      
+      // Check if it should be lowercase (not at start of string)
+      if (index > 0 && lowercaseWords.includes(word.toLowerCase())) {
+        return word.toLowerCase();
+      }
+      
+      // Capitalize first letter
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    }).join(' ');
+  };
+
+  // Helper to clean bullet points - remove garbage entries
+  const cleanBulletPoints = (bullets: string[]): string[] => {
+    return bullets.filter(bullet => {
+      const cleaned = bullet.trim().toLowerCase();
+      
+      // Filter out garbage entries
+      if (bullet.length < 20) return false; // Too short to be meaningful
+      if (cleaned.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$/i)) return false; // Just a date
+      if (cleaned.match(/^\d{4}$/)) return false; // Just a year
+      if (cleaned.includes('**')) return false; // Markdown artifacts
+      if (cleaned.match(/^[-–]\s*(present|current)$/i)) return false; // Just "Present"
+      if (cleaned.match(/specialist\*?\*?$/i) && bullet.length < 30) return false; // Partial job title
+      
+      return true;
+    });
+  };
+
   // Extract AI-enhanced summary if available
   let summary = formData.summary || '';
   
@@ -467,18 +523,29 @@ const buildStructureFromFormData = (): ResumeStructure => {
     // Try to find AI-enhanced achievements for this job
     if (enhancedPreview || generatedResume) {
       const aiContent = enhancedPreview || generatedResume || '';
-      // Look for this job's section in AI content
-      const jobPattern = new RegExp(
-        `${exp.title}[\\s\\S]*?${exp.company}[\\s\\S]*?(?=\\n##|\\n\\*\\*[A-Z]|$)`,
-        'i'
-      );
-      const jobMatch = aiContent.match(jobPattern);
       
-      if (jobMatch) {
-        // Extract bullet points from the AI content
-        const bullets = jobMatch[0].match(/[-•]\s*([^\n]+)/g);
-        if (bullets && bullets.length > 0) {
-          achievements = bullets.map(b => b.replace(/^[-•]\s*/, '').trim()).filter(b => b.length > 10);
+      // Look for this job's section in AI content - try multiple patterns
+      const companyEscaped = exp.company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const titleEscaped = exp.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
+      // Pattern to find the job section and its bullets
+      const jobPatterns = [
+        new RegExp(`${titleEscaped}[\\s\\S]*?${companyEscaped}[\\s\\S]*?(?=\\n##|\\n\\*\\*[A-Z][a-z]+\\s+[A-Z]|$)`, 'i'),
+        new RegExp(`${companyEscaped}[\\s\\S]*?(?=\\n##|\\n\\*\\*[A-Z][a-z]+\\s+[A-Z]|$)`, 'i'),
+      ];
+      
+      for (const pattern of jobPatterns) {
+        const jobMatch = aiContent.match(pattern);
+        if (jobMatch) {
+          // Extract bullet points from the AI content
+          const bullets = jobMatch[0].match(/[-•]\s*([^\n]+)/g);
+          if (bullets && bullets.length > 0) {
+            achievements = bullets
+              .map(b => b.replace(/^[-•]\s*/, '').trim())
+              .filter(b => b.length > 20); // Filter short/garbage entries
+            
+            if (achievements.length > 0) break;
+          }
         }
       }
     }
@@ -486,10 +553,13 @@ const buildStructureFromFormData = (): ResumeStructure => {
     // Fallback to parsing description if no AI achievements found
     if (achievements.length === 0 && exp.description) {
       achievements = exp.description
-        .split(/[\n.]+/)
-        .map(line => line.trim())
-        .filter(line => line.length > 15);
+        .split(/[\n]+/)
+        .map(line => line.replace(/^[-•*]\s*/, '').trim())
+        .filter(line => line.length > 20);
     }
+
+    // Clean up any garbage bullet points
+    achievements = cleanBulletPoints(achievements);
 
     // Format dates properly
     const startFormatted = formatMonthYear(exp.startDate);
@@ -497,9 +567,9 @@ const buildStructureFromFormData = (): ResumeStructure => {
     const period = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
 
     return {
-      title: exp.title,
-      company: exp.company,
-      location: exp.location,
+      title: properCapitalize(exp.title),
+      company: properCapitalize(exp.company),
+      location: properCapitalize(exp.location),
       period: period,
       achievements: achievements,
     };
@@ -511,20 +581,64 @@ const buildStructureFromFormData = (): ResumeStructure => {
     const endFormatted = edu.current ? 'Present' : formatMonthYear(edu.endDate);
     const period = startFormatted && endFormatted ? `${startFormatted} - ${endFormatted}` : '';
 
+    // Clean up degree formatting
+    let degree = properCapitalize(edu.degree);
+    if (edu.field) {
+      degree = `${degree} in ${properCapitalize(edu.field)}`;
+    }
+
     return {
-      degree: `${edu.degree}${edu.field ? ' in ' + edu.field : ''}`,
-      school: edu.school,
+      degree: degree,
+      school: properCapitalize(edu.school),
       period: period,
       details: edu.highlights || (edu.gpa ? `GPA: ${edu.gpa}` : undefined),
     };
   });
 
+  // Properly capitalize skills and languages
+  const capitalizeSkills = (skills: string[]): string[] => {
+    return skills.map(skill => {
+      // Technical skills - keep original casing for known tech terms
+      const techTerms: Record<string, string> = {
+        'javascript': 'JavaScript',
+        'typescript': 'TypeScript',
+        'python': 'Python',
+        'react': 'React',
+        'nodejs': 'Node.js',
+        'node.js': 'Node.js',
+        'html': 'HTML',
+        'css': 'CSS',
+        'sql': 'SQL',
+        'aws': 'AWS',
+        'gcp': 'GCP',
+        'azure': 'Azure',
+        'docker': 'Docker',
+        'kubernetes': 'Kubernetes',
+        'git': 'Git',
+        'api': 'API',
+        'rest': 'REST',
+        'graphql': 'GraphQL',
+      };
+      
+      const lowerSkill = skill.toLowerCase();
+      if (techTerms[lowerSkill]) {
+        return techTerms[lowerSkill];
+      }
+      
+      return properCapitalize(skill);
+    });
+  };
+
+  const capitalizeLanguages = (languages: string[]): string[] => {
+    return languages.map(lang => properCapitalize(lang));
+  };
+
   const structure: ResumeStructure = {
-    name: formData.fullName,
+    name: properCapitalize(formData.fullName),
     contact: {
-      email: formData.email,
+      email: formData.email.toLowerCase(),
       phone: formData.phone,
-      location: formData.location,
+      location: properCapitalize(formData.location),
       linkedin: formData.linkedin,
       portfolio: formData.portfolio,
     },
@@ -532,9 +646,9 @@ const buildStructureFromFormData = (): ResumeStructure => {
     experience: enhancedExperience,
     education: education,
     skills: {
-      technical: formData.skills.technical,
-      soft: formData.skills.soft,
-      languages: formData.skills.languages,
+      technical: capitalizeSkills(formData.skills.technical),
+      soft: capitalizeSkills(formData.skills.soft),
+      languages: capitalizeLanguages(formData.skills.languages),
     },
   };
 
