@@ -116,356 +116,467 @@ function cleanJobTitle(title: string, company?: string): string {
 
 // Enhanced parser with better date and structure handling
 function parseResumeToStructure(content: string): ResumeStructure {
-  const lines = content.split('\n').map(line => line.trim()).filter(line => line);
-  
   const structure: ResumeStructure = {
     name: '',
-    contact: { email: '', phone: '', location: '' },
+    contact: { email: '', phone: '', location: '', linkedin: '', portfolio: '' },
     summary: '',
     experience: [],
     education: [],
     skills: { technical: [], soft: [], languages: [] }
   };
 
-  let currentSection = '';
-  let currentExperience: typeof structure.experience[0] | null = null;
-  let currentEducation: typeof structure.education[0] | null = null;
-  let summaryLines: string[] = [];
+  // Normalize line endings and clean content
+  const normalizedContent = content
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\t/g, ' ');
 
-  // Date patterns for matching
-  const datePatterns = [
-    /(\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})\s*[–-]\s*((?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}|Present|Current)/i,
-    /(\d{1,2}\/\d{4})\s*[–-]\s*(\d{1,2}\/\d{4}|Present|Current)/i,
-    /(\d{4})\s*[–-]\s*(\d{4}|Present|Current)/i,
+  // Split into sections using common headers
+  const sectionHeaders = [
+    'PROFESSIONAL SUMMARY',
+    'SUMMARY',
+    'PROFILE',
+    'PROFESSIONAL EXPERIENCE',
+    'WORK EXPERIENCE',
+    'EXPERIENCE',
+    'EMPLOYMENT HISTORY',
+    'EDUCATION',
+    'ACADEMIC BACKGROUND',
+    'SKILLS',
+    'TECHNICAL SKILLS',
+    'CORE COMPETENCIES',
+    'LANGUAGES',
+    'CERTIFICATIONS',
+    'CERTIFICATES',
+    'CONTACT',
+    'CONTACT INFORMATION'
   ];
 
-  // Helper to extract date from line - returns FIRST match only, cleaned
-  const extractDate = (line: string): string | null => {
-    for (const pattern of datePatterns) {
-      const match = line.match(pattern);
-      if (match) {
-        // Return clean format: "Month Year - Month Year" or "Month Year - Present"
-        return `${match[1]} - ${match[2]}`;
-      }
-    }
-    return null;
-  };
+  // Create regex to split by section headers
+  const sectionRegex = new RegExp(
+    `^(${sectionHeaders.join('|')})\\s*$`,
+    'gim'
+  );
 
-  // Helper to remove ALL date occurrences from a line
-  const removeDates = (line: string): string => {
-    let cleaned = line;
-    // Remove various date formats
-    cleaned = cleaned.replace(/\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s*[–-]\s*(?:(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}|Present|Current)/gi, '');
-    cleaned = cleaned.replace(/\b\d{4}\s*[–-]\s*(?:\d{4}|Present|Current)/gi, '');
-    cleaned = cleaned.replace(/\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}/gi, '');
-    cleaned = cleaned.replace(/\|\s*\|/g, '|'); // Clean up double pipes
-    cleaned = cleaned.replace(/\|\s*$/g, ''); // Remove trailing pipe
-    cleaned = cleaned.replace(/^\s*\|/g, ''); // Remove leading pipe
-    return cleaned.trim();
-  };
-
-  // Helper to detect section headers
-  const detectSection = (line: string): string => {
-    const cleanLine = line.replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
-    const lower = cleanLine.toLowerCase();
-    
-    if (lower.includes('summary') || lower.includes('profile') || lower.includes('objective')) return 'summary';
-    if (lower.includes('experience') || lower.includes('employment') || lower.includes('work history')) return 'experience';
-    if (lower.includes('education') || lower.includes('academic') || lower.includes('qualification')) return 'education';
-    if (lower.includes('skill') || lower.includes('competenc') || lower.includes('expertise') || lower.includes('technical')) return 'skills';
-    if (lower.includes('contact')) return 'contact';
-    if (lower.includes('language')) return 'languages';
-    if (lower.includes('certification')) return 'certifications';
-    
-    return '';
-  };
-
-  // Helper to check if line is a header (## or ALL CAPS short line)
-  const isHeader = (line: string): boolean => {
-    if (line.startsWith('##') || line.startsWith('**')) return true;
-    const clean = line.replace(/[#*]/g, '').trim();
-    if (clean.length > 5 && clean.length < 40 && clean === clean.toUpperCase() && !clean.includes('@')) return true;
-    return false;
-  };
-
-  // Helper to clean markdown
-  const cleanMarkdown = (text: string): string => {
-    return text
-      .replace(/^#+\s*/, '')
-      .replace(/\*\*/g, '')
-      .replace(/^\s*[-•]\s*/, '')
-      .trim();
-  };
-
-  // First pass: extract name (usually first non-section, non-contact line)
-  for (let i = 0; i < Math.min(lines.length, 10); i++) {
-    const line = lines[i];
-    const cleanLine = cleanMarkdown(line);
-    
-    if (detectSection(cleanLine)) continue;
-    if (cleanLine.includes('@') || cleanLine.match(/\+?\d{10,}/) || cleanLine.toLowerCase().includes('linkedin')) continue;
-    
-    // Name is usually 2-4 words, no special characters except hyphen/apostrophe
-    const words = cleanLine.split(/\s+/);
-    if (words.length >= 2 && words.length <= 5 && !extractDate(cleanLine)) {
-      const isNameLike = words.every(w => /^[A-Za-z][a-zA-Z'-]*$/.test(w));
-      if (isNameLike) {
-        structure.name = cleanLine.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        break;
-      }
-    }
-  }
-
-  // Second pass: parse sections
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const cleanLine = cleanMarkdown(line);
-    
-    // Skip empty lines
-    if (!cleanLine) continue;
-
-    // Detect section change
-    const newSection = detectSection(cleanLine);
-    if (newSection) {
-      // Save current items before switching
-      if (currentExperience && currentSection === 'experience') {
-        if (currentExperience.title || currentExperience.company) {
-          structure.experience.push(currentExperience);
-        }
-        currentExperience = null;
-      }
-      if (currentEducation && currentSection === 'education') {
-        if (currentEducation.degree || currentEducation.school) {
-          structure.education.push(currentEducation);
-        }
-        currentEducation = null;
-      }
-      currentSection = newSection;
-      continue;
-    }
-
-    // Parse based on current section
-    switch (currentSection) {
-      case 'contact':
-        if (cleanLine.includes('@')) {
-          const emailMatch = cleanLine.match(/[\w.-]+@[\w.-]+\.\w+/);
-          if (emailMatch) structure.contact.email = emailMatch[0];
-        }
-        if (cleanLine.match(/\+?\d[\d\s-]{9,}/)) {
-          const phoneMatch = cleanLine.match(/\+?[\d\s-]{10,}/);
-          if (phoneMatch) structure.contact.phone = phoneMatch[0].trim();
-        }
-        if (cleanLine.toLowerCase().includes('linkedin')) {
-          const linkedinMatch = cleanLine.match(/linkedin\.com\/in\/[\w-]+/i) || cleanLine.match(/in\/[\w-]+/i);
-          if (linkedinMatch) structure.contact.linkedin = linkedinMatch[0];
-        }
-        if (cleanLine.toLowerCase().includes('location') || cleanLine.match(/^[A-Z][a-z]+,\s*[A-Z]{2}$/)) {
-          structure.contact.location = cleanLine.replace(/^location:?\s*/i, '').trim();
-        }
-        break;
-
-      case 'summary':
-        if (!isHeader(line) && cleanLine.length > 20) {
-          summaryLines.push(cleanLine);
-        }
-        break;
-
-      case 'experience':
-        const expDate = extractDate(cleanLine);
-        
-        // Check if this line has a job title pattern (usually before or with company)
-        const hasCompanyIndicators = cleanLine.includes('|') || cleanLine.includes(',') || expDate;
-        
-        if (hasCompanyIndicators || (isHeader(line) && !detectSection(cleanLine))) {
-          // Save previous experience
-          if (currentExperience && (currentExperience.title || currentExperience.company)) {
-            structure.experience.push(currentExperience);
-          }
-          
-          // Parse new job entry
-          let title = '';
-          let company = '';
-          let location = '';
-          let period = expDate || '';
-          
-          // Remove date from line for parsing
-          let lineWithoutDate = removeDates(cleanLine);
-          
-          // Try to parse "Title | Company, Location" or "Title Company" format
-          if (lineWithoutDate.includes('|')) {
-            const parts = lineWithoutDate.split('|').map(p => p.trim()).filter(p => p);
-            if (parts.length >= 1) title = parts[0];
-            if (parts.length >= 2) {
-              const companyPart = parts[1];
-              if (companyPart.includes(',')) {
-                const [comp, loc] = companyPart.split(',').map(s => s.trim());
-                company = comp;
-                location = loc;
-              } else {
-                company = companyPart;
-              }
-            }
-          } else {
-            // No pipe - might be just title or company on its own line
-            title = lineWithoutDate;
-          }
-          
-          currentExperience = {
-            title: title,
-            company: company,
-            location: location,
-            period: period,
-            achievements: []
-          };
-        } else if (currentExperience) {
-          // Check if this is a bullet point (achievement)
-          if (cleanLine.startsWith('•') || cleanLine.startsWith('-') || cleanLine.startsWith('*')) {
-            const achievement = cleanLine.replace(/^[•\-*]\s*/, '').trim();
-            if (achievement.length > 15 && !extractDate(achievement)) {
-              currentExperience.achievements.push(achievement);
-            }
-          } else if (!currentExperience.company && cleanLine.length > 3 && cleanLine.length < 100) {
-            // This might be company name on separate line
-            const lineWithoutDate = removeDates(cleanLine);
-            if (lineWithoutDate.length > 3) {
-              if (lineWithoutDate.includes(',')) {
-                const [comp, loc] = lineWithoutDate.split(',').map(s => s.trim());
-                currentExperience.company = comp;
-                currentExperience.location = loc || currentExperience.location;
-              } else {
-                currentExperience.company = lineWithoutDate;
-              }
-              // Extract date if we don't have one
-              if (!currentExperience.period) {
-                currentExperience.period = extractDate(cleanLine) || '';
-              }
-            }
-          } else if (cleanLine.length > 30 && !isHeader(line)) {
-            // Long line without bullet might be achievement
-            currentExperience.achievements.push(cleanLine);
-          }
-        }
-        break;
-
-      case 'education':
-        const eduDate = extractDate(cleanLine);
-        
-        // Check if this is a degree line
-        const isDegree = /bachelor|master|doctor|associate|diploma|certificate|degree|b\.?s\.?|m\.?s\.?|ph\.?d|mba/i.test(cleanLine);
-        
-        if (isDegree || (eduDate && !currentEducation)) {
-          // Save previous education
-          if (currentEducation && (currentEducation.degree || currentEducation.school)) {
-            structure.education.push(currentEducation);
-          }
-          
-          let lineWithoutDate = removeDates(cleanLine);
-          let degree = '';
-          let school = '';
-          let period = eduDate || '';
-          
-          // Try to parse "Degree | School" or "Degree - School" format
-          if (lineWithoutDate.includes('|')) {
-            const parts = lineWithoutDate.split('|').map(p => p.trim()).filter(p => p);
-            degree = parts[0] || '';
-            school = parts[1] || '';
-          } else if (lineWithoutDate.includes(' - ')) {
-            const parts = lineWithoutDate.split(' - ').map(p => p.trim()).filter(p => p);
-            degree = parts[0] || '';
-            school = parts[1] || '';
-          } else {
-            degree = lineWithoutDate;
-          }
-          
-          currentEducation = {
-            degree: degree,
-            school: school,
-            period: period,
-            details: ''
-          };
-        } else if (currentEducation) {
-          // Additional education info
-          const lineWithoutDate = removeDates(cleanLine);
-          if (!currentEducation.school && lineWithoutDate.length > 3) {
-            currentEducation.school = lineWithoutDate;
-          } else if (!currentEducation.period && eduDate) {
-            currentEducation.period = eduDate;
-          }
-        }
-        break;
-
-      case 'skills':
-      case 'certifications':
-        // Parse skills - look for bullet points or comma-separated lists
-        if (cleanLine.startsWith('•') || cleanLine.startsWith('-')) {
-          const skill = cleanLine.replace(/^[•\-]\s*/, '').trim();
-          if (skill.length > 2) {
-            // Categorize skill
-            if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|ruby|go|rust|swift|kotlin/i.test(skill)) {
-              structure.skills.technical.push(skill);
-            } else if (/english|french|spanish|german|chinese|arabic|swahili|kinyarwanda/i.test(skill)) {
-              structure.skills.languages?.push(skill);
-            } else {
-              structure.skills.soft.push(skill);
-            }
-          }
-        } else if (cleanLine.includes(',')) {
-          // Comma-separated skills
-          const skills = cleanLine.split(',').map(s => s.trim()).filter(s => s.length > 2);
-          skills.forEach(skill => {
-            if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php/i.test(skill)) {
-              structure.skills.technical.push(skill);
-            } else {
-              structure.skills.soft.push(skill);
-            }
-          });
-        } else if (cleanLine.includes(':')) {
-          // "Category: skill1, skill2" format
-          const [category, skillList] = cleanLine.split(':').map(s => s.trim());
-          if (skillList) {
-            const skills = skillList.split(',').map(s => s.trim()).filter(s => s.length > 2);
-            if (category.toLowerCase().includes('technical') || category.toLowerCase().includes('programming')) {
-              structure.skills.technical.push(...skills);
-            } else if (category.toLowerCase().includes('language')) {
-              structure.skills.languages?.push(...skills);
-            } else {
-              structure.skills.soft.push(...skills);
-            }
-          }
-        }
-        break;
-
-      case 'languages':
-        const langLine = cleanLine.replace(/^[•\-]\s*/, '').trim();
-        if (langLine.length > 2 && !langLine.toLowerCase().startsWith('language')) {
-          // Split by comma or bullet
-          const langs = langLine.split(/[,•]/).map(l => l.trim()).filter(l => l.length > 2);
-          structure.skills.languages?.push(...langs);
-        }
-        break;
-    }
-  }
-
-  // Save any remaining items
-  if (currentExperience && (currentExperience.title || currentExperience.company)) {
-    structure.experience.push(currentExperience);
-  }
-  if (currentEducation && (currentEducation.degree || currentEducation.school)) {
-    structure.education.push(currentEducation);
-  }
+  // Find all section positions
+  const sections: { name: string; start: number; end: number }[] = [];
+  let match;
+  const headerRegex = new RegExp(`^(${sectionHeaders.join('|')})\\s*$`, 'gim');
   
-  structure.summary = summaryLines.join(' ').trim();
+  while ((match = headerRegex.exec(normalizedContent)) !== null) {
+    sections.push({
+      name: match[1].toUpperCase().trim(),
+      start: match.index + match[0].length,
+      end: normalizedContent.length
+    });
+  }
 
-  // Deduplicate skills
+  // Set end positions
+  for (let i = 0; i < sections.length - 1; i++) {
+    sections[i].end = sections[i + 1].start - sections[i + 1].name.length - 1;
+  }
+
+  // Extract header (name and contact) - everything before first section
+  const firstSectionStart = sections.length > 0 ? 
+    normalizedContent.indexOf(sections[0].name) : normalizedContent.length;
+  const headerContent = normalizedContent.substring(0, firstSectionStart).trim();
+  
+  // Parse header for name and contact
+  const headerLines = headerContent.split('\n').map(l => l.trim()).filter(l => l);
+  
+  if (headerLines.length > 0) {
+    // First non-empty line is usually the name
+    const potentialName = headerLines[0].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
+    if (potentialName && !potentialName.includes('@') && !potentialName.includes('|')) {
+      structure.name = potentialName.split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+    }
+    
+    // Look for contact info in remaining header lines
+    for (const line of headerLines.slice(1)) {
+      const cleanLine = line.replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
+      
+      // Email
+      const emailMatch = cleanLine.match(/[\w.-]+@[\w.-]+\.\w+/);
+      if (emailMatch) structure.contact.email = emailMatch[0];
+      
+      // Phone
+      const phoneMatch = cleanLine.match(/\+?[\d\s\-().]{10,}/);
+      if (phoneMatch) structure.contact.phone = phoneMatch[0].trim();
+      
+      // LinkedIn
+      const linkedinMatch = cleanLine.match(/linkedin\.com\/in\/[\w-]+/i);
+      if (linkedinMatch) structure.contact.linkedin = linkedinMatch[0];
+      
+      // Location (if it's a simple city, state format)
+      if (cleanLine.match(/^[A-Z][a-z]+,?\s*[A-Z]{2}$/) || 
+          cleanLine.match(/^[A-Z][a-z]+,\s*[A-Z][a-z]+$/)) {
+        structure.contact.location = cleanLine;
+      }
+    }
+  }
+
+  // Process each section
+  for (const section of sections) {
+    const sectionContent = normalizedContent
+      .substring(section.start, section.end)
+      .trim();
+    
+    const sectionName = section.name.toUpperCase();
+    
+    // SUMMARY
+    if (sectionName.includes('SUMMARY') || sectionName.includes('PROFILE')) {
+      structure.summary = sectionContent
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.match(/^(PROFESSIONAL\s+)?SUMMARY$/i))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+    
+    // EXPERIENCE
+    else if (sectionName.includes('EXPERIENCE') || sectionName.includes('EMPLOYMENT')) {
+      parseExperienceSection(sectionContent, structure);
+    }
+    
+    // EDUCATION
+    else if (sectionName.includes('EDUCATION') || sectionName.includes('ACADEMIC')) {
+      parseEducationSection(sectionContent, structure);
+    }
+    
+    // SKILLS
+    else if (sectionName.includes('SKILL') || sectionName.includes('COMPETENC')) {
+      parseSkillsSection(sectionContent, structure);
+    }
+    
+    // LANGUAGES
+    else if (sectionName === 'LANGUAGES') {
+      parseLanguagesSection(sectionContent, structure);
+    }
+    
+    // CERTIFICATIONS
+    else if (sectionName.includes('CERTIFICATION') || sectionName.includes('CERTIFICATE')) {
+      parseCertificationsSection(sectionContent, structure);
+    }
+  }
+
+  // Deduplicate
   structure.skills.technical = [...new Set(structure.skills.technical)];
   structure.skills.soft = [...new Set(structure.skills.soft)];
   structure.skills.languages = [...new Set(structure.skills.languages || [])];
 
-  // Clean up empty entries
-  structure.experience = structure.experience.filter(exp => exp.title || exp.company);
-  structure.education = structure.education.filter(edu => edu.degree || edu.school);
-
   return structure;
+}
+
+// Parse experience section
+function parseExperienceSection(content: string, structure: ResumeStructure): void {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  
+  let currentJob: {
+    title: string;
+    company: string;
+    location: string;
+    period: string;
+    achievements: string[];
+  } | null = null;
+
+  const datePattern = /(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?\s*\d{4}\s*[-–]\s*(?:(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?\s*\d{4}|Present|Current)/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
+    
+    if (!line) continue;
+    
+    // Check if this is a bullet point (achievement)
+    const isBullet = line.startsWith('•') || line.startsWith('-') || line.startsWith('*');
+    
+    if (isBullet && currentJob) {
+      const achievement = line.replace(/^[•\-*]\s*/, '').trim();
+      if (achievement.length > 10) {
+        currentJob.achievements.push(achievement);
+      }
+    }
+    // Check if this line contains a date (likely job header or company line)
+    else if (datePattern.test(line) || (i < lines.length - 1 && datePattern.test(lines[i + 1] || ''))) {
+      // Save previous job
+      if (currentJob && (currentJob.title || currentJob.company)) {
+        structure.experience.push(currentJob);
+      }
+      
+      // Parse job entry
+      let title = '';
+      let company = '';
+      let location = '';
+      let period = '';
+      
+      // Extract date
+      const dateMatch = line.match(datePattern);
+      if (dateMatch) {
+        period = dateMatch[0].replace(/\s+/g, ' ').trim();
+      }
+      
+      // Remove date from line
+      let lineWithoutDate = line.replace(datePattern, '').trim();
+      lineWithoutDate = lineWithoutDate.replace(/\|\s*$/, '').replace(/^\|\s*/, '').trim();
+      
+      // Check for pipe separator (Title | Company, Location format or Company, Location | Date format)
+      if (lineWithoutDate.includes('|')) {
+        const parts = lineWithoutDate.split('|').map(p => p.trim()).filter(p => p);
+        if (parts.length >= 2) {
+          // Could be "Company, Location | Date" or "Title | Company"
+          const firstPart = parts[0];
+          const secondPart = parts[1];
+          
+          // If first part has comma, it's likely "Company, Location"
+          if (firstPart.includes(',')) {
+            const [comp, loc] = firstPart.split(',').map(s => s.trim());
+            company = comp;
+            location = loc;
+            // Look at previous line for job title
+            if (i > 0) {
+              const prevLine = lines[i - 1].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
+              if (!prevLine.startsWith('•') && !prevLine.startsWith('-') && !datePattern.test(prevLine)) {
+                title = prevLine;
+              }
+            }
+          } else {
+            title = firstPart;
+            if (secondPart.includes(',')) {
+              const [comp, loc] = secondPart.split(',').map(s => s.trim());
+              company = comp;
+              location = loc;
+            } else {
+              company = secondPart;
+            }
+          }
+        }
+      } 
+      // Check for comma (Company, Location format)
+      else if (lineWithoutDate.includes(',')) {
+        const [comp, loc] = lineWithoutDate.split(',').map(s => s.trim());
+        company = comp;
+        location = loc;
+        // Look at previous line for job title
+        if (i > 0) {
+          const prevLine = lines[i - 1].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
+          if (!prevLine.startsWith('•') && !prevLine.startsWith('-') && !datePattern.test(prevLine)) {
+            title = prevLine;
+          }
+        }
+      }
+      // Just a single value - could be title or company
+      else if (lineWithoutDate) {
+        // If next line has date, this is company
+        if (i > 0) {
+          const prevLine = lines[i - 1].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
+          if (!prevLine.startsWith('•') && !prevLine.startsWith('-') && !datePattern.test(prevLine)) {
+            title = prevLine;
+            company = lineWithoutDate;
+          } else {
+            title = lineWithoutDate;
+          }
+        } else {
+          title = lineWithoutDate;
+        }
+      }
+      
+      currentJob = {
+        title: title,
+        company: company,
+        location: location,
+        period: period,
+        achievements: []
+      };
+    }
+    // Non-bullet, non-date line - could be job title for next line
+    else if (!isBullet && currentJob === null) {
+      // Check if next line has a date - if so, this is a job title
+      const nextLine = lines[i + 1] || '';
+      if (datePattern.test(nextLine)) {
+        // Will be processed on next iteration
+        continue;
+      }
+    }
+  }
+  
+  // Save last job
+  if (currentJob && (currentJob.title || currentJob.company)) {
+    structure.experience.push(currentJob);
+  }
+}
+
+// Parse education section
+function parseEducationSection(content: string, structure: ResumeStructure): void {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  
+  let currentEdu: {
+    degree: string;
+    school: string;
+    period: string;
+    details: string;
+  } | null = null;
+
+  const degreeKeywords = /bachelor|master|doctor|phd|associate|diploma|certificate|b\.?s\.?|m\.?s\.?|b\.?a\.?|m\.?a\.?|mba/i;
+  const datePattern = /\d{4}\s*[-–]\s*(?:\d{4}|Present|Current)/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
+    
+    if (!line) continue;
+    
+    // Skip bullet points in education (these are usually misplaced)
+    if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
+      continue;
+    }
+    
+    // Check if this looks like a degree
+    if (degreeKeywords.test(line)) {
+      // Save previous education
+      if (currentEdu && (currentEdu.degree || currentEdu.school)) {
+        structure.education.push(currentEdu);
+      }
+      
+      let degree = line;
+      let school = '';
+      let period = '';
+      
+      // Extract date if present
+      const dateMatch = line.match(datePattern);
+      if (dateMatch) {
+        period = dateMatch[0];
+        degree = line.replace(datePattern, '').replace(/\|\s*$/, '').trim();
+      }
+      
+      // Check for pipe separator
+      if (degree.includes('|')) {
+        const parts = degree.split('|').map(p => p.trim()).filter(p => p);
+        degree = parts[0];
+        if (parts.length > 1 && !datePattern.test(parts[1])) {
+          school = parts[1];
+        }
+      }
+      
+      currentEdu = {
+        degree: degree,
+        school: school,
+        period: period,
+        details: ''
+      };
+    }
+    // Check if this is a school name (following a degree)
+    else if (currentEdu && !currentEdu.school) {
+      let school = line;
+      let period = '';
+      
+      // Extract date if present
+      const dateMatch = line.match(datePattern);
+      if (dateMatch) {
+        period = dateMatch[0];
+        school = line.replace(datePattern, '').replace(/\|\s*$/, '').replace(/^\|\s*/, '').trim();
+      }
+      
+      if (school) {
+        currentEdu.school = school;
+      }
+      if (period && !currentEdu.period) {
+        currentEdu.period = period;
+      }
+    }
+    // Check if line has just a date (for current education)
+    else if (currentEdu && datePattern.test(line) && !currentEdu.period) {
+      const dateMatch = line.match(datePattern);
+      if (dateMatch) {
+        currentEdu.period = dateMatch[0];
+      }
+    }
+  }
+  
+  // Save last education
+  if (currentEdu && (currentEdu.degree || currentEdu.school)) {
+    structure.education.push(currentEdu);
+  }
+}
+
+// Parse skills section
+function parseSkillsSection(content: string, structure: ResumeStructure): void {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  
+  for (const line of lines) {
+    const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
+    
+    if (!cleanLine) continue;
+    
+    // Check for category prefix
+    if (cleanLine.toLowerCase().startsWith('technical:') || 
+        cleanLine.toLowerCase().startsWith('technical skills:')) {
+      const skills = cleanLine.replace(/^technical\s*(skills)?:\s*/i, '').split(/[,;]/).map(s => s.trim()).filter(s => s);
+      structure.skills.technical.push(...skills);
+    }
+    else if (cleanLine.toLowerCase().startsWith('professional:') ||
+             cleanLine.toLowerCase().startsWith('soft skills:')) {
+      const skills = cleanLine.replace(/^(professional|soft\s*skills?):\s*/i, '').split(/[,;]/).map(s => s.trim()).filter(s => s);
+      structure.skills.soft.push(...skills);
+    }
+    // Check if line contains comma-separated skills
+    else if (cleanLine.includes(',')) {
+      const skills = cleanLine.split(',').map(s => s.trim()).filter(s => s.length > 1);
+      // Categorize based on content
+      for (const skill of skills) {
+        if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker/i.test(skill)) {
+          structure.skills.technical.push(skill);
+        } else {
+          structure.skills.soft.push(skill);
+        }
+      }
+    }
+    // Single skill as bullet point
+    else if (cleanLine.length > 2 && cleanLine.length < 50) {
+      if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql/i.test(cleanLine)) {
+        structure.skills.technical.push(cleanLine);
+      } else {
+        structure.skills.soft.push(cleanLine);
+      }
+    }
+  }
+}
+
+// Parse languages section
+function parseLanguagesSection(content: string, structure: ResumeStructure): void {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  
+  for (const line of lines) {
+    const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
+    
+    if (!cleanLine || cleanLine.toLowerCase() === 'languages') continue;
+    
+    // Check for comma-separated languages
+    if (cleanLine.includes(',')) {
+      const langs = cleanLine.split(',').map(l => l.trim()).filter(l => l);
+      structure.skills.languages?.push(...langs);
+    }
+    // Check for bullet with proficiency
+    else if (cleanLine.match(/\(.*\)/) || cleanLine.length < 30) {
+      structure.skills.languages?.push(cleanLine);
+    }
+  }
+}
+
+// Parse certifications section
+function parseCertificationsSection(content: string, structure: ResumeStructure): void {
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  
+  for (const line of lines) {
+    const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
+    
+    if (!cleanLine || cleanLine.toLowerCase().includes('certification')) continue;
+    
+    // Add to soft skills as certifications
+    if (cleanLine.length > 3) {
+      structure.skills.soft.push(cleanLine);
+    }
+  }
 }
 
 // Generate Modern Template PDF
