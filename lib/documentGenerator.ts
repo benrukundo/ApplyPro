@@ -31,6 +31,7 @@ interface ResumeStructure {
     technical: string[];
     soft: string[];
     languages?: string[];
+    certifications?: string[];  // Add this line
   };
 }
 
@@ -269,7 +270,24 @@ function parseResumeToStructure(content: string): ResumeStructure {
       parseCertificationsSection(sectionContent, structure);
     }
   }
+const certificationPattern = /\(\d{4}\)\s*$/;
+const allContent = content.split('\n');
 
+structure.skills.certifications = [];
+
+for (const line of allContent) {
+  const cleanLine = line.replace(/^[•\-*]\s*/, '').replace(/^#+\s*/, '').trim();
+  
+  if (certificationPattern.test(cleanLine) && cleanLine.length > 10 && cleanLine.length < 100) {
+    // Check if not already in certifications
+    if (!structure.skills.certifications.includes(cleanLine)) {
+      structure.skills.certifications.push(cleanLine);
+    }
+  }
+}
+
+// Remove certifications from soft skills if they ended up there
+structure.skills.soft = structure.skills.soft.filter(skill => !certificationPattern.test(skill));
   // Deduplicate
   structure.skills.technical = [...new Set(structure.skills.technical)];
   structure.skills.soft = [...new Set(structure.skills.soft)];
@@ -507,6 +525,9 @@ function parseEducationSection(content: string, structure: ResumeStructure): voi
 function parseSkillsSection(content: string, structure: ResumeStructure): void {
   const lines = content.split('\n').map(l => l.trim()).filter(l => l);
   
+  // Pattern to detect certifications (contains year in parentheses)
+  const certificationPattern = /\(\d{4}\)\s*$/;
+  
   for (const line of lines) {
     let cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
     
@@ -518,39 +539,70 @@ function parseSkillsSection(content: string, structure: ResumeStructure): void {
     
     if (technicalMatch) {
       cleanLine = cleanLine.replace(technicalMatch[0], '');
-      // Split by bullet points or commas
-      const skills = cleanLine.split(/[•,;]/).map(s => s.trim()).filter(s => s.length > 1);
-      structure.skills.technical.push(...skills);
+      const skills = cleanLine.split(/[•]/).map(s => s.trim()).filter(s => s.length > 1);
+      
+      for (const skill of skills) {
+        // Check if it's a certification
+        if (certificationPattern.test(skill)) {
+          // Add to a certifications array (we'll store in soft skills with a marker for now)
+          // Or we can add a certifications field to structure
+          continue; // Skip certifications in technical
+        }
+        structure.skills.technical.push(skill);
+      }
     }
     else if (professionalMatch) {
       cleanLine = cleanLine.replace(professionalMatch[0], '');
-      const skills = cleanLine.split(/[•,;]/).map(s => s.trim()).filter(s => s.length > 1);
-      structure.skills.soft.push(...skills);
+      const skills = cleanLine.split(/[•]/).map(s => s.trim()).filter(s => s.length > 1);
+      
+      for (const skill of skills) {
+        // Check if it's a certification (has year like (2023))
+        if (certificationPattern.test(skill)) {
+          // Don't add certifications to professional skills
+          // We'll handle them separately
+          continue;
+        }
+        structure.skills.soft.push(skill);
+      }
     }
-    // Line with bullets separating skills
+    // Line with bullets separating items
     else if (cleanLine.includes('•')) {
-      const skills = cleanLine.split('•').map(s => s.trim()).filter(s => s.length > 1);
-      for (const skill of skills) {
-        if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql|windows|linux|server|network|dhis|openmrs|power bi/i.test(skill)) {
-          structure.skills.technical.push(skill);
+      const items = cleanLine.split('•').map(s => s.trim()).filter(s => s.length > 1);
+      for (const item of items) {
+        // Skip certifications
+        if (certificationPattern.test(item)) {
+          continue;
+        }
+        
+        if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql|windows|linux|server|network|dhis|openmrs|power bi|virtualization|voip|active directory|exchange/i.test(item)) {
+          structure.skills.technical.push(item);
         } else {
-          structure.skills.soft.push(skill);
+          structure.skills.soft.push(item);
         }
       }
     }
-    // Comma-separated skills
+    // Comma-separated
     else if (cleanLine.includes(',')) {
-      const skills = cleanLine.split(',').map(s => s.trim()).filter(s => s.length > 1);
-      for (const skill of skills) {
-        if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql|windows|linux|server|network|dhis|openmrs|power bi/i.test(skill)) {
-          structure.skills.technical.push(skill);
+      const items = cleanLine.split(',').map(s => s.trim()).filter(s => s.length > 1);
+      for (const item of items) {
+        if (certificationPattern.test(item)) {
+          continue;
+        }
+        
+        if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql|windows|linux|server|network|dhis|openmrs|power bi|virtualization|voip/i.test(item)) {
+          structure.skills.technical.push(item);
         } else {
-          structure.skills.soft.push(skill);
+          structure.skills.soft.push(item);
         }
       }
     }
-    // Single skill
-    else if (cleanLine.length > 2 && cleanLine.length < 60) {
+    // Single item
+    else if (cleanLine.length > 2 && cleanLine.length < 80) {
+      // Skip certifications
+      if (certificationPattern.test(cleanLine)) {
+        continue;
+      }
+      
       if (/javascript|python|java|react|node|sql|html|css|typescript|c#|\.net|php|aws|azure|docker|postgresql|mysql|windows|linux|server|network|dhis|openmrs|power bi|virtualization|voip/i.test(cleanLine)) {
         structure.skills.technical.push(cleanLine);
       } else {
@@ -585,16 +637,34 @@ function parseLanguagesSection(content: string, structure: ResumeStructure): voi
 function parseCertificationsSection(content: string, structure: ResumeStructure): void {
   const lines = content.split('\n').map(l => l.trim()).filter(l => l);
   
+  // Pattern to detect certifications (contains year in parentheses)
+  const certificationPattern = /\(\d{4}\)\s*$/;
+  
+  // We'll store certifications in a temporary array
+  const certifications: string[] = [];
+  
   for (const line of lines) {
     const cleanLine = line.replace(/^[•\-*]\s*/, '').trim();
     
     if (!cleanLine || cleanLine.toLowerCase().includes('certification')) continue;
     
-    // Add to soft skills as certifications
-    if (cleanLine.length > 3) {
-      structure.skills.soft.push(cleanLine);
+    // Check for items with years
+    if (certificationPattern.test(cleanLine)) {
+      certifications.push(cleanLine);
+    }
+    // Check for bullet-separated items
+    else if (cleanLine.includes('•')) {
+      const items = cleanLine.split('•').map(s => s.trim()).filter(s => s.length > 1);
+      for (const item of items) {
+        if (certificationPattern.test(item)) {
+          certifications.push(item);
+        }
+      }
     }
   }
+  
+  // Add certifications to structure (we can add them as a special category)
+  // For now, we won't add them to soft skills
 }
 
 // Generate Modern Template PDF
@@ -744,7 +814,30 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
       sideY += 4;
     });
   }
+// CERTIFICATIONS Section in Sidebar
+if (structure.skills.certifications && structure.skills.certifications.length > 0 && sideY < pageHeight - 30) {
+  sideY += 4;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+  doc.text('CERTIFICATIONS', margin, sideY);
+  sideY += 5;
 
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(70, 70, 70);
+  
+  const maxCertWidth = sidebarWidth - margin - 5;
+  
+  for (const cert of structure.skills.certifications.slice(0, 6)) {
+    if (sideY > pageHeight - 15) break;
+    
+    // Wrap long certifications
+    const certLines = doc.splitTextToSize('• ' + cert, maxCertWidth);
+    doc.text(certLines, margin, sideY);
+    sideY += certLines.length * 3;
+  }
+}
   // EDUCATION Section
   if (structure.education.length > 0 && sideY < pageHeight - 30) {
   sideY += 4;
@@ -1359,7 +1452,33 @@ async function generateModernDOCX(structure: ResumeStructure, color: keyof typeo
       );
     });
   }
+// Certifications in Sidebar
+if (structure.skills.certifications && structure.skills.certifications.length > 0) {
+  sidebarChildren.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: 'CERTIFICATIONS',
+          bold: true,
+          size: 22,
+          color: colors.primary.replace('#', ''),
+        }),
+      ],
+      spacing: { before: 200, after: 100 },
+    })
+  );
 
+  structure.skills.certifications.forEach(cert => {
+    sidebarChildren.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: '• ' + cert, size: 16, color: '4a4a4a' }),
+        ],
+        spacing: { after: 30 },
+      })
+    );
+  });
+}
   // Education in Sidebar
   if (structure.education.length > 0) {
     sidebarChildren.push(
