@@ -27,6 +27,7 @@ model User {
   usageLogs        UsageLog[]
   generatedResumes GeneratedResume[]
   builderResumes   BuilderResume[]
+  interviewPreps   InterviewPrep[]
 }
 
 model Account {
@@ -192,4 +193,67 @@ model BuilderResume {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Interview Preparation Module
+model InterviewPrep {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Input data
+  resumeContent   String            @db.Text
+  jobDescription  String            @db.Text
+  jobTitle        String
+  company         String?
+  interviewType   InterviewType     @default(BEHAVIORAL)
+
+  // Generated content
+  questions       Json              // Array of {question, suggestedAnswer, category, difficulty, tips}
+  keyTalkingPoints Json             // Array of {point, evidence, relevance}
+  questionsToAsk  Json              // Array of {question, purpose, category}
+  companyInsights String?           @db.Text
+
+  // Metadata
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  mockSessions    MockInterviewSession[]
+
+  @@index([userId])
+}
+
+model MockInterviewSession {
+  id              String        @id @default(cuid())
+  prepId          String
+  prep            InterviewPrep @relation(fields: [prepId], references: [id], onDelete: Cascade)
+
+  // Session data
+  answers         Json          // Array of {questionIndex, question, userAnswer, feedback}
+  currentQuestion Int           @default(0)
+  totalQuestions  Int
+  overallScore    Int?
+  overallFeedback String?       @db.Text
+
+  // Status
+  status          SessionStatus @default(IN_PROGRESS)
+  startedAt       DateTime      @default(now())
+  completedAt     DateTime?
+
+  @@index([prepId])
+}
+
+enum InterviewType {
+  PHONE_SCREENING
+  TECHNICAL
+  BEHAVIORAL
+  HR_CULTURE
+  FINAL_ROUND
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
 }
