@@ -789,23 +789,24 @@ const buildCompleteResume = (): string => {
       !progLangs.includes(s) && !frontendTech.includes(s) && !backendTech.includes(s) && !cloudDevOps.includes(s)
     );
 
+    // Each skill on its own line for professional formatting
     if (progLangs.length > 0) {
-      resume += `- Programming Languages: ${progLangs.join(', ')}\n`;
+      progLangs.forEach(skill => resume += `• ${skill}\n`);
     }
     if (frontendTech.length > 0) {
-      resume += `- Frontend Technologies: ${frontendTech.join(', ')}\n`;
+      frontendTech.forEach(skill => resume += `• ${skill}\n`);
     }
     if (backendTech.length > 0) {
-      resume += `- Backend & Databases: ${backendTech.join(', ')}\n`;
+      backendTech.forEach(skill => resume += `• ${skill}\n`);
     }
     if (cloudDevOps.length > 0) {
-      resume += `- Cloud & DevOps: ${cloudDevOps.join(', ')}\n`;
+      cloudDevOps.forEach(skill => resume += `• ${skill}\n`);
     }
     if (otherTech.length > 0) {
-      resume += `- Technical Skills: ${otherTech.join(', ')}\n`;
+      otherTech.forEach(skill => resume += `• ${skill}\n`);
     }
     if (softSkills.length > 0) {
-      resume += `- Professional Skills: ${softSkills.join(', ')}\n`;
+      softSkills.forEach(skill => resume += `• ${skill}\n`);
     }
     resume += `\n`;
   }
