@@ -639,129 +639,128 @@ const formatMonthYear = (dateStr: string): string => {
   return dateStr;
 };
 
-  const handleDownload = async (format: 'pdf' | 'docx') => {
-    console.log('[BUILD-RESUME] handleDownload called:', {
+ const handleDownload = async (format: 'pdf' | 'docx') => {
+  console.log('[BUILD-RESUME] handleDownload called:', {
+    format,
+    hasSession: !!session?.user?.id,
+    subscription,
+    canDownload,
+    isLoadingSubscription,
+    hasEnhancedPreview: !!enhancedPreview,
+    hasGeneratedResume: !!generatedResume,
+  });
+
+  // STRICT subscription check - multiple layers of validation
+  if (!session?.user?.id) {
+    setError('Please sign in to download your resume.');
+    router.push('/login?callbackUrl=/build-resume');
+    return;
+  }
+
+  if (isLoadingSubscription) {
+    setError('Loading subscription info. Please wait...');
+    return;
+  }
+
+  if (!subscription || subscription.isActive !== true) {
+    setError('No active subscription found. Please subscribe to download your resume.');
+    return;
+  }
+
+  if ((subscription.remainingGenerations ?? 0) <= 0) {
+    setError('You have used all your resume generations. Please upgrade or wait for your limit to reset.');
+    return;
+  }
+
+  // Check for content - FIXED: Check BOTH enhancedPreview AND generatedResume
+  const resumeContent = enhancedPreview || generatedResume;
+  
+  if (!resumeContent) {
+    setError('No resume to download. Please generate a preview first.');
+    return;
+  }
+
+  // Additional check: Verify subscription server-side before allowing download
+  setIsDownloading(true);
+  setError('');
+
+  try {
+    // Verify subscription server-side
+    const verifyResponse = await fetch('/api/user/subscription');
+    if (!verifyResponse.ok) {
+      throw new Error('Failed to verify subscription. Please try again.');
+    }
+
+    const verifyData = await verifyResponse.json();
+    if (
+      !verifyData.subscription?.isActive ||
+      (verifyData.subscription?.remainingGenerations ?? 0) <= 0
+    ) {
+      setError('Your subscription is not active or you have no remaining generations. Please upgrade.');
+      setIsDownloading(false);
+      return;
+    }
+
+    // Build complete resume with all sections for PDF/DOCX parser
+    const completeResumeContent = buildCompleteResume();
+    console.log('[BUILD-RESUME] Complete resume built, length:', completeResumeContent.length);
+
+    const timestamp = new Date().toISOString().split('T')[0];
+    const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
+
+    // Use the complete resume content (which incorporates AI-enhanced content)
+    if (format === 'pdf') {
+      const blob = await generatePDF(
+        completeResumeContent,
+        selectedTemplate,
+        selectedColor.key
+      );
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fileName}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else {
+      const blob = await generateDOCX(
+        completeResumeContent,
+        selectedTemplate,
+        selectedColor.key
+      );
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fileName}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    trackEvent('builder_resume_downloaded', {
       format,
-      hasSession: !!session?.user?.id,
-      subscription,
-      canDownload,
-      isLoadingSubscription,
+      template: selectedTemplate,
+      color: selectedColor.key,
+      target_job: formData.targetJobTitle,
     });
 
-    // STRICT subscription check - multiple layers of validation
-    if (!session?.user?.id) {
-      setError('Please sign in to download your resume.');
-      router.push('/login?callbackUrl=/build-resume');
-      return;
-    }
-
-    if (isLoadingSubscription) {
-      setError('Loading subscription info. Please wait...');
-      return;
-    }
-
-    if (!subscription || subscription.isActive !== true) {
-      setError('No active subscription found. Please subscribe to download your resume.');
-      return;
-    }
-
-    if ((subscription.remainingGenerations ?? 0) <= 0) {
-      setError('You have used all your resume generations. Please upgrade or wait for your limit to reset.');
-      return;
-    }
-
-    // Check for content (either enhancedPreview or generatedResume)
-    if (!enhancedPreview && !generatedResume) {
-      setError('No resume to download. Please generate a preview first.');
-      return;
-    }
-
-    // Additional check: Verify subscription on server before allowing download
-    setIsDownloading(true);
-    setError('');
-
-    try {
-      // Verify subscription server-side
-      const verifyResponse = await fetch('/api/user/subscription');
-      if (!verifyResponse.ok) {
-        throw new Error('Failed to verify subscription. Please try again.');
-      }
-
-      const verifyData = await verifyResponse.json();
-      if (
-        !verifyData.subscription?.isActive ||
-        (verifyData.subscription?.remainingGenerations ?? 0) <= 0
-      ) {
-        setError('Your subscription is not active or you have no remaining generations. Please upgrade.');
-        setIsDownloading(false);
-        return;
-      }
-
-      // Build complete resume with all sections for PDF/DOCX parser
-      const completeResumeContent = buildCompleteResume();
-      console.log('[BUILD-RESUME] Complete resume built, length:', completeResumeContent.length);
-
-      const timestamp = new Date().toISOString().split('T')[0];
-      const fileName = `${formData.fullName.replace(/\s+/g, '_')}_Resume_${timestamp}`;
-
-if (!generatedResume) {
-  setError('No resume to download. Please generate a resume first.');
-  return;
-}
-
-if (format === 'pdf') {
-  const blob = await generatePDF(
-    generatedResume,
-    selectedTemplate,
-    selectedColor.key
-  );
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${fileName}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-} else {
-  const blob = await generateDOCX(
-    generatedResume,
-    selectedTemplate,
-    selectedColor.key
-  );
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${fileName}.docx`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-
-      trackEvent('builder_resume_downloaded', {
-        format,
-        template: selectedTemplate,
-        color: selectedColor.key,
-        target_job: formData.targetJobTitle,
-      });
-
-      // Reload subscription to update remaining generations
-      await loadSubscription();
-    } catch (err) {
-      console.error('Download error:', err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to download. Please try again or contact support.'
-      );
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+    // Reload subscription to update remaining generations
+    await loadSubscription();
+  } catch (err) {
+    console.error('Download error:', err);
+    setError(
+      err instanceof Error
+        ? err.message
+        : 'Failed to download. Please try again or contact support.'
+    );
+  } finally {
+    setIsDownloading(false);
+  }
+};
 
   const addEducation = () => {
     const newEntry: Education = {
