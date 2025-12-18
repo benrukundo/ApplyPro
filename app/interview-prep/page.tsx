@@ -109,6 +109,7 @@ export default function InterviewPrepPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState(0);
   const [error, setError] = useState('');
+  const [isExtractingText, setIsExtractingText] = useState(false);
 
   // Results state
   const [prepId, setPrepId] = useState<string | null>(null);
@@ -124,29 +125,61 @@ export default function InterviewPrepPage() {
     }
   }, [status, router]);
 
+  // Extract text from PDF
+  const extractPdfText = async (file: File): Promise<string> => {
+    const pdfParse = (await import('pdf-parse' as any)).default;
+    const arrayBuffer = await file.arrayBuffer();
+    const data = await pdfParse(Buffer.from(arrayBuffer));
+    return data.text;
+  };
+
+  // Extract text from DOCX
+  const extractDocxText = async (file: File): Promise<string> => {
+    const mammoth = (await import('mammoth' as any)).default;
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  };
+
+  // Extract text from TXT
+  const extractTxtText = async (file: File): Promise<string> => {
+    return await file.text();
+  };
+
   // Handle file upload
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setResumeFile(file);
-
-    // Extract text from file
-    const formData = new FormData();
-    formData.append('file', file);
+    setError('');
+    setIsExtractingText(true);
 
     try {
-      const response = await fetch('/api/extract-text', {
-        method: 'POST',
-        body: formData,
-      });
+      const fileName = file.name.toLowerCase();
+      let text = '';
 
-      if (response.ok) {
-        const data = await response.json();
-        setResumeContent(data.text);
+      if (fileName.endsWith('.pdf')) {
+        text = await extractPdfText(file);
+      } else if (fileName.endsWith('.docx')) {
+        text = await extractDocxText(file);
+      } else if (fileName.endsWith('.txt')) {
+        text = await extractTxtText(file);
+      } else {
+        setError('Unsupported file type. Please upload PDF, DOCX, or TXT.');
+        setResumeFile(null);
+        setIsExtractingText(false);
+        return;
       }
+
+      setResumeContent(text);
+      setIsExtractingText(false);
     } catch (err) {
       console.error('Failed to extract text:', err);
+      setError('Failed to read file. Please try another file.');
+      setResumeFile(null);
+      setResumeContent('');
+      setIsExtractingText(false);
     }
   };
 
@@ -306,7 +339,13 @@ export default function InterviewPrepPage() {
                     <p className="text-sm text-gray-400 mt-1">PDF, DOCX, or TXT</p>
                   </label>
                 </div>
-                {resumeContent && (
+                {isExtractingText && (
+                  <p className="text-sm text-blue-600 mt-2 flex items-center">
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    Extracting text from file...
+                  </p>
+                )}
+                {resumeContent && !isExtractingText && (
                   <p className="text-sm text-green-600 mt-2 flex items-center">
                     <Check className="w-4 h-4 mr-1" />
                     Resume loaded ({resumeContent.length} characters)
