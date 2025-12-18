@@ -192,7 +192,7 @@ function DashboardContent() {
     loadSubscription();
   };
 
-  // Handle download from history
+  // Handle download from history - FIXED
   const handleDownload = async (
     generation: GenerationHistory,
     type: 'resume' | 'ats' | 'cover',
@@ -204,24 +204,41 @@ function DashboardContent() {
       const timestamp = new Date(generation.createdAt).toISOString().split('T')[0];
       const companySlug = generation.company?.replace(/[^a-zA-Z0-9]/g, '_') || 'Resume';
 
+      let blob: Blob;
+      let fileName: string;
+
       if (type === 'cover') {
         const content = generation.coverLetter;
         if (format === 'pdf') {
-          await generateCoverLetterPDF(content, `Cover_Letter_${companySlug}_${timestamp}.pdf`);
+          blob = await generateCoverLetterPDF(content, 'modern', 'blue');
+          fileName = `Cover_Letter_${companySlug}_${timestamp}.pdf`;
         } else {
-          await generateCoverLetterDOCX(content, `Cover_Letter_${companySlug}_${timestamp}.docx`);
+          blob = await generateCoverLetterDOCX(content, 'modern', 'blue');
+          fileName = `Cover_Letter_${companySlug}_${timestamp}.docx`;
         }
       } else {
         const content = type === 'ats' ? generation.atsResume : generation.fullResume;
-        const baseName = type === 'ats' ? 'ATS_Resume' : 'Resume';
         const template = type === 'ats' ? 'ats' : 'modern';
+        const baseName = type === 'ats' ? 'ATS_Resume' : 'Resume';
 
         if (format === 'pdf') {
-          await generatePDF(content, `${baseName}_${companySlug}_${timestamp}.pdf`, template);
+          blob = await generatePDF(content, template, 'blue');
+          fileName = `${baseName}_${companySlug}_${timestamp}.pdf`;
         } else {
-          await generateDOCX(content, `${baseName}_${companySlug}_${timestamp}.docx`, template);
+          blob = await generateDOCX(content, template, 'blue');
+          fileName = `${baseName}_${companySlug}_${timestamp}.docx`;
         }
       }
+
+      // Download the blob
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Error downloading:', err);
     } finally {
@@ -592,7 +609,7 @@ function DashboardContent() {
               href="/generate"
               className="text-blue-600 hover:text-blue-700 font-medium text-sm"
             >
-              Generate New →
+              Generate New 
             </Link>
           </div>
 
@@ -748,7 +765,7 @@ function DashboardContent() {
               <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-600 mb-2">No generations yet</p>
               <Link href="/generate" className="text-blue-600 hover:text-blue-700 font-medium">
-                Generate your first resume →
+                Generate your first resume 
               </Link>
             </div>
           )}

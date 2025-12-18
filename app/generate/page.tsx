@@ -257,71 +257,89 @@ export default function GeneratePage() {
   };
 
   // Download handler using documentGenerator
-  const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 'docx') => {
-    console.log('=== DOWNLOAD DEBUG ===');
-    console.log('Type:', type);
-    console.log('Format:', format);
-    console.log('Selected Template:', selectedTemplate);
-    console.log('Generated Resume object:', generatedResume);
-    console.log('Full Resume length:', generatedResume?.fullResume?.length || 0);
-    console.log('Full Resume first 500 chars:', generatedResume?.fullResume?.substring(0, 500));
-    console.log('======================');
+  // Download handler using documentGenerator
+const handleDownload = async (type: 'resume' | 'ats' | 'cover', format: 'pdf' | 'docx') => {
+  console.log('=== DOWNLOAD DEBUG ===');
+  console.log('Type:', type);
+  console.log('Format:', format);
+  console.log('Selected Template:', selectedTemplate);
+  console.log('Generated Resume object:', generatedResume);
+  console.log('Full Resume length:', generatedResume?.fullResume?.length || 0);
+  console.log('Full Resume first 500 chars:', generatedResume?.fullResume?.substring(0, 500));
+  console.log('======================');
 
-    setIsDownloading(true);
-    setError('');
+  setIsDownloading(true);
+  setError('');
 
-    try {
-      const timestamp = new Date().toISOString().split('T')[0];
+  try {
+    const timestamp = new Date().toISOString().split('T')[0];
 
-      // Determine content based on type
-      let content = '';
-      if (type === 'cover') {
-        content = generatedResume?.coverLetter || '';
-      } else if (type === 'ats') {
-        content = generatedResume?.atsOptimizedResume || generatedResume?.fullResume || '';
-      } else {
-        content = generatedResume?.fullResume || '';
-      }
-
-      if (!content) {
-        throw new Error('No content available to download');
-      }
-
-      if (type === 'cover') {
-        // Cover letter
-        if (format === 'pdf') {
-          await generateCoverLetterPDF(content, `Cover_Letter_${timestamp}.pdf`, selectedColor.key);
-        } else {
-          await generateCoverLetterDOCX(content, `Cover_Letter_${timestamp}.docx`, selectedColor.key);
-        }
-      } else {
-        // Resume (full or ats)
-        const baseName = type === 'ats' ? 'ATS_Optimized_Resume' : 'Tailored_Resume';
-        // ATS type always uses 'ats' template, full uses selected template
-        const template = type === 'ats' ? 'ats' : selectedTemplate;
-
-        if (format === 'pdf') {
-          await generatePDF(content, `${baseName}_${timestamp}.pdf`, template, selectedColor.key);
-        } else {
-          await generateDOCX(content, `${baseName}_${timestamp}.docx`, template, selectedColor.key);
-        }
-      }
-
-      // Track download
-      trackEvent('resume_downloaded', {
-        type: type,
-        format: format,
-        template: type === 'ats' ? 'ats' : selectedTemplate,
-        color: selectedColor.key,
-      });
-
-    } catch (err) {
-      console.error('Error generating document:', err);
-      setError(`Failed to download ${format.toUpperCase()}. Please try again.`);
-    } finally {
-      setIsDownloading(false);
+    // Determine content based on type
+    let content = '';
+    if (type === 'cover') {
+      content = generatedResume?.coverLetter || '';
+    } else if (type === 'ats') {
+      content = generatedResume?.atsOptimizedResume || generatedResume?.fullResume || '';
+    } else {
+      content = generatedResume?.fullResume || '';
     }
-  };
+
+    if (!content) {
+      throw new Error('No content available to download');
+    }
+
+    let blob: Blob;
+    let fileName: string;
+
+    if (type === 'cover') {
+      // Cover letter
+      if (format === 'pdf') {
+        blob = await generateCoverLetterPDF(content, 'modern', selectedColor.key);
+        fileName = `Cover_Letter_${timestamp}.pdf`;
+      } else {
+        blob = await generateCoverLetterDOCX(content, 'modern', selectedColor.key);
+        fileName = `Cover_Letter_${timestamp}.docx`;
+      }
+    } else {
+      // Resume (full or ats)
+      const baseName = type === 'ats' ? 'ATS_Optimized_Resume' : 'Tailored_Resume';
+      // ATS type always uses 'ats' template, full uses selected template
+      const template = type === 'ats' ? 'ats' : selectedTemplate;
+
+      if (format === 'pdf') {
+        blob = await generatePDF(content, template, selectedColor.key);
+        fileName = `${baseName}_${timestamp}.pdf`;
+      } else {
+        blob = await generateDOCX(content, template, selectedColor.key);
+        fileName = `${baseName}_${timestamp}.docx`;
+      }
+    }
+
+    // Download the blob
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Track download
+    trackEvent('resume_downloaded', {
+      type: type,
+      format: format,
+      template: type === 'ats' ? 'ats' : selectedTemplate,
+      color: selectedColor.key,
+    });
+
+  } catch (err) {
+    console.error('Error generating document:', err);
+    setError(`Failed to download ${format.toUpperCase()}. Please try again.`);
+  } finally {
+    setIsDownloading(false);
+  }
+};
 
   // Paid generation - requires auth + subscription
   const handleGenerate = async () => {
