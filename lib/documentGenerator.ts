@@ -290,6 +290,8 @@ function parseExperienceSection(content: string, structure: ResumeStructure): vo
     achievements: string[];
   } | null = null;
 
+  let pendingTitle = ''; // Store title from previous line
+
   const datePattern = /(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?\s*\d{4}\s*[-–]\s*(?:(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?\s*\d{4}|Present|Current)/i;
 
   for (let i = 0; i < lines.length; i++) {
@@ -305,9 +307,10 @@ function parseExperienceSection(content: string, structure: ResumeStructure): vo
       if (achievement.length > 10) {
         currentJob.achievements.push(achievement);
       }
+      pendingTitle = ''; // Clear pending title after achievements
     }
-    // Check if this line contains a date (likely job header or company line)
-    else if (datePattern.test(line) || (i < lines.length - 1 && datePattern.test(lines[i + 1] || ''))) {
+    // Check if this line contains a date (job entry with company info)
+    else if (datePattern.test(line)) {
       // Save previous job
       if (currentJob && (currentJob.title || currentJob.company)) {
         structure.experience.push(currentJob);
@@ -329,89 +332,74 @@ function parseExperienceSection(content: string, structure: ResumeStructure): vo
       let lineWithoutDate = line.replace(datePattern, '').trim();
       lineWithoutDate = lineWithoutDate.replace(/\|\s*$/, '').replace(/^\|\s*/, '').trim();
       
-      // Check for pipe separator (Title | Company, Location format or Company, Location | Date format)
+      // Check if line starts with pending title (duplicate)
+      if (pendingTitle && lineWithoutDate.toLowerCase().startsWith(pendingTitle.toLowerCase())) {
+        // Remove duplicate title from beginning
+        lineWithoutDate = lineWithoutDate.substring(pendingTitle.length).trim();
+        lineWithoutDate = lineWithoutDate.replace(/^[|,]\s*/, '').trim();
+        title = pendingTitle;
+      }
+      
+      // Parse remaining content for company/location
       if (lineWithoutDate.includes('|')) {
         const parts = lineWithoutDate.split('|').map(p => p.trim()).filter(p => p);
-        if (parts.length >= 2) {
-          // Could be "Company, Location | Date" or "Title | Company"
-          const firstPart = parts[0];
-          const secondPart = parts[1];
-          
-          // If first part has comma, it's likely "Company, Location"
-          if (firstPart.includes(',')) {
-            const [comp, loc] = firstPart.split(',').map(s => s.trim());
-            company = comp;
-            location = loc;
-            // Look at previous line for job title
-            if (i > 0) {
-              const prevLine = lines[i - 1].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
-              if (!prevLine.startsWith('•') && !prevLine.startsWith('-') && !datePattern.test(prevLine)) {
-                title = prevLine;
-              }
-            }
-          } else {
-            title = firstPart;
-            if (secondPart.includes(',')) {
-              const [comp, loc] = secondPart.split(',').map(s => s.trim());
-              company = comp;
-              location = loc;
-            } else {
-              company = secondPart;
-            }
+        if (!title && parts.length >= 1) {
+          // Check if first part matches pending title
+          if (pendingTitle && parts[0].toLowerCase() === pendingTitle.toLowerCase()) {
+            title = pendingTitle;
+            parts.shift();
+          } else if (!pendingTitle) {
+            title = parts.shift() || '';
           }
         }
-      } 
-      // Check for comma (Company, Location format)
-      else if (lineWithoutDate.includes(',')) {
+        if (parts.length >= 1) {
+          const companyPart = parts[0];
+          if (companyPart.includes(',')) {
+            const [comp, loc] = companyPart.split(',').map(s => s.trim());
+            company = comp;
+            location = loc;
+          } else {
+            company = companyPart;
+          }
+        }
+      } else if (lineWithoutDate.includes(',')) {
+        if (!title) title = pendingTitle;
         const [comp, loc] = lineWithoutDate.split(',').map(s => s.trim());
         company = comp;
         location = loc;
-        // Look at previous line for job title
-        if (i > 0) {
-          const prevLine = lines[i - 1].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
-          if (!prevLine.startsWith('•') && !prevLine.startsWith('-') && !datePattern.test(prevLine)) {
-            title = prevLine;
-          }
-        }
-      }
-      // Just a single value - could be title or company
-      else if (lineWithoutDate) {
-        // If next line has date, this is company
-        if (i > 0) {
-          const prevLine = lines[i - 1].replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
-          if (!prevLine.startsWith('•') && !prevLine.startsWith('-') && !datePattern.test(prevLine)) {
-            title = prevLine;
-            company = lineWithoutDate;
-          } else {
-            title = lineWithoutDate;
-          }
-        } else {
-          title = lineWithoutDate;
-        }
+      } else if (lineWithoutDate && !title) {
+        title = pendingTitle || lineWithoutDate;
+        if (pendingTitle) company = lineWithoutDate;
       }
       
-      let cleanTitle = title;
-if (company && cleanTitle.toLowerCase().includes(company.toLowerCase())) {
-  cleanTitle = cleanTitle.replace(new RegExp(company, 'gi'), '').trim();
-}
-// Remove trailing pipes or commas
-cleanTitle = cleanTitle.replace(/[|,]\s*$/, '').trim();
-
-currentJob = {
-  title: cleanTitle,
-  company: company,
-  location: location,
-  period: period,
-  achievements: []
-};
+      // Use pending title if we still don't have one
+      if (!title && pendingTitle) {
+        title = pendingTitle;
+      }
+      
+      currentJob = {
+        title: title,
+        company: company,
+        location: location,
+        period: period,
+        achievements: []
+      };
+      
+      pendingTitle = ''; // Clear pending title
     }
-    // Non-bullet, non-date line - could be job title for next line
-    else if (!isBullet && currentJob === null) {
-      // Check if next line has a date - if so, this is a job title
-      const nextLine = lines[i + 1] || '';
-      if (datePattern.test(nextLine)) {
-        // Will be processed on next iteration
-        continue;
+    // Non-bullet, non-date line - likely a job title for next entry
+    else if (!isBullet) {
+      // If we have a current job and this might be next job's title
+      if (currentJob) {
+        // Check if next line has date (this is next job's title)
+        const nextLine = lines[i + 1] || '';
+        if (datePattern.test(nextLine)) {
+          // This is a title for the next job
+          pendingTitle = line;
+        }
+      } else {
+        // No current job, this might be first job's title
+        pendingTitle = line;
       }
     }
   }
@@ -689,39 +677,55 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
 
   // SKILLS Section
   if (structure.skills.technical.length > 0 || structure.skills.soft.length > 0) {
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    doc.text('SKILLS', margin, sideY);
-    sideY += 7;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+  doc.text('SKILLS', margin, sideY);
+  sideY += 6;
 
+  const maxSkillWidth = sidebarWidth - margin - 8;
+
+  if (structure.skills.technical.length > 0) {
     doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(70, 70, 70);
-
-    if (structure.skills.technical.length > 0) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Technical:', margin, sideY);
-      sideY += 5;
-      doc.setFont('helvetica', 'normal');
-      structure.skills.technical.forEach(skill => {
-        doc.text('• ' + skill, margin, sideY, { maxWidth: sidebarWidth - margin - 5 });
-        sideY += 4;
-      });
-      sideY += 3;
+    doc.text('Technical:', margin, sideY);
+    sideY += 4;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    
+    for (const skill of structure.skills.technical.slice(0, 15)) { // Limit to 15
+      // Truncate long skills
+      let displaySkill = skill.length > 25 ? skill.substring(0, 23) + '...' : skill;
+      doc.text('• ' + displaySkill, margin, sideY, { maxWidth: maxSkillWidth });
+      sideY += 3.5;
+      
+      // Check if we're running out of space
+      if (sideY > pageHeight - 60) break;
     }
-
-    if (structure.skills.soft.length > 0) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Professional:', margin, sideY);
-      sideY += 5;
-      doc.setFont('helvetica', 'normal');
-      structure.skills.soft.forEach(skill => {
-        doc.text('• ' + skill, margin, sideY, { maxWidth: sidebarWidth - margin - 5 });
-        sideY += 4;
-      });
-      sideY += 3;
-    }
+    sideY += 2;
   }
+
+  if (structure.skills.soft.length > 0 && sideY < pageHeight - 40) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Professional:', margin, sideY);
+    sideY += 4;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    
+    for (const skill of structure.skills.soft.slice(0, 10)) { // Limit to 10
+      let displaySkill = skill.length > 25 ? skill.substring(0, 23) + '...' : skill;
+      doc.text('• ' + displaySkill, margin, sideY, { maxWidth: maxSkillWidth });
+      sideY += 3.5;
+      
+      if (sideY > pageHeight - 40) break;
+    }
+    sideY += 2;
+  }
+}
 
   // LANGUAGES Section
   if (structure.skills.languages && structure.skills.languages.length > 0) {
@@ -742,38 +746,45 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
   }
 
   // EDUCATION Section
-  if (structure.education.length > 0) {
-    sideY += 8;
-    doc.setFontSize(11);
+  if (structure.education.length > 0 && sideY < pageHeight - 30) {
+  sideY += 4;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+  doc.text('EDUCATION', margin, sideY);
+  sideY += 6;
+
+  const maxEduWidth = sidebarWidth - margin - 5;
+
+  for (const edu of structure.education) {
+    if (sideY > pageHeight - 20) break;
+    
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    doc.text('EDUCATION', margin, sideY);
-    sideY += 7;
-
-    doc.setFontSize(9);
     doc.setTextColor(70, 70, 70);
+    
+    // Wrap degree text
+    const degreeLines = doc.splitTextToSize(edu.degree, maxEduWidth);
+    doc.text(degreeLines, margin, sideY);
+    sideY += degreeLines.length * 3.5;
 
-    for (const edu of structure.education) {
-      doc.setFont('helvetica', 'bold');
-      const degreeLines = doc.splitTextToSize(edu.degree, sidebarWidth - margin - 5);
-      doc.text(degreeLines, margin, sideY);
-      sideY += degreeLines.length * 4;
-
+    if (edu.school) {
       doc.setFont('helvetica', 'normal');
-      if (edu.school) {
-        doc.text(edu.school, margin, sideY, { maxWidth: sidebarWidth - margin - 5 });
-        sideY += 4;
-      }
-      if (edu.period) {
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(8);
-        doc.text(edu.period, margin, sideY);
-        doc.setFontSize(9);
-        sideY += 4;
-      }
-      sideY += 4;
+      const schoolLines = doc.splitTextToSize(edu.school, maxEduWidth);
+      doc.text(schoolLines, margin, sideY);
+      sideY += schoolLines.length * 3.5;
     }
+    
+    if (edu.period) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.text(edu.period, margin, sideY);
+      sideY += 3.5;
+    }
+    
+    sideY += 3;
   }
+}
 
   // ============ MAIN CONTENT AREA ============
  const mainX = sidebarWidth + 8;
