@@ -5,9 +5,11 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
+    const { sessionId } = await params;
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -15,7 +17,7 @@ export async function GET(
     }
 
     const mockSession = await prisma.mockInterviewSession.findFirst({
-      where: { id: params.sessionId },
+      where: { id: sessionId },
       include: {
         prep: {
           select: {

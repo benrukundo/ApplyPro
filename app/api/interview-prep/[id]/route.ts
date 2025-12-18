@@ -5,9 +5,11 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -16,7 +18,7 @@ export async function GET(
 
     const interviewPrep = await prisma.interviewPrep.findFirst({
       where: {
-        id: params.id,
+        id: id,
         userId: session.user.id,
       },
       include: {
@@ -46,9 +48,11 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -57,7 +61,7 @@ export async function DELETE(
 
     await prisma.interviewPrep.deleteMany({
       where: {
-        id: params.id,
+        id: id,
         userId: session.user.id,
       },
     });
