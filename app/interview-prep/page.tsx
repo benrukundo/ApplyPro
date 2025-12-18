@@ -510,11 +510,22 @@ export default function InterviewPrepPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 Your Interview Prep is Ready!
               </h2>
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-3">
                 {jobTitle}
                 {company && ` at ${company}`} •{' '}
                 {interviewTypes.find((t) => t.id === selectedType)?.name} Interview
               </p>
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                <Check className="w-4 h-4" />
+                <span>Automatically saved to your account</span>
+                <span>•</span>
+                <Link
+                  href="/interview-prep/saved"
+                  className="font-semibold hover:underline"
+                >
+                  View all saved preps
+                </Link>
+              </div>
             </div>
 
             {/* Tabs */}

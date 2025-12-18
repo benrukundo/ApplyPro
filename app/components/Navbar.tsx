@@ -80,18 +80,7 @@ export default function Navbar() {
                 <Link
                   href="/interview-prep"
                   className={`text-sm font-medium transition-colors hover:text-green-600 dark:hover:text-green-400 flex items-center gap-1 ${
-                    pathname === "/interview-prep"
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  <Brain className="w-4 h-4" />
-                  Interview Prep
-                </Link>
-                <Link
-                  href="/interview-prep"
-                  className={`text-sm font-medium transition-colors hover:text-green-600 dark:hover:text-green-400 flex items-center gap-1 ${
-                    pathname === "/interview-prep"
+                    pathname?.startsWith("/interview-prep")
                       ? "text-green-600 dark:text-green-400"
                       : "text-gray-700 dark:text-gray-300"
                   }`}
@@ -155,8 +144,9 @@ export default function Navbar() {
                 </Link>
                 <Link
                   href="/interview-prep"
+                  onClick={() => setMobileMenuOpen(false)}
                   className={`text-sm font-medium transition-colors hover:text-green-600 dark:hover:text-green-400 flex items-center gap-1 ${
-                    pathname === "/interview-prep"
+                    pathname?.startsWith("/interview-prep")
                       ? "text-green-600 dark:text-green-400"
                       : "text-gray-700 dark:text-gray-300"
                   }`}
