@@ -1991,313 +1991,281 @@ const formatMonthYear = (dateStr: string): string => {
                       )}
 
                       {/* Modern Template Preview - Matches PDF exactly */}
-                      {selectedTemplate === 'modern' && (
-                        <div className="font-sans flex" style={{ minHeight: '800px', maxHeight: '800px' }}>
-                          {/* LEFT SIDEBAR - Colored background matching PDF */}
-                          <div
-                            className="w-64 p-5 flex-shrink-0 overflow-y-auto"
-                            style={{
-                              backgroundColor: `${selectedColor.hex}15`, // 15 is hex for ~8% opacity
-                            }}
-                          >
-                            {/* Contact Section */}
-                            {(formData.email || formData.phone || formData.location || formData.linkedin) && (
-                              <div className="mb-6">
-                                <h3
-                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
-                                  style={{ color: selectedColor.hex }}
-                                >
-                                  CONTACT
-                                </h3>
-                                <div className="space-y-2 text-xs text-gray-700">
-                                  {formData.email && (
-                                    <div className="flex items-start gap-2">
-                                      <Mail className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: selectedColor.hex }} />
-                                      <span className="break-all">{formData.email}</span>
-                                    </div>
-                                  )}
-                                  {formData.phone && (
-                                    <div className="flex items-start gap-2">
-                                      <Phone className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: selectedColor.hex }} />
-                                      <span>{formData.phone}</span>
-                                    </div>
-                                  )}
-                                  {formData.location && (
-                                    <div className="flex items-start gap-2">
-                                      <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: selectedColor.hex }} />
-                                      <span>{formData.location}</span>
-                                    </div>
-                                  )}
-                                  {formData.linkedin && (
-                                    <div className="text-xs break-all">{formData.linkedin}</div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                      {/* Modern Template Preview - Matches PDF exactly */}
+{selectedTemplate === 'modern' && (
+  <div className="font-sans flex" style={{ minHeight: '700px' }}>
+    {/* LEFT SIDEBAR */}
+    <div
+      className="w-[200px] flex-shrink-0 p-5"
+      style={{
+        backgroundColor: `${selectedColor.hex}10`,
+      }}
+    >
+      {/* Contact Section */}
+      <div className="mb-6">
+        <h3
+          className="text-[11px] font-bold mb-3 tracking-wide"
+          style={{ color: selectedColor.hex }}
+        >
+          CONTACT
+        </h3>
+        <div className="space-y-1.5 text-[10px] text-gray-700">
+          {formData.email && (
+            <p className="break-all leading-tight">{formData.email}</p>
+          )}
+          {formData.phone && (
+            <p className="leading-tight">{formData.phone}</p>
+          )}
+          {formData.location && (
+            <p className="leading-tight">{formData.location}</p>
+          )}
+          {formData.linkedin && (
+            <p className="break-all leading-tight">
+              {formData.linkedin.replace('https://', '').replace('www.', '')}
+            </p>
+          )}
+        </div>
+      </div>
 
-                            {/* Skills Section */}
-                            {(formData.skills.technical.length > 0 || formData.skills.soft.length > 0) && (
-                              <div className="mb-6">
-                                <h3
-                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
-                                  style={{ color: selectedColor.hex }}
-                                >
-                                  SKILLS
-                                </h3>
-                                <ul className="space-y-1.5 text-xs text-gray-700">
-                                  {[...formData.skills.technical, ...formData.skills.soft].slice(0, 15).map((skill, idx) => (
-                                    <li key={idx} className="flex items-start">
-                                      <span className="mr-2">•</span>
-                                      <span>{skill}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+      {/* Skills Section */}
+      {(formData.skills.technical.length > 0 || formData.skills.soft.length > 0) && (
+        <div className="mb-6">
+          <h3
+            className="text-[11px] font-bold mb-3 tracking-wide"
+            style={{ color: selectedColor.hex }}
+          >
+            SKILLS
+          </h3>
+          
+          {formData.skills.technical.length > 0 && (
+            <div className="mb-3">
+              <p className="text-[9px] font-bold text-gray-700 mb-1">Technical:</p>
+              <ul className="space-y-0.5">
+                {formData.skills.technical.map((skill, idx) => (
+                  <li key={idx} className="text-[9px] text-gray-600 leading-tight">
+                    • {skill}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {formData.skills.soft.length > 0 && (
+            <div>
+              <p className="text-[9px] font-bold text-gray-700 mb-1">Professional:</p>
+              <ul className="space-y-0.5">
+                {formData.skills.soft.map((skill, idx) => (
+                  <li key={idx} className="text-[9px] text-gray-600 leading-tight">
+                    • {skill}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
-                            {/* Education Section */}
-                            {formData.education.length > 0 && (
-                              <div className="mb-6">
-                                <h3
-                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
-                                  style={{ color: selectedColor.hex }}
-                                >
-                                  EDUCATION
-                                </h3>
-                                <div className="space-y-3 text-xs text-gray-700">
-                                  {formData.education.map((edu, idx) => (
-                                    <div key={idx}>
-                                      <div className="font-semibold">{edu.degree} {edu.field && `in ${edu.field}`}</div>
-                                      <div className="text-gray-600">{edu.school}</div>
-                                      {edu.startDate && (
-                                        <div className="text-gray-500 text-[10px]">
-                                          {edu.startDate} - {edu.current ? 'Present' : edu.endDate}
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+      {/* Languages Section */}
+      {formData.skills.languages.length > 0 && (
+        <div className="mb-6">
+          <h3
+            className="text-[11px] font-bold mb-3 tracking-wide"
+            style={{ color: selectedColor.hex }}
+          >
+            LANGUAGES
+          </h3>
+          <ul className="space-y-0.5">
+            {formData.skills.languages.map((lang, idx) => (
+              <li key={idx} className="text-[9px] text-gray-600 leading-tight">
+                • {lang}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-                            {/* Certifications */}
-                            {formData.skills.certifications.length > 0 && (
-                              <div className="mb-6">
-                                <h3
-                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
-                                  style={{ color: selectedColor.hex }}
-                                >
-                                  CERTIFICATIONS
-                                </h3>
-                                <ul className="space-y-1.5 text-xs text-gray-700">
-                                  {formData.skills.certifications.map((cert, idx) => (
-                                    <li key={idx} className="flex items-start">
-                                      <span className="mr-2">•</span>
-                                      <span>{cert}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
+      {/* Education Section */}
+      {formData.education.length > 0 && (
+        <div className="mb-6">
+          <h3
+            className="text-[11px] font-bold mb-3 tracking-wide"
+            style={{ color: selectedColor.hex }}
+          >
+            EDUCATION
+          </h3>
+          <div className="space-y-3">
+            {formData.education.map((edu, idx) => (
+              <div key={idx}>
+                <p className="text-[9px] font-bold text-gray-700 leading-tight">
+                  {edu.degree}{edu.field ? ` in ${edu.field}` : ''}
+                </p>
+                <p className="text-[9px] text-gray-600 leading-tight">{edu.school}</p>
+                {(edu.startDate || edu.endDate) && (
+                  <p className="text-[8px] text-gray-500 italic leading-tight">
+                    {formatMonthYear(edu.startDate)} - {edu.current ? 'Present' : formatMonthYear(edu.endDate)}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-                            {/* Languages */}
-                            {formData.skills.languages.length > 0 && (
-                              <div className="mb-6">
-                                <h3
-                                  className="text-xs font-bold mb-3 uppercase tracking-wider"
-                                  style={{ color: selectedColor.hex }}
-                                >
-                                  LANGUAGES
-                                </h3>
-                                <ul className="space-y-1.5 text-xs text-gray-700">
-                                  {formData.skills.languages.map((lang, idx) => (
-                                    <li key={idx} className="flex items-start">
-                                      <span className="mr-2">•</span>
-                                      <span>{lang}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                          </div>
+      {/* Certifications Section */}
+      {formData.skills.certifications.length > 0 && (
+        <div className="mb-6">
+          <h3
+            className="text-[11px] font-bold mb-3 tracking-wide"
+            style={{ color: selectedColor.hex }}
+          >
+            CERTIFICATIONS
+          </h3>
+          <ul className="space-y-0.5">
+            {formData.skills.certifications.map((cert, idx) => (
+              <li key={idx} className="text-[9px] text-gray-600 leading-tight">
+                • {cert}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
 
-                          {/* RIGHT COLUMN - Main content */}
-                          <div className="flex-1 relative">
-                            {/* Top accent bar */}
-                            <div
-                              className="h-8 w-full absolute top-0 left-0"
-                              style={{ backgroundColor: selectedColor.hex }}
-                            />
+    {/* RIGHT COLUMN - Main content */}
+    <div className="flex-1 relative">
+      {/* Top accent bar */}
+      <div
+        className="h-2 w-full absolute top-0 left-0"
+        style={{ backgroundColor: selectedColor.hex }}
+      />
 
-                            {/* Main content area */}
-                            <div className="pt-12 px-6 pb-6 overflow-y-auto" style={{ maxHeight: '800px' }}>
-                              {/* Name and Title */}
-                              <div className="mb-6">
-                                <h1 className="text-3xl font-bold text-gray-900 mb-1">
-                                  {formData.fullName || 'Your Name'}
-                                </h1>
-                                <h2
-                                  className="text-lg font-medium"
-                                  style={{ color: selectedColor.hex }}
-                                >
-                                  {formData.targetJobTitle || 'Your Title'}
-                                </h2>
-                              </div>
+      {/* Main content area */}
+      <div className="pt-6 px-5 pb-5">
+        {/* Name */}
+        <h1
+          className="text-[28px] font-bold leading-tight mb-4"
+          style={{ color: selectedColor.hex }}
+        >
+          {formData.fullName || 'Your Name'}
+        </h1>
 
-                              {/* AI Enhanced Content OR Form Data */}
-                              {(enhancedPreview || generatedResume) ? (
-                                // Show AI-enhanced content (filter out sidebar sections)
-                                <div className="space-y-3">
-                                  {(() => {
-                                    const lines = (enhancedPreview || generatedResume)!.split('\n');
-                                    let skipSection = false;
-                                    const sectionsToSkip = ['SKILLS', 'SKILL', 'EDUCATION', 'CERTIFICATIONS', 'CERTIFICATION', 'LANGUAGES', 'LANGUAGE', 'CONTACT'];
+        {/* Professional Summary */}
+        {(enhancedPreview || generatedResume || formData.summary) && (
+          <div className="mb-5">
+            <h2
+              className="text-[12px] font-bold mb-1 tracking-wide"
+              style={{ color: selectedColor.hex }}
+            >
+              PROFESSIONAL SUMMARY
+            </h2>
+            <div
+              className="h-[2px] w-12 mb-2"
+              style={{ backgroundColor: selectedColor.hex }}
+            />
+            <p className="text-[10px] text-gray-700 leading-relaxed">
+              {(() => {
+                const aiContent = enhancedPreview || generatedResume || '';
+                if (aiContent) {
+                  const summaryMatch = aiContent.match(/##\s*PROFESSIONAL\s*SUMMARY\s*\n([\s\S]*?)(?=##|$)/i);
+                  if (summaryMatch) {
+                    return summaryMatch[1].trim();
+                  }
+                }
+                return formData.summary || 'Your professional summary will appear here...';
+              })()}
+            </p>
+          </div>
+        )}
 
-                                    return lines.map((line, idx) => {
-                                      const trimmedLine = line.trim();
-                                      if (!trimmedLine) return null;
+        {/* Professional Experience */}
+        {formData.experience.length > 0 && (
+          <div className="mb-5">
+            <h2
+              className="text-[12px] font-bold mb-1 tracking-wide"
+              style={{ color: selectedColor.hex }}
+            >
+              PROFESSIONAL EXPERIENCE
+            </h2>
+            <div
+              className="h-[2px] w-14 mb-3"
+              style={{ backgroundColor: selectedColor.hex }}
+            />
 
-                                      const cleanLine = trimmedLine.replace(/^#+\s*/, '').replace(/\*\*/g, '');
+            <div className="space-y-4">
+              {formData.experience.map((exp, idx) => {
+                // Try to get AI-enhanced bullets for this job
+                let bullets: string[] = [];
+                const aiContent = enhancedPreview || generatedResume || '';
+                
+                if (aiContent) {
+                  const companyEscaped = exp.company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                  const jobPattern = new RegExp(
+                    `${companyEscaped}[\\s\\S]*?(?=\\n##|\\n\\*\\*[A-Z][a-z]+|$)`,
+                    'i'
+                  );
+                  const jobMatch = aiContent.match(jobPattern);
+                  
+                  if (jobMatch) {
+                    const bulletMatches = jobMatch[0].match(/[-•]\s*([^\n]+)/g);
+                    if (bulletMatches) {
+                      bullets = bulletMatches
+                        .map(b => b.replace(/^[-•]\s*/, '').trim())
+                        .filter(b => b.length > 20);
+                    }
+                  }
+                }
+                
+                // Fallback to description
+                if (bullets.length === 0 && exp.description) {
+                  bullets = exp.description
+                    .split(/[\n]+/)
+                    .map(line => line.replace(/^[-•*]\s*/, '').trim())
+                    .filter(line => line.length > 15);
+                }
 
-                                      // Check if this is a section header we should skip
-                                      const isHeader = trimmedLine.startsWith('##') ||
-                                                      (trimmedLine.toUpperCase() === trimmedLine &&
-                                                       trimmedLine.length > 5 &&
-                                                       trimmedLine.length < 60 &&
-                                                       !trimmedLine.includes('@') &&
-                                                       !trimmedLine.match(/^\d/));
+                const startFormatted = formatMonthYear(exp.startDate);
+                const endFormatted = exp.current ? 'Present' : formatMonthYear(exp.endDate);
 
-                                      if (isHeader) {
-                                        const headerUpper = cleanLine.toUpperCase();
-                                        // Check if this is a sidebar section
-                                        skipSection = sectionsToSkip.some(s => headerUpper.includes(s));
-
-                                        if (skipSection) {
-                                          return null; // Skip this header
-                                        }
-
-                                        // Valid section header (SUMMARY or EXPERIENCE)
-                                        return (
-                                          <h3
-                                            key={idx}
-                                            className="text-sm font-bold mt-4 mb-2 uppercase tracking-wider pb-1 border-b"
-                                            style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
-                                          >
-                                            {cleanLine}
-                                          </h3>
-                                        );
-                                      }
-
-                                      // Skip content if we're in a skipped section
-                                      if (skipSection) {
-                                        return null;
-                                      }
-
-                                      // Skip name, title, contact (already in header/sidebar)
-                                      if (cleanLine.toLowerCase().includes(formData.fullName.toLowerCase()) && cleanLine.length < 100) {
-                                        return null;
-                                      }
-                                      if (cleanLine.toLowerCase() === formData.targetJobTitle.toLowerCase()) {
-                                        return null;
-                                      }
-                                      if (cleanLine.includes('@') || cleanLine.match(/\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/)) {
-                                        return null;
-                                      }
-
-                                      // Bullet points
-                                      if (trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
-                                        return (
-                                          <div key={idx} className="flex items-start text-xs text-gray-700 leading-relaxed mb-1">
-                                            <span className="mr-2 mt-0.5">•</span>
-                                            <span>{cleanLine.replace(/^[•\-*]\s*/, '')}</span>
-                                          </div>
-                                        );
-                                      }
-
-                                      // Regular paragraphs
-                                      if (cleanLine.length > 3) {
-                                        return (
-                                          <p key={idx} className="text-xs text-gray-700 leading-relaxed mb-2">
-                                            {cleanLine}
-                                          </p>
-                                        );
-                                      }
-
-                                      return null;
-                                    });
-                                  })()}
-                                </div>
-                              ) : (
-                                // Show form data as fallback (before AI generation)
-                                <>
-                                  {/* Summary Section */}
-                                  {formData.summary && (
-                                    <div className="mb-6">
-                                      <h3
-                                        className="text-sm font-bold mb-2 uppercase tracking-wider"
-                                        style={{ color: selectedColor.hex }}
-                                      >
-                                        PROFESSIONAL SUMMARY
-                                      </h3>
-                                      <p className="text-xs text-gray-700 leading-relaxed">
-                                        {formData.summary}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Experience Section */}
-                                  {formData.experience.length > 0 && (
-                                    <div className="mb-6">
-                                      <h3
-                                        className="text-sm font-bold mb-3 uppercase tracking-wider pb-1 border-b"
-                                        style={{ color: selectedColor.hex, borderColor: selectedColor.hex }}
-                                      >
-                                        EXPERIENCE
-                                      </h3>
-                                      <div className="space-y-4">
-                                        {formData.experience.map((exp, idx) => (
-                                          <div key={idx}>
-                                            <div className="flex justify-between items-start mb-1">
-                                              <div>
-                                                <h4 className="text-sm font-bold text-gray-900">{exp.title}</h4>
-                                                <p className="text-xs font-medium" style={{ color: selectedColor.hex }}>
-                                                  {exp.company}
-                                                </p>
-                                              </div>
-                                              <span className="text-[10px] text-gray-500 whitespace-nowrap ml-2">
-                                                {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
-                                              </span>
-                                            </div>
-                                            {exp.location && (
-                                              <p className="text-[10px] text-gray-500 mb-2">{exp.location}</p>
-                                            )}
-                                            {exp.description && (
-                                              <div className="text-xs text-gray-700 leading-relaxed">
-                                                {exp.description.split('\n').map((line, i) => (
-                                                  <p key={i} className="mb-1">
-                                                    {line.startsWith('•') || line.startsWith('-') ? (
-                                                      <span className="flex items-start">
-                                                        <span className="mr-2">•</span>
-                                                        <span>{line.replace(/^[•-]\s*/, '')}</span>
-                                                      </span>
-                                                    ) : (
-                                                      line
-                                                    )}
-                                                  </p>
-                                                ))}
-                                              </div>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                return (
+                  <div key={idx}>
+                    {/* Job Title */}
+                    <h3 className="text-[11px] font-bold text-gray-800 leading-tight">
+                      {exp.title}
+                    </h3>
+                    
+                    {/* Company, Location | Period */}
+                    <p className="text-[10px] leading-tight mb-1">
+                      <span style={{ color: selectedColor.hex }}>{exp.company}</span>
+                      {exp.location && (
+                        <span style={{ color: selectedColor.hex }}>, {exp.location}</span>
                       )}
+                      {startFormatted && (
+                        <span className="text-gray-500 italic">
+                          {' '}| {startFormatted} - {endFormatted}
+                        </span>
+                      )}
+                    </p>
+                    
+                    {/* Bullets */}
+                    {bullets.length > 0 && (
+                      <ul className="space-y-0.5 mt-1">
+                        {bullets.slice(0, 5).map((bullet, bIdx) => (
+                          <li key={bIdx} className="text-[10px] text-gray-700 leading-relaxed">
+                            • {bullet}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
                       {/* Traditional Template Preview */}
                       {selectedTemplate === 'traditional' && (
