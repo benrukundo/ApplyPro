@@ -2150,18 +2150,19 @@ const formatMonthYear = (dateStr: string): string => {
         </h1>
 
         {/* Professional Summary */}
-        {(enhancedPreview || generatedResume || formData.summary) && (
-          <div className="mb-5">
-            <h2
-              className="text-[12px] font-bold mb-1 tracking-wide"
-              style={{ color: selectedColor.hex }}
-            >
-              PROFESSIONAL SUMMARY
-            </h2>
-            <div
-              className="h-[2px] w-12 mb-2"
-              style={{ backgroundColor: selectedColor.hex }}
-            />
+       {(enhancedPreview || generatedResume || formData.summary) && (
+  <div className="mb-5">
+    <h2
+      className="text-[12px] font-bold mb-1 tracking-wide"
+      style={{ color: selectedColor.hex }}
+    >
+      PROFESSIONAL SUMMARY
+    </h2>
+    {/* Full-width thin underline */}
+    <div
+      className="h-[1px] w-full mb-3"
+      style={{ backgroundColor: selectedColor.hex }}
+    />
             <p className="text-[10px] text-gray-700 leading-relaxed">
               {(() => {
                 const aiContent = enhancedPreview || generatedResume || '';
@@ -2179,17 +2180,18 @@ const formatMonthYear = (dateStr: string): string => {
 
         {/* Professional Experience */}
         {formData.experience.length > 0 && (
-          <div className="mb-5">
-            <h2
-              className="text-[12px] font-bold mb-1 tracking-wide"
-              style={{ color: selectedColor.hex }}
-            >
-              PROFESSIONAL EXPERIENCE
-            </h2>
-            <div
-              className="h-[2px] w-14 mb-3"
-              style={{ backgroundColor: selectedColor.hex }}
-            />
+  <div className="mb-5">
+    <h2
+      className="text-[12px] font-bold mb-1 tracking-wide"
+      style={{ color: selectedColor.hex }}
+    >
+      PROFESSIONAL EXPERIENCE
+    </h2>
+    {/* Full-width thin underline */}
+    <div
+      className="h-[1px] w-full mb-3"
+      style={{ backgroundColor: selectedColor.hex }}
+    />
 
             <div className="space-y-4">
               {formData.experience.map((exp, idx) => {

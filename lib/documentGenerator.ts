@@ -616,109 +616,111 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
   }
 
   // ============ MAIN CONTENT AREA ============
-  const mainX = sidebarWidth + 8;
-  const mainWidth = pageWidth - sidebarWidth - margin - 8;
-  let yPos = 18;
+ const mainX = sidebarWidth + 8;
+const mainWidth = pageWidth - sidebarWidth - margin - 8;
+let yPos = 18;
 
-  // Name
-  doc.setFontSize(28);
+// Name
+doc.setFontSize(28);
+doc.setFont('helvetica', 'bold');
+doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+doc.text(structure.name || 'Your Name', mainX, yPos);
+yPos += 14;
+
+// PROFESSIONAL SUMMARY
+if (structure.summary) {
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-  doc.text(structure.name || 'Your Name', mainX, yPos);
-  yPos += 14;
+  doc.text('PROFESSIONAL SUMMARY', mainX, yPos);
+  yPos += 2;
+  
+  // Full-width thin underline
+  doc.setDrawColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+  doc.setLineWidth(0.3);
+  doc.line(mainX, yPos, mainX + mainWidth, yPos);
+  yPos += 5;
 
-  // PROFESSIONAL SUMMARY
-  if (structure.summary) {
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    doc.text('PROFESSIONAL SUMMARY', mainX, yPos);
-    yPos += 1;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(50, 50, 50);
+  const summaryLines = doc.splitTextToSize(structure.summary, mainWidth);
+  doc.text(summaryLines, mainX, yPos);
+  yPos += summaryLines.length * 4.5 + 6;
+}
+
+// PROFESSIONAL EXPERIENCE
+if (structure.experience.length > 0) {
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+  doc.text('PROFESSIONAL EXPERIENCE', mainX, yPos);
+  yPos += 2;
+  
+  // Full-width thin underline
+  doc.setDrawColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
+  doc.setLineWidth(0.3);
+  doc.line(mainX, yPos, mainX + mainWidth, yPos);
+  yPos += 6;
+
+  for (const exp of structure.experience) {
+    // Calculate space needed for this job entry
+    const spaceNeeded = 20 + (exp.achievements.length * 5);
     
-    doc.setDrawColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    doc.setLineWidth(0.5);
-    doc.line(mainX, yPos, mainX + 50, yPos);
+    // Check for page break
+    if (yPos > pageHeight - Math.min(spaceNeeded, 45)) {
+      doc.addPage();
+      drawSidebarBackground();
+      yPos = 20;
+    }
+
+    // Job Title
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text(exp.title, mainX, yPos);
     yPos += 5;
 
+    // Company, Location | Period
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(50, 50, 50);
-    const summaryLines = doc.splitTextToSize(structure.summary, mainWidth);
-    doc.text(summaryLines, mainX, yPos);
-    yPos += summaryLines.length * 4 + 6;
-  }
-
-  // PROFESSIONAL EXPERIENCE
-  if (structure.experience.length > 0) {
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    doc.text('PROFESSIONAL EXPERIENCE', mainX, yPos);
-    yPos += 1;
     
-    doc.setDrawColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-    doc.setLineWidth(0.5);
-    doc.line(mainX, yPos, mainX + 55, yPos);
-    yPos += 6;
+    let companyLine = exp.company;
+    if (exp.location) {
+      companyLine += ', ' + exp.location;
+    }
+    
+    doc.text(companyLine, mainX, yPos);
+    
+    if (exp.period) {
+      doc.setTextColor(100, 100, 100);
+      doc.setFont('helvetica', 'italic');
+      const periodText = ' | ' + exp.period;
+      const companyWidth = doc.getTextWidth(companyLine);
+      doc.text(periodText, mainX + companyWidth, yPos);
+    }
+    yPos += 5;
 
-    for (const exp of structure.experience) {
-      // Calculate space needed for this job entry
-      const spaceNeeded = 20 + (exp.achievements.length * 5);
-      
-      // Check for page break
-      if (yPos > pageHeight - Math.min(spaceNeeded, 45)) {
+    // Achievements
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(10);
+    for (const achievement of exp.achievements) {
+      if (yPos > pageHeight - 15) {
         doc.addPage();
         drawSidebarBackground();
         yPos = 20;
       }
 
-      // Job Title
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(40, 40, 40);
-      doc.text(exp.title, mainX, yPos);
-      yPos += 4;
-
-      // Company, Location | Period
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
-      
-      let companyLine = exp.company;
-      if (exp.location) {
-        companyLine += ', ' + exp.location;
-      }
-      
-      doc.text(companyLine, mainX, yPos);
-      
-      if (exp.period) {
-        doc.setTextColor(100, 100, 100);
-        doc.setFont('helvetica', 'italic');
-        const periodText = ' | ' + exp.period;
-        const companyWidth = doc.getTextWidth(companyLine);
-        doc.text(periodText, mainX + companyWidth, yPos);
-      }
-      yPos += 5;
-
-      // Achievements
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(60, 60, 60);
-      for (const achievement of exp.achievements) {
-        if (yPos > pageHeight - 15) {
-          doc.addPage();
-          drawSidebarBackground();
-          yPos = 20;
-        }
-
-        const bulletText = '• ' + achievement;
-        const achLines = doc.splitTextToSize(bulletText, mainWidth - 3);
-        doc.text(achLines, mainX, yPos);
-        yPos += achLines.length * 4 + 1;
-      }
-      yPos += 4;
+      const bulletText = '• ' + achievement;
+      const achLines = doc.splitTextToSize(bulletText, mainWidth - 3);
+      doc.text(achLines, mainX, yPos);
+      yPos += achLines.length * 4.5 + 1;
     }
+    yPos += 5;
   }
-
+}
   return doc;
 }
 
