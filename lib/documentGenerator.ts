@@ -618,15 +618,15 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
   let yPos = 18;
 
   // Name
-  doc.setFontSize(26);
+  doc.setFontSize(28);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
   doc.text(structure.name || 'Your Name', mainX, yPos);
-  yPos += 12;
+  yPos += 14;
 
   // PROFESSIONAL SUMMARY
   if (structure.summary) {
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
     doc.text('PROFESSIONAL SUMMARY', mainX, yPos);
@@ -637,9 +637,9 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
     doc.line(mainX, yPos, mainX + 50, yPos);
     yPos += 5;
 
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
+    doc.setTextColor(50, 50, 50);
     const summaryLines = doc.splitTextToSize(structure.summary, mainWidth);
     doc.text(summaryLines, mainX, yPos);
     yPos += summaryLines.length * 4 + 6;
@@ -647,7 +647,7 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
 
   // PROFESSIONAL EXPERIENCE
   if (structure.experience.length > 0) {
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
     doc.text('PROFESSIONAL EXPERIENCE', mainX, yPos);
@@ -670,14 +670,14 @@ function generateModernPDF(structure: ResumeStructure, color: keyof typeof color
       }
 
       // Job Title
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(40, 40, 40);
       doc.text(exp.title, mainX, yPos);
       yPos += 4;
 
       // Company, Location | Period
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(primaryRgb.r, primaryRgb.g, primaryRgb.b);
       
