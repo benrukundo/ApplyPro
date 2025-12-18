@@ -1327,19 +1327,58 @@ function generateATSPDF(structure: ResumeStructure): jsPDF {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
 
-    const allSkills = [
-      ...structure.skills.technical,
-      ...structure.skills.soft,
-      ...(structure.skills.languages || [])
-    ];
+    // Technical skills as comma-separated list
+    if (structure.skills.technical.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Technical: ', margin, yPos);
+      doc.setFont('helvetica', 'normal');
+      const techText = structure.skills.technical.join(', ');
+      const techLines = doc.splitTextToSize(techText, pageWidth - 2 * margin - 20);
+      doc.text(techLines, margin + 20, yPos);
+      yPos += techLines.length * 5 + 3;
+    }
 
-    for (const skill of allSkills) {
+    // Professional/Soft skills as comma-separated list
+    if (structure.skills.soft.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Professional: ', margin, yPos);
+      doc.setFont('helvetica', 'normal');
+      const softText = structure.skills.soft.join(', ');
+      const softLines = doc.splitTextToSize(softText, pageWidth - 2 * margin - 25);
+      doc.text(softLines, margin + 25, yPos);
+      yPos += softLines.length * 5 + 3;
+    }
+
+    // Languages as comma-separated list
+    if (structure.skills.languages && structure.skills.languages.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Languages: ', margin, yPos);
+      doc.setFont('helvetica', 'normal');
+      const langText = structure.skills.languages.join(', ');
+      const langLines = doc.splitTextToSize(langText, pageWidth - 2 * margin - 20);
+      doc.text(langLines, margin + 20, yPos);
+      yPos += langLines.length * 5 + 3;
+    }
+  }
+
+  // Certifications
+  if (structure.skills.certifications && structure.skills.certifications.length > 0) {
+    if (yPos > pageHeight - 30) {
+      doc.addPage();
+      yPos = margin;
+    }
+    addSection('Certifications');
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+
+    for (const cert of structure.skills.certifications) {
       if (yPos > pageHeight - 20) {
         doc.addPage();
         yPos = margin;
       }
-      const skillLines = doc.splitTextToSize('• ' + skill, pageWidth - 2 * margin - 5);
-      skillLines.forEach((line: string) => {
+      const certLines = doc.splitTextToSize('• ' + cert, pageWidth - 2 * margin - 5);
+      certLines.forEach((line: string) => {
         doc.text(line, margin + 5, yPos);
         yPos += 5;
       });
@@ -2178,15 +2217,76 @@ async function generateATSDOCX(structure: ResumeStructure): Promise<Blob> {
             ],
             spacing: { before: 200, after: 100 },
           }),
-          ...[
-            ...structure.skills.technical,
-            ...structure.skills.soft,
-            ...(structure.skills.languages || []),
-          ].map(skill =>
+          // Technical skills as comma-separated
+          ...(structure.skills.technical.length > 0 ? [
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `• ${skill}`,
+                  text: 'Technical: ',
+                  bold: true,
+                  size: 22,
+                }),
+                new TextRun({
+                  text: structure.skills.technical.join(', '),
+                  size: 22,
+                }),
+              ],
+              spacing: { after: 100 },
+            }),
+          ] : []),
+          // Professional skills as comma-separated
+          ...(structure.skills.soft.length > 0 ? [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: 'Professional: ',
+                  bold: true,
+                  size: 22,
+                }),
+                new TextRun({
+                  text: structure.skills.soft.join(', '),
+                  size: 22,
+                }),
+              ],
+              spacing: { after: 100 },
+            }),
+          ] : []),
+          // Languages as comma-separated
+          ...(structure.skills.languages && structure.skills.languages.length > 0 ? [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: 'Languages: ',
+                  bold: true,
+                  size: 22,
+                }),
+                new TextRun({
+                  text: structure.skills.languages.join(', '),
+                  size: 22,
+                }),
+              ],
+              spacing: { after: 100 },
+            }),
+          ] : []),
+        ] : []),
+
+        // Certifications
+        ...(structure.skills.certifications && structure.skills.certifications.length > 0 ? [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'CERTIFICATIONS',
+                bold: true,
+                size: 24,
+              }),
+            ],
+            spacing: { before: 200, after: 100 },
+          }),
+          ...structure.skills.certifications.map(cert =>
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `• ${cert}`,
                   size: 22,
                 }),
               ],
