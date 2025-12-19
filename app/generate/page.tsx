@@ -648,12 +648,16 @@ export default function GeneratePage() {
                   className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${
                     isDragActive
                       ? 'border-blue-500 bg-blue-50 scale-[1.02]'
-                      : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'
+                      : 'border-slate-300 bg-slate-50/80 hover:border-blue-400 hover:bg-blue-50'
                   }`}
                 >
                   <input {...getInputProps()} />
-                  <div className={`w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center transition-colors ${isDragActive ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                    <Upload className={`w-6 h-6 ${isDragActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <div className={`w-14 h-14 mx-auto mb-4 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                    isDragActive
+                      ? 'bg-blue-100 border-2 border-blue-200'
+                      : 'bg-white border-2 border-slate-200 shadow-sm'
+                  }`}>
+                    <Upload className={`w-6 h-6 ${isDragActive ? 'text-blue-600' : 'text-slate-400'}`} />
                   </div>
                   <p className="text-base font-semibold text-gray-900 mb-1">
                     {isDragActive ? 'Drop your file here' : 'Drag and drop your resume'}
