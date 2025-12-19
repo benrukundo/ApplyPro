@@ -127,28 +127,7 @@ export default function LinkedInOptimizerPage() {
     fetchCount();
   }, [session?.user?.id]);
 
-  // Extract text from PDF
-  const extractPdfText = async (file: File): Promise<string> => {
-    const pdfParse = (await import('pdf-parse' as any)).default;
-    const arrayBuffer = await file.arrayBuffer();
-    const data = await pdfParse(Buffer.from(arrayBuffer));
-    return data.text;
-  };
-
-  // Extract text from DOCX
-  const extractDocxText = async (file: File): Promise<string> => {
-    const mammoth = (await import('mammoth' as any)).default;
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value;
-  };
-
-  // Extract text from TXT
-  const extractTxtText = async (file: File): Promise<string> => {
-    return await file.text();
-  };
-
-  // Handle file upload
+  // Handle file upload - Use server-side extraction for reliability
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -158,27 +137,26 @@ export default function LinkedInOptimizerPage() {
     setIsExtractingText(true);
 
     try {
-      const fileName = file.name.toLowerCase();
-      let text = '';
+      // Use server-side extraction API for more reliable PDF handling
+      const formData = new FormData();
+      formData.append('file', file);
 
-      if (fileName.endsWith('.pdf')) {
-        text = await extractPdfText(file);
-      } else if (fileName.endsWith('.docx')) {
-        text = await extractDocxText(file);
-      } else if (fileName.endsWith('.txt')) {
-        text = await extractTxtText(file);
-      } else {
-        setError('Unsupported file type. Please upload PDF, DOCX, or TXT.');
-        setResumeFile(null);
-        setIsExtractingText(false);
-        return;
+      const response = await fetch('/api/extract-text', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to extract text');
       }
 
-      setResumeContent(text);
+      const data = await response.json();
+      setResumeContent(data.text);
       setIsExtractingText(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to extract text:', err);
-      setError('Failed to read file. Please try another file.');
+      setError(err.message || 'Failed to read file. Please try another file.');
       setResumeFile(null);
       setResumeContent('');
       setIsExtractingText(false);
