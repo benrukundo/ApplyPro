@@ -543,8 +543,12 @@ export default function GeneratePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 pt-20 pb-12">
-      <div className="container mx-auto px-4 max-w-6xl">
+    <div className="min-h-screen bg-slate-50 pt-20 pb-12 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-100/40 to-purple-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-indigo-100/30 to-cyan-100/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+
+      <div className="relative z-10 container mx-auto px-4 max-w-6xl">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <Link
