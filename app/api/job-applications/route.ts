@@ -6,13 +6,16 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+
+    // Validate email exists in session
+    const userEmail = session?.user?.email;
+    if (!userEmail) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Find user by email
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { email: userEmail },
     });
 
     if (!user) {
@@ -74,9 +77,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - No session' }, { status: 401 });
     }
 
+    // Validate email exists in session
+    const userEmail = session.user.email;
+    if (!userEmail) {
+      return NextResponse.json({ error: 'No email in session' }, { status: 401 });
+    }
+
     // Find user by email (reliable lookup)
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { email: userEmail },
     });
 
     if (!user) {
