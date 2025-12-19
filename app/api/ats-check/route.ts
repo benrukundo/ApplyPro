@@ -118,7 +118,8 @@ export async function POST(request: NextRequest) {
     if (fileName.endsWith(".pdf")) {
       // Use unpdf - works in Node.js/serverless without browser APIs
       const { extractText } = await import('unpdf');
-      const result = await extractText(buffer);
+      const uint8Array = new Uint8Array(buffer);
+      const result = await extractText(uint8Array);
       extractedText = Array.isArray(result.text) ? result.text.join('\n') : result.text;
     } else if (fileName.endsWith(".docx")) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

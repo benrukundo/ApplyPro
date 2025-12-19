@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
 
     } else if (fileName.endsWith('.pdf')) {
       // Use unpdf - works in Node.js/serverless without browser APIs
-      const result = await extractText(buffer);
+      const uint8Array = new Uint8Array(buffer);
+      const result = await extractText(uint8Array);
       text = Array.isArray(result.text) ? result.text.join('\n') : result.text;
 
     } else {
