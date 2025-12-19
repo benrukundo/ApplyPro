@@ -104,17 +104,27 @@ export const authOptions: NextAuthOptions = {
       if (url.startsWith(baseUrl)) return url;
       return `${baseUrl}/dashboard`;
     },
-    async jwt({ token, user }) {
+    async session({ session, token, user }) {
+      if (session.user) {
+        // For JWT strategy, use token.sub
+        // For database strategy, use user.id
+        if (user) {
+          session.user.id = user.id;
+        } else if (token?.sub) {
+          session.user.id = token.sub;
+        } else if (token?.id) {
+          session.user.id = token.id as string;
+        }
+      }
+      return session;
+    },
+    async jwt({ token, user, account }) {
+      // When user signs in, add their ID to the token
       if (user) {
+        token.id = user.id;
         token.sub = user.id;
       }
       return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub || (token as any).id;
-      }
-      return session;
     },
   },
   pages: {

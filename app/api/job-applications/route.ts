@@ -6,8 +6,17 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -16,7 +25,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
 
     let where: any = {
-      userId: session.user.id,
+      userId: user.id,  // Use database user ID
     };
 
     // Add filters
@@ -61,24 +70,48 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Debug logging
-    console.log('Session:', JSON.stringify(session, null, 2));
-    console.log('User ID:', session?.user?.id);
+    // Detailed debug logging
+    console.log('=== Job Application Debug ===');
+    console.log('Full session:', JSON.stringify(session, null, 2));
+    console.log('session.user:', JSON.stringify(session?.user, null, 2));
+    console.log('session.user.id:', session?.user?.id);
+    console.log('session.user.email:', session?.user?.email);
 
-    if (!session?.user?.id) {
-      console.error('No user ID found in session');
-      return NextResponse.json({ error: 'Unauthorized - No user ID' }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized - No session' }, { status: 401 });
     }
 
-    // Verify user exists in database
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    });
+    // Try to find user by ID first, then by email as fallback
+    let user = null;
+
+    if (session.user.id) {
+      console.log('Looking up user by ID:', session.user.id);
+      user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+      });
+      console.log('User found by ID:', user ? 'YES' : 'NO');
+    }
+
+    // Fallback: find by email if ID lookup failed
+    if (!user && session.user.email) {
+      console.log('Looking up user by email:', session.user.email);
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+      });
+      console.log('User found by email:', user ? 'YES' : 'NO');
+      if (user) {
+        console.log('Actual user ID in database:', user.id);
+      }
+    }
 
     if (!user) {
-      console.error('User not found in database:', session.user.id);
+      console.error('User not found by ID or email');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    // Use the actual database user ID
+    const userId = user.id;
+    console.log('Using userId:', userId);
 
     const body = await request.json();
     const {
@@ -100,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     // Check user limit (100 applications)
     const currentCount = await prisma.jobApplication.count({
-      where: { userId: session.user.id },
+      where: { userId: userId },
     });
 
     if (currentCount >= 100) {
@@ -112,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     const application = await prisma.jobApplication.create({
       data: {
-        userId: session.user.id,
+        userId: userId,
         companyName,
         positionTitle,
         jobUrl,

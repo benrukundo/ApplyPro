@@ -9,15 +9,24 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const resolvedParams = await params;
     const application = await prisma.jobApplication.findFirst({
       where: {
         id: resolvedParams.id,
-        userId: session.user.id,
+        userId: user.id,
       },
       include: {
         statusHistory: {
@@ -49,8 +58,17 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const resolvedParams = await params;
@@ -76,7 +94,7 @@ export async function PUT(
     const currentApplication = await prisma.jobApplication.findFirst({
       where: {
         id: resolvedParams.id,
-        userId: session.user.id,
+        userId: user.id,
       },
     });
 
@@ -119,7 +137,7 @@ export async function PUT(
     const application = await prisma.jobApplication.update({
       where: {
         id: resolvedParams.id,
-        userId: session.user.id,
+        userId: user.id,
       },
       data: updateData,
     });
@@ -140,15 +158,24 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const resolvedParams = await params;
     await prisma.jobApplication.delete({
       where: {
         id: resolvedParams.id,
-        userId: session.user.id,
+        userId: user.id,
       },
     });
 

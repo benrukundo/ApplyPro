@@ -1,0 +1,172 @@
+Debug the user ID mismatch issue. The session has a user ID but it doesn't match any user in the database.
+
+Step 1: Add detailed debugging to see what's happening
+
+In app/api/job-applications/route.ts, update the POST function with more logging:
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    // Detailed debug logging
+    console.log('=== Job Application Debug ===');
+    console.log('Full session:', JSON.stringify(session, null, 2));
+    console.log('session.user:', JSON.stringify(session?.user, null, 2));
+    console.log('session.user.id:', session?.user?.id);
+    console.log('session.user.email:', session?.user?.email);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized - No session' }, { status: 401 });
+    }
+
+    // Try to find user by ID first, then by email as fallback
+    let user = null;
+    
+    if (session.user.id) {
+      console.log('Looking up user by ID:', session.user.id);
+      user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+      });
+      console.log('User found by ID:', user ? 'YES' : 'NO');
+    }
+    
+    // Fallback: find by email if ID lookup failed
+    if (!user && session.user.email) {
+      console.log('Looking up user by email:', session.user.email);
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+      });
+      console.log('User found by email:', user ? 'YES' : 'NO');
+      if (user) {
+        console.log('Actual user ID in database:', user.id);
+      }
+    }
+    
+    if (!user) {
+      console.error('User not found by ID or email');
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Use the actual database user ID
+    const userId = user.id;
+    console.log('Using userId:', userId);
+
+    const body = await request.json();
+    // ... rest of the code, but use userId instead of session.user.id
+
+    const application = await prisma.jobApplication.create({
+      data: {
+        userId: userId,  // Use the verified database user ID
+        companyName,
+        positionTitle,
+        // ... rest of fields
+      },
+      // ...
+    });
+
+    return NextResponse.json({ application }, { status: 201 });
+  } catch (error) {
+    console.error('Error creating job application:', error);
+    return NextResponse.json(
+      { error: 'Failed to create job application' },
+      { status: 500 }
+    );
+  }
+}
+
+
+Step 2: The real fix - Update authOptions.ts to use the correct user ID
+
+The issue is likely in lib/authOptions.ts. The session callback needs to get the 
+actual database user ID. 
+
+Show me the contents of lib/authOptions.ts so I can see how the session is configured.
+
+For now, update the session callback in lib/authOptions.ts:
+
+callbacks: {
+  async session({ session, token, user }) {
+    if (session.user) {
+      // For JWT strategy, use token.sub
+      // For database strategy, use user.id
+      if (user) {
+        session.user.id = user.id;
+      } else if (token?.sub) {
+        session.user.id = token.sub;
+      } else if (token?.id) {
+        session.user.id = token.id as string;
+      }
+    }
+    return session;
+  },
+  async jwt({ token, user, account }) {
+    // When user signs in, add their ID to the token
+    if (user) {
+      token.id = user.id;
+      token.sub = user.id;
+    }
+    return token;
+  },
+},
+
+
+Step 3: As a temporary workaround, update the API to find user by email
+
+Since we know the email is in the session, we can use that as a reliable lookup.
+
+In app/api/job-applications/route.ts, replace the user lookup section:
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Find user by email (reliable)
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+    
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Use the database user ID for all operations
+    const userId = user.id;
+
+
+Step 4: Apply the same fix to GET handler
+
+Update the GET function in the same file to also use email lookup:
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+    
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    // ... rest of code
+
+    let where: any = {
+      userId: user.id,  // Use database user ID
+    };
+
+    // ... rest of the function
+
+
+Step 5: Apply to the [id] route as well
+
+Update app/api/job-applications/[id]/route.ts with the same pattern for GET, PUT, DELETE.
+
+
+Commit with message: "fix: use email-based user lookup for job applications API"
+Push to GitHub.
