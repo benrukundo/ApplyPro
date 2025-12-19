@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { extractTextFromPDF } from '@/lib/pdfExtractor';
 import {
   FileText,
   Briefcase,
@@ -155,17 +154,26 @@ export default function InterviewPrepPage() {
     if (!file) return;
 
     setResumeFile(file);
-    setError('');
-    setIsExtractingText(true);
+    setError(''); // Clear any previous errors
+
+    const fileName = file.name.toLowerCase();
 
     try {
-      const fileName = file.name.toLowerCase();
-
       if (fileName.endsWith('.pdf')) {
-        // Extract PDF text on client side using pdf.js
+        // Extract PDF text on client side (no server needed)
+        console.log('Extracting text from PDF client-side...');
+        const { extractTextFromPDF } = await import('@/lib/pdfExtractor');
         const text = await extractTextFromPDF(file);
+
+        if (!text || text.trim().length < 50) {
+          setError('Could not extract text from PDF. The file may be image-based (scanned). Please try a DOCX file.');
+          return;
+        }
+
         setResumeContent(text);
-      } else {
+        console.log('PDF text extracted successfully:', text.length, 'characters');
+
+      } else if (fileName.endsWith('.docx') || fileName.endsWith('.txt')) {
         // For DOCX and TXT, use server-side extraction
         const formData = new FormData();
         formData.append('file', file);
@@ -175,21 +183,24 @@ export default function InterviewPrepPage() {
           body: formData,
         });
 
-        if (!response.ok) {
+        if (response.ok) {
+          const data = await response.json();
+          setResumeContent(data.text);
+        } else {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to extract text');
+          setError(errorData.error || 'Failed to extract text from file');
         }
 
-        const data = await response.json();
-        setResumeContent(data.text);
+      } else if (fileName.endsWith('.doc')) {
+        setError('Old .doc format is not supported. Please save as .docx or .pdf');
+
+      } else {
+        setError('Unsupported file format. Please upload PDF, DOCX, or TXT file.');
       }
-      setIsExtractingText(false);
+
     } catch (err: any) {
-      console.error('Failed to extract text:', err);
-      setError(err.message || 'Failed to read file. Please try DOCX format instead.');
-      setResumeFile(null);
-      setResumeContent('');
-      setIsExtractingText(false);
+      console.error('File extraction error:', err);
+      setError(err.message || 'Failed to read file. Please try another file.');
     }
   };
 

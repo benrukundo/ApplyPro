@@ -1,22 +1,49 @@
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Disable worker - use single-threaded mode (simpler and works everywhere)
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+
 export async function extractTextFromPDF(file: File): Promise<string> {
-  const pdfjsLib = await import('pdfjs-dist');
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
 
-  // Set worker source
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    // Load PDF document without worker
+    const loadingTask = pdfjsLib.getDocument({
+      data: uint8Array,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    });
 
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await loadingTask.promise;
+    const textParts: string[] = [];
 
-  let fullText = '';
+    // Extract text from each page
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
 
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      .map((item: any) => ('str' in item ? item.str : ''))
-      .join(' ');
-    fullText += pageText + '\n\n';
+      let lastY = -1;
+      let pageText = '';
+
+      for (const item of textContent.items) {
+        if ('str' in item && item.str) {
+          // Add newline when Y position changes significantly (new line)
+          if (lastY !== -1 && Math.abs(lastY - item.transform[5]) > 5) {
+            pageText += '\n';
+          }
+          pageText += item.str + ' ';
+          lastY = item.transform[5];
+        }
+      }
+
+      textParts.push(pageText.trim());
+    }
+
+    return textParts.join('\n\n');
+  } catch (error: any) {
+    console.error('PDF extraction error:', error);
+    throw new Error('Failed to extract text from PDF: ' + error.message);
   }
-
-  return fullText.trim();
 }

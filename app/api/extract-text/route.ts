@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
 
     let text = '';
 
-    // Handle different file types
     if (fileName.endsWith('.txt')) {
       // Plain text file
       text = buffer.toString('utf-8');
@@ -29,85 +28,30 @@ export async function POST(req: NextRequest) {
         const mammoth = await import('mammoth');
         const result = await mammoth.extractRawText({ buffer });
         text = result.value;
-      } catch (docxError) {
+      } catch (docxError: any) {
         console.error('DOCX extraction error:', docxError);
         return NextResponse.json(
-          { error: 'Failed to extract text from DOCX file' },
+          { error: 'Failed to extract text from DOCX file: ' + docxError.message },
           { status: 500 }
         );
       }
 
     } else if (fileName.endsWith('.pdf')) {
-      // PDF file - use pdfjs-dist (works better in serverless)
-      try {
-        // @ts-ignore
-        const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-
-        // Convert buffer to Uint8Array for pdfjs
-        const uint8Array = new Uint8Array(arrayBuffer);
-
-        // Load the PDF document
-        const loadingTask = pdfjsLib.getDocument({
-          data: uint8Array,
-          useSystemFonts: true,
-        });
-
-        const pdfDocument = await loadingTask.promise;
-        const numPages = pdfDocument.numPages;
-        const textParts: string[] = [];
-
-        // Extract text from each page
-        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-          const page = await pdfDocument.getPage(pageNum);
-          const textContent = await page.getTextContent();
-
-          // Combine all text items from the page
-          const pageText = textContent.items
-            .map((item: any) => {
-              if ('str' in item) {
-                return item.str;
-              }
-              return '';
-            })
-            .join(' ');
-
-          textParts.push(pageText);
-        }
-
-        text = textParts.join('\n\n');
-
-      } catch (pdfError: any) {
-        console.error('PDF extraction error:', pdfError);
-
-        // Try alternative method with pdf-parse as fallback
-        try {
-          console.log('Trying pdf-parse as fallback...');
-          // @ts-ignore
-          const pdfParse = (await import('pdf-parse')).default;
-          const pdfData = await pdfParse(buffer);
-          text = pdfData.text;
-        } catch (fallbackError: any) {
-          console.error('PDF fallback extraction also failed:', fallbackError);
-          return NextResponse.json(
-            {
-              error: 'Failed to extract text from PDF. The file may be scanned, encrypted, or corrupted. Please try uploading a DOCX file instead.',
-              details: pdfError.message
-            },
-            { status: 500 }
-          );
-        }
-      }
+      // PDF should be handled client-side, but provide fallback message
+      return NextResponse.json(
+        { error: 'PDF files should be processed in browser. Please refresh and try again.' },
+        { status: 400 }
+      );
 
     } else if (fileName.endsWith('.doc')) {
-      // Old .doc format - not supported
       return NextResponse.json(
-        { error: 'Old .doc format is not supported. Please convert to .docx or .pdf' },
+        { error: 'Old .doc format is not supported. Please convert to .docx' },
         { status: 400 }
       );
 
     } else {
       return NextResponse.json(
-        { error: 'Unsupported file format. Please upload PDF, DOCX, or TXT file.' },
+        { error: 'Unsupported file format. Please upload DOCX or TXT file.' },
         { status: 400 }
       );
     }
@@ -117,15 +61,11 @@ export async function POST(req: NextRequest) {
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n')
       .replace(/\n{3,}/g, '\n\n')
-      .replace(/\s+/g, ' ')
       .trim();
 
-    // Check if we got meaningful text
     if (!text || text.length < 20) {
       return NextResponse.json(
-        {
-          error: 'Could not extract meaningful text from file. The PDF may be scanned (image-based) rather than text-based. Please try uploading a DOCX file instead.',
-        },
+        { error: 'Could not extract meaningful text from file.' },
         { status: 400 }
       );
     }
@@ -141,7 +81,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Text extraction error:', error);
     return NextResponse.json(
-      { error: 'Failed to process file. Please try another file or use DOCX format.' },
+      { error: 'Failed to process file: ' + error.message },
       { status: 500 }
     );
   }
