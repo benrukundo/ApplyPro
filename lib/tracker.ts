@@ -1,30 +1,33 @@
+import { getSession } from 'next-auth/react';
+
 export type ApplicationStatus = 'saved' | 'applied' | 'interview' | 'offer' | 'rejected';
 export type Priority = 'low' | 'medium' | 'high';
 export type JobSource = 'linkedin' | 'indeed' | 'company_website' | 'referral' | 'recruiter' | 'other';
 
+// Updated interface to match database schema
 export interface Application {
   id: string;
   userId: string;
   companyName: string;
   positionTitle: string;
-  status: ApplicationStatus;
-  appliedDate: number | null;
-  salary: string;
-  location: string;
+  jobUrl?: string;
+  location?: string;
+  salary?: string;
   isRemote: boolean;
-  jobUrl: string;
-  notes: string;
   jobSource: JobSource;
-  followUpDate: number | null;
+  status: ApplicationStatus;
+  appliedDate?: Date;
+  notes?: string;
+  followUpDate?: Date;
   priority: Priority;
-  contactPerson: string;
-  contactEmail: string;
-  createdAt: number;
-  updatedAt: number;
-  history: Array<{
+  contactPerson?: string;
+  contactEmail?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  statusHistory?: Array<{
     status: ApplicationStatus;
-    date: number;
-    note: string;
+    changedAt: Date;
+    note?: string;
   }>;
 }
 
@@ -42,354 +45,340 @@ export interface Statistics {
 
 const isBrowser = typeof window !== 'undefined';
 
-// Get user ID from localStorage (set by the tracker page when authenticated)
-function getUserId(): string | null {
-  if (!isBrowser) return null;
-  return localStorage.getItem('applypro_current_user_id');
+// API helper functions
+async function apiRequest(endpoint: string, options?: RequestInit) {
+  const session = await getSession();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(endpoint, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+    ...options,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'API request failed');
+  }
+
+  return response.json();
 }
 
-// Set user ID (called from tracker page when session is available)
-export function setCurrentUserId(userId: string): void {
-  if (!isBrowser) return;
-  localStorage.setItem('applypro_current_user_id', userId);
+// Convert database format to frontend format
+function convertFromDatabase(dbApp: any): Application {
+  return {
+    id: dbApp.id,
+    userId: dbApp.userId,
+    companyName: dbApp.companyName,
+    positionTitle: dbApp.positionTitle,
+    jobUrl: dbApp.jobUrl || '',
+    location: dbApp.location || '',
+    salary: dbApp.salary || '',
+    isRemote: dbApp.isRemote,
+    jobSource: dbApp.jobSource,
+    status: dbApp.status,
+    appliedDate: dbApp.appliedDate ? new Date(dbApp.appliedDate) : undefined,
+    notes: dbApp.notes || '',
+    followUpDate: dbApp.followUpDate ? new Date(dbApp.followUpDate) : undefined,
+    priority: dbApp.priority,
+    contactPerson: dbApp.contactPerson || '',
+    contactEmail: dbApp.contactEmail || '',
+    createdAt: new Date(dbApp.createdAt),
+    updatedAt: new Date(dbApp.updatedAt),
+    statusHistory: dbApp.statusHistory?.map((h: any) => ({
+      status: h.status,
+      changedAt: new Date(h.changedAt),
+      note: h.note,
+    })),
+  };
 }
 
-// Clear user ID (called on logout)
-export function clearCurrentUserId(): void {
-  if (!isBrowser) return;
-  localStorage.removeItem('applypro_current_user_id');
-}
-
-function getUserKey(): string | null {
-  const userId = getUserId();
-  if (!userId) return null;
-  return `applypro_applications_${userId}`;
-}
-
-export function getAllApplications(): Application[] {
-  if (!isBrowser) return [];
-
-  const key = getUserKey();
-  if (!key) return [];
-
-  const data = localStorage.getItem(key);
-  if (!data) return [];
-
+export async function getAllApplications(): Promise<Application[]> {
   try {
-    return JSON.parse(data);
-  } catch (e) {
+    const response = await apiRequest('/api/job-applications');
+    return response.applications.map(convertFromDatabase);
+  } catch (error) {
+    console.error('Error fetching applications:', error);
     return [];
   }
 }
 
-export function getApplicationById(id: string): Application | null {
-  const applications = getAllApplications();
-  return applications.find(app => app.id === id) || null;
+export async function getApplicationById(id: string): Promise<Application | null> {
+  try {
+    const response = await apiRequest(`/api/job-applications/${id}`);
+    return convertFromDatabase(response.application);
+  } catch (error) {
+    console.error('Error fetching application:', error);
+    return null;
+  }
 }
 
-export function addApplication(data: Omit<Application, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'history'>): { success: boolean; id?: string; error?: string } {
-  if (!isBrowser) return { success: false, error: 'Not in browser environment' };
-
-  const userId = getUserId();
-  if (!userId) {
-    return { success: false, error: 'Not authenticated' };
-  }
-
-  const applications = getAllApplications();
-
-  // Check limit (100 applications - generous limit)
-  if (applications.length >= 100) {
-    return { success: false, error: 'Application limit reached (100).' };
-  }
-
-  const now = Date.now();
-  const newApplication: Application = {
-    id: crypto.randomUUID(),
-    userId: userId,
-    companyName: data.companyName || '',
-    positionTitle: data.positionTitle || '',
-    status: data.status || 'saved',
-    appliedDate: data.appliedDate || null,
-    salary: data.salary || '',
-    location: data.location || '',
-    isRemote: data.isRemote || false,
-    jobUrl: data.jobUrl || '',
-    notes: data.notes || '',
-    jobSource: data.jobSource || 'other',
-    followUpDate: data.followUpDate || null,
-    priority: data.priority || 'medium',
-    contactPerson: data.contactPerson || '',
-    contactEmail: data.contactEmail || '',
-    createdAt: now,
-    updatedAt: now,
-    history: [
-      {
-        status: data.status || 'saved',
-        date: now,
-        note: 'Application created'
-      }
-    ]
-  };
-
-  applications.push(newApplication);
-
-  const key = getUserKey();
-  if (!key) return { success: false, error: 'User key not found' };
-
-  localStorage.setItem(key, JSON.stringify(applications));
-
-  return { success: true, id: newApplication.id };
-}
-
-export function updateApplication(id: string, updates: Partial<Application>): { success: boolean; error?: string } {
-  if (!isBrowser) return { success: false, error: 'Not in browser environment' };
-
-  const applications = getAllApplications();
-  const index = applications.findIndex(app => app.id === id);
-
-  if (index === -1) {
-    return { success: false, error: 'Application not found' };
-  }
-
-  const now = Date.now();
-  const currentApp = applications[index];
-
-  // If status changed, add to history
-  if (updates.status && updates.status !== currentApp.status) {
-    const historyEntry = {
-      status: updates.status,
-      date: now,
-      note: `Status changed to ${updates.status}`
+export async function addApplication(data: Omit<Application, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'statusHistory'>): Promise<{ success: boolean; id?: string; error?: string }> {
+  try {
+    const payload = {
+      companyName: data.companyName,
+      positionTitle: data.positionTitle,
+      jobUrl: data.jobUrl,
+      location: data.location,
+      salary: data.salary,
+      isRemote: data.isRemote,
+      jobSource: data.jobSource,
+      status: data.status,
+      appliedDate: data.appliedDate?.toISOString(),
+      notes: data.notes,
+      followUpDate: data.followUpDate?.toISOString(),
+      priority: data.priority,
+      contactPerson: data.contactPerson,
+      contactEmail: data.contactEmail,
     };
 
-    updates.history = [...currentApp.history, historyEntry];
+    const response = await apiRequest('/api/job-applications', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    return { success: true, id: response.application.id };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
-
-  applications[index] = {
-    ...currentApp,
-    ...updates,
-    updatedAt: now
-  };
-
-  const key = getUserKey();
-  if (!key) return { success: false, error: 'User key not found' };
-
-  localStorage.setItem(key, JSON.stringify(applications));
-
-  return { success: true };
 }
 
-export function deleteApplication(id: string): { success: boolean; error?: string } {
-  if (!isBrowser) return { success: false, error: 'Not in browser environment' };
+export async function updateApplication(id: string, updates: Partial<Application>): Promise<{ success: boolean; error?: string }> {
+  try {
+    const payload = {
+      companyName: updates.companyName,
+      positionTitle: updates.positionTitle,
+      jobUrl: updates.jobUrl,
+      location: updates.location,
+      salary: updates.salary,
+      isRemote: updates.isRemote,
+      jobSource: updates.jobSource,
+      status: updates.status,
+      appliedDate: updates.appliedDate?.toISOString(),
+      notes: updates.notes,
+      followUpDate: updates.followUpDate?.toISOString(),
+      priority: updates.priority,
+      contactPerson: updates.contactPerson,
+      contactEmail: updates.contactEmail,
+    };
 
-  const applications = getAllApplications();
-  const filtered = applications.filter(app => app.id !== id);
+    await apiRequest(`/api/job-applications/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
 
-  if (filtered.length === applications.length) {
-    return { success: false, error: 'Application not found' };
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
-
-  const key = getUserKey();
-  if (!key) return { success: false, error: 'User key not found' };
-
-  localStorage.setItem(key, JSON.stringify(filtered));
-
-  return { success: true };
 }
 
-export function deleteMultipleApplications(ids: string[]): { success: boolean; deleted: number; error?: string } {
-  if (!isBrowser) return { success: false, deleted: 0, error: 'Not in browser environment' };
-
-  const applications = getAllApplications();
-  const filtered = applications.filter(app => !ids.includes(app.id));
-
-  const deletedCount = applications.length - filtered.length;
-
-  const key = getUserKey();
-  if (!key) return { success: false, deleted: 0, error: 'User key not found' };
-
-  localStorage.setItem(key, JSON.stringify(filtered));
-
-  return { success: true, deleted: deletedCount };
-}
-
-export function getStatistics(): Statistics {
-  const applications = getAllApplications();
-
-  const stats: Statistics = {
-    total: applications.length,
-    saved: applications.filter(app => app.status === 'saved').length,
-    applied: applications.filter(app => app.status === 'applied').length,
-    interview: applications.filter(app => app.status === 'interview').length,
-    offer: applications.filter(app => app.status === 'offer').length,
-    rejected: applications.filter(app => app.status === 'rejected').length,
-    responseRate: 0,
-    averageResponseTime: 0,
-    applicationsByMonth: []
-  };
-
-  // Calculate response rate
-  const totalResponded = stats.interview + stats.offer + stats.rejected;
-  const totalApplied = stats.applied + totalResponded;
-  if (totalApplied > 0) {
-    stats.responseRate = Math.round((totalResponded / totalApplied) * 100);
+export async function deleteApplication(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiRequest(`/api/job-applications/${id}`, {
+      method: 'DELETE',
+    });
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
+}
 
-  // Calculate average response time (days from applied to any response)
-  const respondedApps = applications.filter(app =>
-    app.status !== 'saved' && app.status !== 'applied' && app.appliedDate
-  );
-
-  if (respondedApps.length > 0) {
-    const totalResponseTime = respondedApps.reduce((sum, app) => {
-      const responseTime = app.updatedAt - (app.appliedDate || app.createdAt);
-      return sum + responseTime;
-    }, 0);
-
-    stats.averageResponseTime = Math.round(totalResponseTime / respondedApps.length / (1000 * 60 * 60 * 24));
+export async function deleteMultipleApplications(ids: string[]): Promise<{ success: boolean; deleted: number; error?: string }> {
+  try {
+    const deletePromises = ids.map(id =>
+      apiRequest(`/api/job-applications/${id}`, { method: 'DELETE' })
+    );
+    await Promise.all(deletePromises);
+    return { success: true, deleted: ids.length };
+  } catch (error: any) {
+    return { success: false, deleted: 0, error: error.message };
   }
-
-  // Group by month
-  const monthGroups: { [key: string]: number } = {};
-  applications.forEach(app => {
-    const date = new Date(app.createdAt);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    monthGroups[monthKey] = (monthGroups[monthKey] || 0) + 1;
-  });
-
-  stats.applicationsByMonth = Object.entries(monthGroups)
-    .map(([month, count]) => ({ month, count }))
-    .sort((a, b) => a.month.localeCompare(b.month));
-
-  return stats;
 }
 
-export function searchApplications(query: string): Application[] {
-  const applications = getAllApplications();
-  const lowerQuery = query.toLowerCase().trim();
-
-  if (!lowerQuery) return applications;
-
-  return applications.filter(app =>
-    app.companyName.toLowerCase().includes(lowerQuery) ||
-    app.positionTitle.toLowerCase().includes(lowerQuery) ||
-    app.location.toLowerCase().includes(lowerQuery) ||
-    app.notes.toLowerCase().includes(lowerQuery)
-  );
+export async function getStatistics(): Promise<Statistics> {
+  try {
+    const response = await apiRequest('/api/job-applications/stats');
+    return response.stats;
+  } catch (error) {
+    console.error('Error fetching statistics:', error);
+    return {
+      total: 0,
+      saved: 0,
+      applied: 0,
+      interview: 0,
+      offer: 0,
+      rejected: 0,
+      responseRate: 0,
+      averageResponseTime: 0,
+      applicationsByMonth: [],
+    };
+  }
 }
 
-export function filterApplications(
+export async function searchApplications(query: string): Promise<Application[]> {
+  try {
+    const response = await apiRequest(`/api/job-applications?search=${encodeURIComponent(query)}`);
+    return response.applications.map(convertFromDatabase);
+  } catch (error) {
+    console.error('Error searching applications:', error);
+    return [];
+  }
+}
+
+export async function filterApplications(
   status?: ApplicationStatus,
   priority?: Priority,
   dateFrom?: number,
   dateTo?: number
-): Application[] {
-  let applications = getAllApplications();
-
-  if (status) {
-    applications = applications.filter(app => app.status === status);
-  }
-
-  if (priority) {
-    applications = applications.filter(app => app.priority === priority);
-  }
-
-  if (dateFrom) {
-    applications = applications.filter(app => app.createdAt >= dateFrom);
-  }
-
-  if (dateTo) {
-    applications = applications.filter(app => app.createdAt <= dateTo);
-  }
-
-  return applications;
-}
-
-export function getUpcomingFollowUps(): Application[] {
-  const applications = getAllApplications();
-  const now = Date.now();
-  const sevenDaysFromNow = now + (7 * 24 * 60 * 60 * 1000);
-
-  return applications
-    .filter(app => app.followUpDate && app.followUpDate >= now && app.followUpDate <= sevenDaysFromNow)
-    .sort((a, b) => (a.followUpDate || 0) - (b.followUpDate || 0));
-}
-
-export function exportToCSV(): string {
-  const applications = getAllApplications();
-
-  const headers = [
-    'Company',
-    'Position',
-    'Status',
-    'Applied Date',
-    'Salary',
-    'Location',
-    'Remote',
-    'Job URL',
-    'Job Source',
-    'Priority',
-    'Contact Person',
-    'Contact Email',
-    'Notes'
-  ];
-
-  const rows = applications.map(app => [
-    app.companyName,
-    app.positionTitle,
-    app.status,
-    app.appliedDate ? new Date(app.appliedDate).toLocaleDateString() : '',
-    app.salary,
-    app.location,
-    app.isRemote ? 'Yes' : 'No',
-    app.jobUrl,
-    app.jobSource || 'other',
-    app.priority,
-    app.contactPerson,
-    app.contactEmail,
-    app.notes.replace(/\n/g, ' ')
-  ]);
-
-  const csv = [headers, ...rows]
-    .map(row => row.map(cell => `"${cell}"`).join(','))
-    .join('\n');
-
-  return csv;
-}
-
-export function importFromBackup(jsonData: string): { success: boolean; imported: number; error?: string } {
-  if (!isBrowser) return { success: false, imported: 0, error: 'Not in browser environment' };
-
-  const userId = getUserId();
-  if (!userId) {
-    return { success: false, imported: 0, error: 'Not authenticated' };
-  }
-
+): Promise<Application[]> {
   try {
-    const applications = JSON.parse(jsonData) as Application[];
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (priority) params.append('priority', priority);
+
+    const response = await apiRequest(`/api/job-applications?${params.toString()}`);
+    let applications = response.applications.map(convertFromDatabase);
+
+    // Client-side filtering for dates (since API doesn't support date range yet)
+    if (dateFrom) {
+      applications = applications.filter(app => app.createdAt.getTime() >= dateFrom);
+    }
+    if (dateTo) {
+      applications = applications.filter(app => app.createdAt.getTime() <= dateTo);
+    }
+
+    return applications;
+  } catch (error) {
+    console.error('Error filtering applications:', error);
+    return [];
+  }
+}
+
+export async function getUpcomingFollowUps(): Promise<Application[]> {
+  try {
+    const applications = await getAllApplications();
+    const now = Date.now();
+    const sevenDaysFromNow = now + (7 * 24 * 60 * 60 * 1000);
+
+    return applications
+      .filter(app => app.followUpDate && app.followUpDate.getTime() >= now && app.followUpDate.getTime() <= sevenDaysFromNow)
+      .sort((a, b) => (a.followUpDate?.getTime() || 0) - (b.followUpDate?.getTime() || 0));
+  } catch (error) {
+    console.error('Error fetching upcoming follow-ups:', error);
+    return [];
+  }
+}
+
+export async function exportToCSV(): Promise<string> {
+  try {
+    const applications = await getAllApplications();
+
+    const headers = [
+      'Company',
+      'Position',
+      'Status',
+      'Applied Date',
+      'Salary',
+      'Location',
+      'Remote',
+      'Job URL',
+      'Job Source',
+      'Priority',
+      'Contact Person',
+      'Contact Email',
+      'Notes'
+    ];
+
+    const rows = applications.map(app => [
+      app.companyName,
+      app.positionTitle,
+      app.status,
+      app.appliedDate ? app.appliedDate.toLocaleDateString() : '',
+      app.salary,
+      app.location,
+      app.isRemote ? 'Yes' : 'No',
+      app.jobUrl,
+      app.jobSource,
+      app.priority,
+      app.contactPerson,
+      app.contactEmail,
+      app.notes?.replace(/\n/g, ' ') || '',
+    ]);
+
+    const csv = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+
+    return csv;
+  } catch (error) {
+    console.error('Error exporting to CSV:', error);
+    return '';
+  }
+}
+
+export async function importFromBackup(jsonData: string): Promise<{ success: boolean; imported: number; error?: string }> {
+  try {
+    const applications = JSON.parse(jsonData) as Partial<Application>[];
 
     if (!Array.isArray(applications)) {
       return { success: false, imported: 0, error: 'Invalid backup format' };
     }
 
-    // Update userId for all applications
-    const updatedApplications = applications.map(app => ({
-      ...app,
-      userId: userId
-    }));
+    let imported = 0;
+    for (const app of applications) {
+      try {
+        const result = await addApplication({
+          companyName: app.companyName || '',
+          positionTitle: app.positionTitle || '',
+          jobUrl: app.jobUrl,
+          location: app.location,
+          salary: app.salary,
+          isRemote: app.isRemote || false,
+          jobSource: app.jobSource || 'other',
+          status: app.status || 'saved',
+          appliedDate: app.appliedDate,
+          notes: app.notes,
+          followUpDate: app.followUpDate,
+          priority: app.priority || 'medium',
+          contactPerson: app.contactPerson,
+          contactEmail: app.contactEmail,
+        });
 
-    const key = getUserKey();
-    if (!key) return { success: false, imported: 0, error: 'User key not found' };
+        if (result.success) {
+          imported++;
+        }
+      } catch (e) {
+        // Continue with next application if one fails
+        console.error('Error importing application:', e);
+      }
+    }
 
-    localStorage.setItem(key, JSON.stringify(updatedApplications));
-
-    return { success: true, imported: updatedApplications.length };
+    return { success: true, imported };
   } catch (e) {
     return { success: false, imported: 0, error: 'Failed to parse backup file' };
   }
 }
 
-export function exportBackup(): string {
-  const applications = getAllApplications();
-  return JSON.stringify(applications, null, 2);
+export async function exportBackup(): Promise<string> {
+  try {
+    const applications = await getAllApplications();
+    return JSON.stringify(applications, null, 2);
+  } catch (error) {
+    console.error('Error exporting backup:', error);
+    return '[]';
+  }
+}
+
+// Legacy functions for backward compatibility (now no-ops)
+export function setCurrentUserId(userId: string): void {
+  // No longer needed - authentication handled by NextAuth
+}
+
+export function clearCurrentUserId(): void {
+  // No longer needed - authentication handled by NextAuth
 }

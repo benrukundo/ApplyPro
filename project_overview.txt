@@ -1,0 +1,399 @@
+# ApplyPro - AI-Powered Resume & Career Tools Platform
+
+## Overview
+ApplyPro is a comprehensive AI-powered platform designed to help job seekers optimize their resumes, prepare for interviews, and enhance their career prospects. Built with Next.js 16, TypeScript, and modern web technologies, it offers a suite of tools powered by Anthropic's Claude AI.
+
+## Technology Stack
+
+### Frontend
+- **Framework:** Next.js 16 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **UI Components:** Custom components with Lucide React icons
+- **State Management:** React hooks and context
+- **Authentication:** NextAuth.js with multiple providers
+
+### Backend & Database
+- **Runtime:** Node.js (serverless via Vercel)
+- **Database:** PostgreSQL with Prisma ORM
+- **API:** RESTful API routes in Next.js
+- **Authentication:** JWT tokens with NextAuth.js
+
+### AI & Third-Party Services
+- **AI Provider:** Anthropic Claude 3.5 Haiku
+- **Analytics:** PostHog
+- **Payments:** Paddle (primary), Gumroad (legacy)
+- **Email:** Resend
+- **PDF Processing:** unpdf (server-side PDF text extraction)
+
+### Development Tools
+- **Package Manager:** npm
+- **Linting:** ESLint
+- **Build Tool:** Next.js built-in (Turbopack)
+- **Database Migrations:** Prisma
+- **Version Control:** Git
+
+## Core Features
+
+### 1. Resume Analyzer & Generator
+**Location:** `app/generate/page.tsx`
+**Purpose:** Analyze existing resumes and generate tailored versions for specific job applications.
+
+#### Key Functionality:
+- **File Upload:** Supports PDF, DOCX, and TXT files
+- **Text Extraction:** Server-side PDF processing using unpdf
+- **Job Description Analysis:** Matches resume content with job requirements
+- **AI-Powered Generation:** Creates customized resume content using Claude AI
+- **Template System:** Multiple resume templates (Modern, Traditional, ATS-Optimized)
+- **Color Customization:** Customizable accent colors for Modern template
+- **PDF/DOCX Export:** Generate downloadable documents
+
+#### Technical Implementation:
+- File upload via multipart form data
+- Server-side text extraction in `app/api/extract-text/route.ts`
+- Resume generation API in `app/api/generate/route.ts`
+- Document generation in `lib/documentGenerator.ts`
+- Subscription-based usage limits
+
+### 2. LinkedIn Profile Optimizer
+**Location:** `app/linkedin-optimizer/page.tsx`
+**Purpose:** Optimize LinkedIn profiles for better visibility and job search success.
+
+#### Key Functionality:
+- **Profile Analysis:** Analyzes current LinkedIn headline, about section, and resume
+- **Keyword Optimization:** Identifies missing keywords for target roles
+- **Headline Suggestions:** Generates multiple optimized headline variations
+- **About Section Enhancement:** Creates compelling about section content
+- **Skills Recommendations:** Suggests relevant skills to add
+- **Experience Tips:** Provides optimization suggestions for experience section
+
+#### Technical Implementation:
+- LinkedIn analysis API in `app/api/linkedin/analyze/route.ts`
+- Saved optimizations management
+- Real-time content suggestions
+
+### 3. Interview Preparation Tool
+**Location:** `app/interview-prep/page.tsx`
+**Purpose:** Prepare candidates for job interviews with AI-generated questions and answers.
+
+#### Key Functionality:
+- **Interview Type Selection:** Phone screening, technical, behavioral, HR/culture fit, final round
+- **Question Generation:** AI-generated questions based on resume and job description
+- **Suggested Answers:** Detailed, STAR-method responses
+- **Talking Points:** Key achievements and evidence to highlight
+- **Questions to Ask:** Strategic questions for candidates to ask interviewers
+- **Company Insights:** AI-generated insights about target companies
+
+#### Technical Implementation:
+- Interview prep generation API in `app/api/interview-prep/generate/route.ts`
+- Session management for mock interviews
+- Saved preparation tracking
+
+### 4. ATS (Applicant Tracking System) Checker
+**Location:** `app/ats-checker/page.tsx`
+**Purpose:** Analyze resumes for ATS compatibility and provide optimization recommendations.
+
+#### Key Functionality:
+- **ATS Scoring:** Comprehensive scoring across multiple criteria
+- **Format Analysis:** Checks for ATS-friendly formatting
+- **Keyword Analysis:** Identifies keyword usage and density
+- **Structure Validation:** Ensures proper section organization
+- **Critical Issue Detection:** Highlights blocking issues for ATS parsing
+
+#### Technical Implementation:
+- ATS analysis API in `app/api/ats-check/route.ts`
+- Claude AI integration for detailed analysis
+- Rate limiting to manage API usage
+
+### 5. Resume Builder from Scratch
+**Location:** `app/build-resume/page.tsx`
+**Purpose:** Guide users through creating professional resumes from scratch.
+
+#### Key Functionality:
+- **Step-by-Step Builder:** Guided resume creation process
+- **Template Selection:** Choose from multiple professional templates
+- **Section Management:** Add/edit different resume sections
+- **Real-time Preview:** Live preview of resume as it's built
+- **Export Options:** Generate final resume in multiple formats
+
+### 6. User Authentication & Subscriptions
+**Location:** Multiple auth-related files
+**Purpose:** Secure user management and subscription-based access control.
+
+#### Key Functionality:
+- **Multiple Auth Providers:** Email/password, social logins
+- **Email Verification:** Account verification via email
+- **Subscription Management:** Handle different subscription tiers
+- **Usage Tracking:** Monitor API usage and enforce limits
+- **Payment Integration:** Paddle for subscription payments
+
+#### Technical Implementation:
+- NextAuth.js configuration in `lib/authOptions.ts`
+- User model in Prisma schema
+- Subscription tracking in `lib/subscription-db.ts`
+- Payment webhooks in `app/api/paddle-webhook/route.ts`
+
+## Project Structure
+
+### App Directory (`/app`)
+```
+app/
+├── api/                          # API routes
+│   ├── ats-check/               # ATS analysis endpoint
+│   ├── auth/                    # Authentication endpoints
+│   ├── build-resume/            # Resume builder APIs
+│   ├── extract-text/            # File text extraction
+│   ├── generate/                # Resume generation
+│   ├── interview-prep/          # Interview prep APIs
+│   ├── linkedin/                # LinkedIn optimization
+│   ├── paddle-webhook/          # Payment webhooks
+│   ├── preview/                 # Resume preview/analysis
+│   └── user/                    # User management
+├── ats-checker/                 # ATS checker page
+├── build-resume/                # Resume builder
+├── dashboard/                   # User dashboard
+├── generate/                    # Resume generator
+├── interview-prep/              # Interview preparation
+├── linkedin-optimizer/          # LinkedIn optimizer
+├── login/, signup/, etc.        # Auth pages
+└── layout.tsx, page.tsx         # Root layout and home page
+```
+
+### Library Directory (`/lib`)
+```
+lib/
+├── auth.ts, authOptions.ts      # Authentication setup
+├── documentGenerator.ts         # PDF/DOCX generation
+├── emailTemplates.ts            # Email templates
+├── subscription-db.ts           # Subscription management
+├── tracker.ts                   # Analytics tracking
+└── prisma.ts                    # Database client
+```
+
+### Components Directory (`/components`)
+```
+components/
+├── PaddleCheckout.tsx           # Payment component
+├── CancelSubscriptionModal.tsx  # Subscription management
+├── PostHogProvider.tsx          # Analytics provider
+└── ...                         # Other UI components
+```
+
+### Database Schema (`/prisma`)
+```
+prisma/
+├── schema.prisma               # Database schema
+└── migrations/                 # Database migrations
+```
+
+## Database Models
+
+### User Model
+- Basic user information (name, email, image)
+- Authentication provider data
+- Subscription status and limits
+- Usage tracking
+
+### Generation/Optimization Records
+- Resume generations
+- LinkedIn optimizations
+- Interview preparations
+- ATS check results
+
+### Subscription Data
+- Subscription tiers and pricing
+- Payment records
+- Usage limits and counters
+
+## API Architecture
+
+### RESTful Endpoints
+- **POST /api/extract-text** - Extract text from uploaded files
+- **POST /api/generate** - Generate tailored resumes
+- **POST /api/linkedin/analyze** - Analyze LinkedIn profiles
+- **POST /api/interview-prep/generate** - Generate interview prep
+- **POST /api/ats-check** - Analyze resume for ATS compatibility
+- **POST /api/preview** - Quick resume analysis (free)
+
+### Authentication
+- JWT-based authentication via NextAuth.js
+- Protected routes with session validation
+- Role-based access control
+
+### Rate Limiting
+- IP-based rate limiting on public endpoints
+- User-based limits on authenticated features
+- Subscription tier limits
+
+## Deployment & Environment
+
+### Platform
+- **Hosting:** Vercel (serverless functions)
+- **Database:** Vercel Postgres / Neon
+- **CDN:** Vercel Edge Network
+
+### Environment Variables
+```
+# Authentication
+NEXTAUTH_SECRET=...
+NEXTAUTH_URL=...
+ANTHROPIC_API_KEY=...
+
+# Database
+DATABASE_URL=...
+
+# Payments
+PADDLE_API_KEY=...
+PADDLE_ENVIRONMENT=...
+
+# Email
+RESEND_API_KEY=...
+
+# Analytics
+NEXT_PUBLIC_POSTHOG_KEY=...
+POSTHOG_SECRET_KEY=...
+```
+
+### Build & Deployment
+- Automated deployments via Vercel
+- Database migrations run automatically
+- Static optimization for performance
+- Edge function deployment for APIs
+
+## Development Workflow
+
+### Local Development
+1. Clone repository
+2. Install dependencies: `npm install`
+3. Set up environment variables
+4. Run database migrations: `npx prisma migrate dev`
+5. Generate Prisma client: `npx prisma generate`
+6. Start development server: `npm run dev`
+
+### Key Scripts
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `prisma generate` - Generate database client
+- `prisma migrate dev` - Run database migrations
+
+## Security Features
+
+### Authentication
+- Secure password hashing
+- JWT token management
+- Session validation
+- CSRF protection
+
+### API Security
+- Rate limiting on all endpoints
+- Input validation and sanitization
+- CORS configuration
+- Secure headers
+
+### Data Protection
+- Encrypted database connections
+- Secure API key management
+- User data privacy compliance
+
+## Performance Optimizations
+
+### Frontend
+- Next.js App Router for optimal loading
+- Static generation where possible
+- Dynamic imports for code splitting
+- Image optimization
+- Font optimization
+
+### Backend
+- Serverless function optimization
+- Database query optimization
+- Caching strategies
+- API response compression
+
+### AI Integration
+- Efficient prompt engineering
+- Response caching
+- Rate limit management
+- Cost optimization
+
+## Monitoring & Analytics
+
+### Application Monitoring
+- Error tracking with Sentry
+- Performance monitoring
+- User analytics with PostHog
+
+### Business Metrics
+- User acquisition and retention
+- Feature usage analytics
+- Conversion tracking
+- Revenue analytics
+
+## Future Enhancements
+
+### Planned Features
+- Mobile app development
+- Advanced AI features (video interview prep)
+- Integration with job boards
+- Team collaboration features
+- Advanced analytics dashboard
+
+### Technical Improvements
+- Microservices architecture consideration
+- GraphQL API implementation
+- Real-time features with WebSockets
+- Advanced caching strategies
+
+## Getting Started for Developers
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- PostgreSQL database
+- Git
+
+### Quick Start
+```bash
+# Clone the repository
+git clone https://github.com/benrukundo/ApplyPro.git
+cd ApplyPro
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.local.example .env.local
+# Edit .env.local with your API keys
+
+# Set up database
+npx prisma migrate dev
+npx prisma generate
+
+# Start development server
+npm run dev
+```
+
+### Code Quality
+- TypeScript for type safety
+- ESLint for code linting
+- Prettier for code formatting
+- Comprehensive error handling
+- Unit and integration tests (planned)
+
+## Support & Maintenance
+
+### Documentation
+- Inline code documentation
+- API documentation in code comments
+- Database schema documentation
+- Deployment guides
+
+### Monitoring
+- Error logging and alerting
+- Performance monitoring
+- User feedback collection
+- Regular security audits
+
+This platform represents a comprehensive solution for job seekers, combining AI-powered tools with modern web technologies to provide exceptional user experience and results.

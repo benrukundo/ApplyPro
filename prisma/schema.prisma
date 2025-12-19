@@ -29,6 +29,7 @@ model User {
   builderResumes   BuilderResume[]
   interviewPreps   InterviewPrep[]
   linkedInOptimizations LinkedInOptimization[]
+  jobApplications JobApplication[]
 }
 
 model Account {
@@ -125,29 +126,58 @@ model GeneratedResume {
   @@index([userId, createdAt])
 }
 
-// Optional: Store job applications from tracker
+// Job Application Tracker - moved from localStorage to database for cross-device sync
 model JobApplication {
   id            String   @id @default(cuid())
   userId        String
-  
-  jobTitle      String
-  company       String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Job details
+  companyName   String
+  positionTitle String
   jobUrl        String?
   location      String?
   salary        String?
-  
-  status        String   @default("applied") // applied, interview, offer, rejected, saved
-  appliedAt     DateTime @default(now())
+  isRemote      Boolean  @default(false)
+  jobSource     String   @default("other") // linkedin, indeed, company_website, referral, recruiter, other
+
+  // Application status
+  status        String   @default("saved") // saved, applied, interview, offer, rejected
+  appliedDate   DateTime?
   notes         String?  @db.Text
-  
-  // Link to generated resume if used
-  generatedResumeId String?
-  
+
+  // Follow-up and priority
+  followUpDate  DateTime?
+  priority      String   @default("medium") // low, medium, high
+
+  // Contact information
+  contactPerson String?
+  contactEmail  String?
+
+  // Metadata
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Status change history
+  statusHistory JobApplicationStatusHistory[]
+
+  @@index([userId])
   @@index([userId, status])
   @@index([userId, createdAt])
+  @@index([userId, priority])
+}
+
+// Status change history for job applications
+model JobApplicationStatusHistory {
+  id            String   @id @default(cuid())
+  applicationId String
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  status        String   // saved, applied, interview, offer, rejected
+  changedAt     DateTime @default(now())
+  note          String?  @db.Text
+
+  @@index([applicationId, changedAt])
 }
 
 // Resume Builder - saves user progress and generated resumes

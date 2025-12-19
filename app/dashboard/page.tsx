@@ -9,6 +9,7 @@ import {
   getStatistics,
   getUpcomingFollowUps,
   Application,
+  Statistics,
 } from '@/lib/tracker';
 import {
   Plus,
@@ -180,12 +181,59 @@ function DashboardContent() {
 
   // Load applications
   useEffect(() => {
-    const apps = getAllApplications();
-    setApplications(apps);
-  }, []);
+    const loadApplications = async () => {
+      try {
+        const apps = await getAllApplications();
+        setApplications(apps);
+      } catch (error) {
+        console.error('Error loading applications:', error);
+      }
+    };
 
-  const stats = getStatistics();
-  const upcomingFollowUps = getUpcomingFollowUps();
+    if (session?.user?.id) {
+      loadApplications();
+    }
+  }, [session?.user?.id]);
+
+  const [stats, setStats] = useState<Statistics>({
+    total: 0,
+    saved: 0,
+    applied: 0,
+    interview: 0,
+    offer: 0,
+    rejected: 0,
+    responseRate: 0,
+    averageResponseTime: 0,
+    applicationsByMonth: [],
+  });
+
+  const [upcomingFollowUps, setUpcomingFollowUps] = useState<Application[]>([]);
+
+  // Load stats
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const statsData = await getStatistics();
+        setStats(statsData);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    };
+
+    const loadFollowUps = async () => {
+      try {
+        const followUps = await getUpcomingFollowUps();
+        setUpcomingFollowUps(followUps);
+      } catch (error) {
+        console.error('Error loading follow-ups:', error);
+      }
+    };
+
+    if (session?.user?.id) {
+      loadStats();
+      loadFollowUps();
+    }
+  }, [session?.user?.id, applications]);
 
   const handleCancelSuccess = (message: string, effectiveDate: string) => {
     setCancelMessage(message);
@@ -810,7 +858,7 @@ function DashboardContent() {
               <div>
                 <p className="text-gray-600 text-sm font-medium">Success Rate</p>
                 <p className="text-3xl font-bold text-green-600 mt-2">
-                  {stats.total > 0 ? ((stats.offer / stats.total) * 100).toFixed(1) : 0}%
+                  {stats.total > 0 ? ((Number(stats.offer) / Number(stats.total)) * 100).toFixed(1) : 0}%
                 </p>
               </div>
               <TrendingUp className="w-12 h-12 text-green-600 opacity-10" />
