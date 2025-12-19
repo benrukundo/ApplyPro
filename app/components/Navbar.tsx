@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { Menu, X, LogOut, PenTool, Brain } from "lucide-react";
+import { Menu, X, LogOut, PenTool, Brain, Linkedin } from "lucide-react";
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -89,6 +89,17 @@ export default function Navbar() {
                   Interview Prep
                 </Link>
                 <Link
+                  href="/linkedin-optimizer"
+                  className={`text-sm font-medium transition-colors hover:text-[#0077B5] dark:hover:text-blue-400 flex items-center gap-1 ${
+                    pathname?.startsWith("/linkedin-optimizer")
+                      ? "text-[#0077B5] dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <Linkedin className="w-4 h-4" />
+                  LinkedIn
+                </Link>
+                <Link
                   href="/ats-checker"
                   className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
                     pathname === "/ats-checker"
@@ -155,7 +166,20 @@ export default function Navbar() {
                   Interview Prep
                 </Link>
                 <Link
+                  href="/linkedin-optimizer"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`text-sm font-medium transition-colors hover:text-[#0077B5] dark:hover:text-blue-400 flex items-center gap-1 ${
+                    pathname?.startsWith("/linkedin-optimizer")
+                      ? "text-[#0077B5] dark:text-blue-400"
+                      : "text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <Linkedin className="w-4 h-4" />
+                  LinkedIn
+                </Link>
+                <Link
                   href="/ats-checker"
+                  onClick={() => setMobileMenuOpen(false)}
                   className={`text-sm font-medium transition-colors hover:text-blue-600 dark:hover:text-blue-400 ${
                     pathname === "/ats-checker"
                       ? "text-blue-600 dark:text-blue-400"
