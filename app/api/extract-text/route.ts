@@ -38,20 +38,64 @@ export async function POST(req: NextRequest) {
       }
 
     } else if (fileName.endsWith('.pdf')) {
-      // PDF file - use pdf-parse
+      // PDF file - use pdfjs-dist (works better in serverless)
       try {
-        // @ts-ignore - pdf-parse doesn't have proper type definitions
-        const pdfParse = (await import('pdf-parse')).default;
-        const pdfData = await pdfParse(buffer);
-        text = pdfData.text;
+        // @ts-ignore
+        const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+        // Convert buffer to Uint8Array for pdfjs
+        const uint8Array = new Uint8Array(arrayBuffer);
+
+        // Load the PDF document
+        const loadingTask = pdfjsLib.getDocument({
+          data: uint8Array,
+          useSystemFonts: true,
+        });
+
+        const pdfDocument = await loadingTask.promise;
+        const numPages = pdfDocument.numPages;
+        const textParts: string[] = [];
+
+        // Extract text from each page
+        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+          const page = await pdfDocument.getPage(pageNum);
+          const textContent = await page.getTextContent();
+
+          // Combine all text items from the page
+          const pageText = textContent.items
+            .map((item: any) => {
+              if ('str' in item) {
+                return item.str;
+              }
+              return '';
+            })
+            .join(' ');
+
+          textParts.push(pageText);
+        }
+
+        text = textParts.join('\n\n');
+
       } catch (pdfError: any) {
         console.error('PDF extraction error:', pdfError);
 
-        // If pdf-parse fails, return a helpful error
-        return NextResponse.json(
-          { error: 'Failed to extract text from PDF. Please try uploading a DOCX file instead.' },
-          { status: 500 }
-        );
+        // Try alternative method with pdf-parse as fallback
+        try {
+          console.log('Trying pdf-parse as fallback...');
+          // @ts-ignore
+          const pdfParse = (await import('pdf-parse')).default;
+          const pdfData = await pdfParse(buffer);
+          text = pdfData.text;
+        } catch (fallbackError: any) {
+          console.error('PDF fallback extraction also failed:', fallbackError);
+          return NextResponse.json(
+            {
+              error: 'Failed to extract text from PDF. The file may be scanned, encrypted, or corrupted. Please try uploading a DOCX file instead.',
+              details: pdfError.message
+            },
+            { status: 500 }
+          );
+        }
       }
 
     } else if (fileName.endsWith('.doc')) {
@@ -73,11 +117,15 @@ export async function POST(req: NextRequest) {
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n')
       .replace(/\n{3,}/g, '\n\n')
+      .replace(/\s+/g, ' ')
       .trim();
 
-    if (!text || text.length < 50) {
+    // Check if we got meaningful text
+    if (!text || text.length < 20) {
       return NextResponse.json(
-        { error: 'Could not extract meaningful text from file. Please try another file.' },
+        {
+          error: 'Could not extract meaningful text from file. The PDF may be scanned (image-based) rather than text-based. Please try uploading a DOCX file instead.',
+        },
         { status: 400 }
       );
     }
@@ -93,7 +141,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Text extraction error:', error);
     return NextResponse.json(
-      { error: 'Failed to process file. Please try another file.' },
+      { error: 'Failed to process file. Please try another file or use DOCX format.' },
       { status: 500 }
     );
   }

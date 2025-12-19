@@ -25,6 +25,7 @@
     "next": "^16.0.7",
     "next-auth": "^4.24.13",
     "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^5.4.449",
     "posthog-js": "^1.309.0",
     "posthog-node": "^5.17.3",
     "prisma": "^5.22.0",
