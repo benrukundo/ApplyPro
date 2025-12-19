@@ -116,10 +116,32 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     if (fileName.endsWith(".pdf")) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfParse = (await import("pdf-parse" as any)).default;
-      const data = await pdfParse(buffer);
-      extractedText = data.text;
+      // Use pdfjs-dist directly for server-side PDF extraction
+      // @ts-ignore
+      const PDFJS = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+      const data = new Uint8Array(buffer);
+
+      const doc = await PDFJS.getDocument({
+        data,
+        useSystemFonts: true,
+        disableFontFace: true,
+        verbosity: 0,
+      }).promise;
+
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const textContent = await page.getTextContent();
+
+        const pageText = textContent.items
+          .filter((item: any) => 'str' in item)
+          .map((item: any) => item.str)
+          .join(' ');
+
+        extractedText += pageText + '\n';
+      }
+
+      extractedText = extractedText.trim();
     } else if (fileName.endsWith(".docx")) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mammoth = (await import("mammoth" as any)).default;

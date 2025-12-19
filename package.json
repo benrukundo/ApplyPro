@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
-    "lint": "eslint",
-    "postinstall": "node scripts/fix-pdf-parse.js"
+    "lint": "eslint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
@@ -25,7 +24,7 @@
     "mammoth": "^1.11.0",
     "next": "^16.0.7",
     "next-auth": "^4.24.13",
-    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^5.4.449",
     "posthog-js": "^1.309.0",
     "posthog-node": "^5.17.3",
     "prisma": "^5.22.0",
