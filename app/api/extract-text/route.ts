@@ -1,35 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-async function extractPDFText(buffer: Buffer): Promise<string> {
-  // Use pdfjs-dist directly without pdf-parse
-  // @ts-ignore
-  const PDFJS = await import('pdfjs-dist/legacy/build/pdf.mjs');
-
-  const data = new Uint8Array(buffer);
-
-  const doc = await PDFJS.getDocument({
-    data,
-    useSystemFonts: true,
-    disableFontFace: true,
-    verbosity: 0,
-  }).promise;
-
-  let fullText = '';
-
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
-    const textContent = await page.getTextContent();
-
-    const pageText = textContent.items
-      .filter((item: any) => 'str' in item)
-      .map((item: any) => item.str)
-      .join(' ');
-
-    fullText += pageText + '\n';
-  }
-
-  return fullText.trim();
-}
+import { extractText } from 'unpdf';
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,7 +25,9 @@ export async function POST(req: NextRequest) {
       text = result.value;
 
     } else if (fileName.endsWith('.pdf')) {
-      text = await extractPDFText(buffer);
+      // Use unpdf - works in Node.js/serverless without browser APIs
+      const result = await extractText(buffer);
+      text = Array.isArray(result.text) ? result.text.join('\n') : result.text;
 
     } else {
       return NextResponse.json(
@@ -65,7 +37,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Clean text
-    text = text.replace(/\s+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+    text = text
+      .replace(/\r\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     if (!text || text.length < 20) {
       return NextResponse.json(

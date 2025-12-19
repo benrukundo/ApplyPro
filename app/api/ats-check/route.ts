@@ -116,32 +116,10 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     if (fileName.endsWith(".pdf")) {
-      // Use pdfjs-dist directly for server-side PDF extraction
-      // @ts-ignore
-      const PDFJS = await import('pdfjs-dist/legacy/build/pdf.mjs');
-
-      const data = new Uint8Array(buffer);
-
-      const doc = await PDFJS.getDocument({
-        data,
-        useSystemFonts: true,
-        disableFontFace: true,
-        verbosity: 0,
-      }).promise;
-
-      for (let i = 1; i <= doc.numPages; i++) {
-        const page = await doc.getPage(i);
-        const textContent = await page.getTextContent();
-
-        const pageText = textContent.items
-          .filter((item: any) => 'str' in item)
-          .map((item: any) => item.str)
-          .join(' ');
-
-        extractedText += pageText + '\n';
-      }
-
-      extractedText = extractedText.trim();
+      // Use unpdf - works in Node.js/serverless without browser APIs
+      const { extractText } = await import('unpdf');
+      const result = await extractText(buffer);
+      extractedText = Array.isArray(result.text) ? result.text.join('\n') : result.text;
     } else if (fileName.endsWith(".docx")) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mammoth = (await import("mammoth" as any)).default;
