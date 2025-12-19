@@ -741,7 +741,7 @@ function DashboardContent() {
                           </div>
                           <div>
                             <p className="font-medium text-gray-900 text-sm">
-                              {gen.jobTitle || 'Resume'}
+                              {gen.jobTitle || gen.company ? `Resume for ${gen.company}` : 'Tailored Resume'}
                             </p>
                             <p className="text-xs text-gray-500">
                               {new Date(gen.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
