@@ -1,0 +1,258 @@
+Problem: Both pdf-parse and pdfjs-dist are failing to extract text from PDFs in Vercel's serverless environment, even though the PDFs are valid and readable locally.
+
+Root Cause: These PDF libraries have known issues in serverless/edge environments due to:
+
+Missing native dependencies
+Worker thread limitations
+File system access restrictions
+Solution: Use a simpler approach with pdf-parse but with proper configuration, OR use a client-side PDF extraction approach.
+
+Option A: Fix pdf-parse with proper buffer handling
+
+File: app/api/extract-text/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+
+// Disable the test file check that causes issues in serverless
+const pdfParseOptions = {
+  // Don't try to load test PDF
+  max: 0,
+};
+
+export async function POST(req: NextRequest) {
+  try {
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json(
+        { error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    const fileName = file.name.toLowerCase();
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    let text = '';
+
+    // Handle different file types
+    if (fileName.endsWith('.txt')) {
+      text = buffer.toString('utf-8');
+      
+    } else if (fileName.endsWith('.docx')) {
+      try {
+        const mammoth = await import('mammoth');
+        const result = await mammoth.extractRawText({ buffer });
+        text = result.value;
+      } catch (docxError: any) {
+        console.error('DOCX extraction error:', docxError);
+        return NextResponse.json(
+          { error: 'Failed to extract text from DOCX file' },
+          { status: 500 }
+        );
+      }
+      
+    } else if (fileName.endsWith('.pdf')) {
+      try {
+        // Method 1: Try using pdf-parse with dynamic require workaround
+        const extractPdfText = async (dataBuffer: Buffer): Promise<string> => {
+          return new Promise(async (resolve, reject) => {
+            try {
+              // Dynamic import with error handling
+              const pdfParseModule = await import('pdf-parse');
+              const pdfParse = pdfParseModule.default || pdfParseModule;
+              
+              // Create a custom render function to handle text extraction
+              const renderPage = (pageData: any) => {
+                return pageData.getTextContent().then((textContent: any) => {
+                  let lastY = -1;
+                  let text = '';
+                  
+                  for (const item of textContent.items) {
+                    if ('str' in item) {
+                      if (lastY !== item.transform[5] && lastY !== -1) {
+                        text += '\n';
+                      }
+                      text += item.str;
+                      lastY = item.transform[5];
+                    }
+                  }
+                  
+                  return text;
+                });
+              };
+
+              const options = {
+                pagerender: renderPage,
+              };
+
+              const data = await pdfParse(dataBuffer, options);
+              resolve(data.text);
+            } catch (err) {
+              reject(err);
+            }
+          });
+        };
+
+        text = await extractPdfText(buffer);
+        
+      } catch (pdfError: any) {
+        console.error('PDF extraction error:', pdfError.message);
+        console.error('Full error:', pdfError);
+        
+        // Method 2: Try basic pdf-parse without custom renderer
+        try {
+          console.log('Trying basic pdf-parse...');
+          const pdfParseModule = await import('pdf-parse');
+          const pdfParse = pdfParseModule.default || pdfParseModule;
+          const data = await pdfParse(buffer);
+          text = data.text;
+        } catch (fallbackError: any) {
+          console.error('Basic pdf-parse also failed:', fallbackError.message);
+          
+          return NextResponse.json(
+            { 
+              error: 'Unable to extract text from this PDF. Please save your resume as DOCX format and upload again.',
+              technicalDetails: fallbackError.message,
+            },
+            { status: 500 }
+          );
+        }
+      }
+      
+    } else if (fileName.endsWith('.doc')) {
+      return NextResponse.json(
+        { error: 'Old .doc format is not supported. Please convert to .docx or .pdf' },
+        { status: 400 }
+      );
+      
+    } else {
+      return NextResponse.json(
+        { error: 'Unsupported file format. Please upload PDF, DOCX, or TXT file.' },
+        { status: 400 }
+      );
+    }
+
+    // Clean up the extracted text
+    text = text
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    // Check if we got meaningful text
+    if (!text || text.length < 20) {
+      return NextResponse.json(
+        { 
+          error: 'Could not extract text from this PDF. It may be image-based. Please upload a DOCX version instead.',
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      text,
+      fileName: file.name,
+      fileSize: file.size,
+      characterCount: text.length,
+    });
+    
+  } catch (error: any) {
+    console.error('Text extraction error:', error);
+    return NextResponse.json(
+      { error: 'Failed to process file. Please try DOCX format instead.' },
+      { status: 500 }
+    );
+  }
+}
+Option B (Recommended): Client-side PDF extraction
+
+If server-side PDF extraction continues to fail, the most reliable solution is to extract PDF text on the client side using pdf.js in the browser, then send the extracted text to the server.
+
+Step 1: Install pdf.js for client-side use:
+
+npm install pdfjs-dist
+Step 2: Create a client-side PDF extraction utility:
+
+File: lib/pdfExtractor.ts
+
+export async function extractTextFromPDF(file: File): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist');
+  
+  // Set worker source
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  
+  let fullText = '';
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item: any) => ('str' in item ? item.str : ''))
+      .join(' ');
+    fullText += pageText + '\n\n';
+  }
+  
+  return fullText.trim();
+}
+Step 3: Update the frontend components to use client-side extraction for PDFs:
+
+In your LinkedIn Optimizer page (app/linkedin-optimizer/page.tsx) and Interview Prep page, update the file upload handler:
+
+import { extractTextFromPDF } from '@/lib/pdfExtractor';
+
+// In handleFileUpload function:
+const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  setResumeFile(file);
+  const fileName = file.name.toLowerCase();
+
+  try {
+    if (fileName.endsWith('.pdf')) {
+      // Extract PDF text on client side
+      const text = await extractTextFromPDF(file);
+      setResumeContent(text);
+    } else {
+      // For DOCX and TXT, use server-side extraction
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/extract-text', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setResumeContent(data.text);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to extract text');
+      }
+    }
+  } catch (err: any) {
+    console.error('Failed to extract text:', err);
+    setError('Failed to read file. Please try a DOCX file instead.');
+  }
+};
+My Recommendation:
+
+Go with Option B (Client-side extraction) because:
+
+Works reliably in browser without serverless limitations
+Faster - no network round trip for PDF processing
+Reduces server load
+pdf.js has excellent browser support
+Git commands after implementing Option B:
+
+git add .
+git commit -m "Fix: Use client-side PDF extraction with pdf.js for reliable text extraction"
+git push origin main

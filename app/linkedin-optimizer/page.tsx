@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { extractTextFromPDF } from '@/lib/pdfExtractor';
 import {
   Linkedin,
   FileText,
@@ -127,7 +128,7 @@ export default function LinkedInOptimizerPage() {
     fetchCount();
   }, [session?.user?.id]);
 
-  // Handle file upload - Use server-side extraction for reliability
+  // Handle file upload - Use client-side extraction for PDFs
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -137,26 +138,34 @@ export default function LinkedInOptimizerPage() {
     setIsExtractingText(true);
 
     try {
-      // Use server-side extraction API for more reliable PDF handling
-      const formData = new FormData();
-      formData.append('file', file);
+      const fileName = file.name.toLowerCase();
 
-      const response = await fetch('/api/extract-text', {
-        method: 'POST',
-        body: formData,
-      });
+      if (fileName.endsWith('.pdf')) {
+        // Extract PDF text on client side using pdf.js
+        const text = await extractTextFromPDF(file);
+        setResumeContent(text);
+      } else {
+        // For DOCX and TXT, use server-side extraction
+        const formData = new FormData();
+        formData.append('file', file);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to extract text');
+        const response = await fetch('/api/extract-text', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to extract text');
+        }
+
+        const data = await response.json();
+        setResumeContent(data.text);
       }
-
-      const data = await response.json();
-      setResumeContent(data.text);
       setIsExtractingText(false);
     } catch (err: any) {
       console.error('Failed to extract text:', err);
-      setError(err.message || 'Failed to read file. Please try another file.');
+      setError(err.message || 'Failed to read file. Please try DOCX format instead.');
       setResumeFile(null);
       setResumeContent('');
       setIsExtractingText(false);
