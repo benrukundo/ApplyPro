@@ -35,7 +35,29 @@ ApplyPro is a comprehensive AI-powered platform designed to help job seekers opt
 
 ## Core Features
 
-### 1. Resume Analyzer & Generator
+### 1. Job Application Tracker
+**Location:** `app/tracker/page.tsx`, `app/api/job-applications/`
+**Purpose:** Track and manage job applications with database persistence and analytics.
+
+#### Key Functionality:
+- **Application Management:** Add, edit, update, and delete job applications
+- **Status Tracking:** Track application status (saved, applied, interview, offer, rejected)
+- **Advanced Filtering:** Filter by status, search by company/position
+- **Statistics Dashboard:** View application metrics and success rates
+- **Follow-up Reminders:** Track upcoming follow-up dates
+- **Database Persistence:** All data stored in PostgreSQL
+- **Cross-device Sync:** Applications sync across all devices
+- **Usage Limits:** 100 applications per user with upgrade prompts
+
+#### Technical Implementation:
+- React components with drag-and-drop interface (planned)
+- RESTful API endpoints with email-based user authentication
+- Prisma database integration with proper error handling
+- Real-time statistics calculation
+- Status history tracking with timestamps
+- TypeScript interfaces for type safety
+
+### 2. Resume Analyzer & Generator
 **Location:** `app/generate/page.tsx`
 **Purpose:** Analyze existing resumes and generate tailored versions for specific job applications.
 
@@ -168,6 +190,21 @@ lib/
 ├── subscription-db.ts           # Subscription management
 ├── tracker.ts                   # Analytics tracking
 └── prisma.ts                    # Database client
+```
+
+### Debug Files Directory (`/debug-files`)
+```
+debug-files/
+├── dashboard-page.txt           # Dashboard component snapshot
+├── layout.txt                   # Main layout component
+├── navbar.txt                   # Navigation component
+├── footer.txt                   # Footer component
+├── components-list.txt          # Available UI components
+├── schema.txt                   # Complete Prisma schema
+├── job-applications-route.txt   # Main job applications API
+├── tracker.txt                  # Job tracker library
+├── tracker-page.txt             # Job tracker page component
+└── job-applications-id-route.txt # Individual application API
 ```
 
 ### Components Directory (`/components`)
@@ -330,6 +367,50 @@ POSTHOG_SECRET_KEY=...
 - Feature usage analytics
 - Conversion tracking
 - Revenue analytics
+
+## Recent Fixes & Improvements
+
+### December 2025 Updates
+
+#### 1. Job Application Tracker Implementation
+- **Database Migration:** Migrated from localStorage to PostgreSQL with Prisma ORM
+- **API Endpoints:** Complete RESTful API for CRUD operations on job applications
+- **User Authentication:** Fixed session user ID mismatch issues with email-based lookup
+- **Dashboard Integration:** Added job application tracking to main dashboard
+- **Statistics & Analytics:** Real-time application metrics and success rate calculations
+- **Status History:** Complete audit trail for application status changes
+
+#### 2. TypeScript Error Fixes
+- **Null Safety:** Fixed `session.user.email` null handling across all API endpoints
+- **Prisma Type Safety:** Resolved type mismatches in database queries
+- **Subscription Plan Handling:** Fixed undefined plan values in dashboard
+- **Error Handling:** Improved error responses and validation
+
+#### 3. Authentication Improvements
+- **Email-Based User Lookup:** Replaced unreliable session IDs with email verification
+- **Session Validation:** Enhanced session handling and user verification
+- **API Security:** Strengthened authentication checks across all endpoints
+- **Error Messages:** More informative error responses for debugging
+
+#### 4. Code Quality & Debugging
+- **Debug Files Directory:** Created `debug-files/` for code snapshots and debugging
+- **Clean Production Code:** Removed debug console.log statements
+- **TypeScript Compliance:** Fixed all TypeScript compilation errors
+- **Documentation:** Updated project overview with current features
+
+#### 5. Database & Performance
+- **Prisma Client Generation:** Ensured proper database client generation
+- **Query Optimization:** Improved database query efficiency
+- **Migration Safety:** Clean database migrations without data loss
+- **Connection Handling:** Proper database connection management
+
+### Git Commit History (Recent)
+```
+da69249 - fix: handle null email in session for job applications API
+39b8cdb - fix: handle undefined subscription plan in dashboard
+81f3c43 - cleanup: remove debug console.log statements from job applications API
+02916e9 - fix: use email-based user lookup for job applications API
+```
 
 ## Future Enhancements
 
