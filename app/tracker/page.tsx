@@ -98,34 +98,37 @@ function TrackerContent() {
     }
   }, [status, router]);
 
-  // Set user ID for tracker when authenticated
+  // Load applications when authenticated
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id) {
-      setCurrentUserId(session.user.id);
-      loadApplications();
+    const loadApplications = async () => {
+      try {
+        const apps = await getAllApplications();
+        setApplications(apps);
 
-      const action = searchParams.get('action');
-      const id = searchParams.get('id');
+        // Handle URL parameters after loading apps
+        const action = searchParams.get('action');
+        const id = searchParams.get('id');
 
-      if (action === 'add') {
-        setShowAddModal(true);
-      }
-
-      if (id) {
-        const apps = getAllApplications();
-        const app = apps.find((a) => a.id === id);
-        if (app) {
-          setSelectedApp(app);
-          setShowDetailsModal(true);
+        if (action === 'add') {
+          setShowAddModal(true);
         }
+
+        if (id) {
+          const app = apps.find((a) => a.id === id);
+          if (app) {
+            setSelectedApp(app);
+            setShowDetailsModal(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading applications:', error);
       }
+    };
+
+    if (status === 'authenticated' && session?.user?.id) {
+      loadApplications();
     }
   }, [status, session?.user?.id, searchParams]);
-
-  const loadApplications = () => {
-    const apps = getAllApplications();
-    setApplications(apps);
-  };
 
   const toggleColumnExpand = (status: ApplicationStatus) => {
     setExpandedColumns(prev => {
@@ -173,18 +176,18 @@ function TrackerContent() {
       appliedDate: app.appliedDate
         ? new Date(app.appliedDate).toISOString().split("T")[0]
         : "",
-      salary: app.salary,
-      location: app.location,
+      salary: app.salary || "",
+      location: app.location || "",
       isRemote: app.isRemote,
-      jobUrl: app.jobUrl,
-      notes: app.notes,
+      jobUrl: app.jobUrl || "",
+      notes: app.notes || "",
       jobSource: app.jobSource || "other",
       followUpDate: app.followUpDate
         ? new Date(app.followUpDate).toISOString().split("T")[0]
         : "",
       priority: app.priority,
-      contactPerson: app.contactPerson,
-      contactEmail: app.contactEmail,
+      contactPerson: app.contactPerson || "",
+      contactEmail: app.contactEmail || "",
     });
     setSelectedApp(app);
     setIsEditMode(true);
@@ -213,8 +216,8 @@ function TrackerContent() {
         positionTitle: formData.positionTitle.trim(),
         status: formData.status,
         appliedDate: formData.appliedDate
-          ? new Date(formData.appliedDate).getTime()
-          : null,
+          ? new Date(formData.appliedDate)
+          : undefined,
         salary: formData.salary.trim(),
         location: formData.location.trim(),
         isRemote: formData.isRemote,
@@ -222,22 +225,22 @@ function TrackerContent() {
         notes: formData.notes.trim(),
         jobSource: formData.jobSource,
         followUpDate: formData.followUpDate
-          ? new Date(formData.followUpDate).getTime()
-          : null,
+          ? new Date(formData.followUpDate)
+          : undefined,
         priority: formData.priority,
         contactPerson: formData.contactPerson.trim(),
         contactEmail: formData.contactEmail.trim(),
       };
 
       if (isEditMode && selectedApp) {
-        const result = updateApplication(selectedApp.id, appData);
+        const result = await updateApplication(selectedApp.id, appData);
         if (!result.success) {
           setFormError(result.error || "Failed to update application");
           setIsSubmitting(false);
           return;
         }
       } else {
-        const result = addApplication(appData);
+        const result = await addApplication(appData);
         if (!result.success) {
           setFormError(result.error || "Failed to add application");
           setIsSubmitting(false);
@@ -245,7 +248,9 @@ function TrackerContent() {
         }
       }
 
-      loadApplications();
+      // Reload applications
+      const updatedApps = await getAllApplications();
+      setApplications(updatedApps);
       setShowAddModal(false);
       resetForm();
     } catch (err) {
@@ -255,15 +260,21 @@ function TrackerContent() {
     }
   };
 
-  const handleDeleteApplication = () => {
+  const handleDeleteApplication = async () => {
     if (!selectedApp) return;
 
-    const result = deleteApplication(selectedApp.id);
-    if (result.success) {
-      loadApplications();
-      setShowDeleteModal(false);
-      setShowDetailsModal(false);
-      setSelectedApp(null);
+    try {
+      const result = await deleteApplication(selectedApp.id);
+      if (result.success) {
+        // Reload applications
+        const updatedApps = await getAllApplications();
+        setApplications(updatedApps);
+        setShowDeleteModal(false);
+        setShowDetailsModal(false);
+        setSelectedApp(null);
+      }
+    } catch (error) {
+      console.error('Error deleting application:', error);
     }
   };
 
@@ -293,12 +304,14 @@ function TrackerContent() {
     setDragOverColumn(null);
   };
 
-  const handleDrop = (status: ApplicationStatus) => {
+  const handleDrop = async (status: ApplicationStatus) => {
     if (!draggedApp) return;
 
     if (draggedApp.status !== status) {
-      updateApplication(draggedApp.id, { status });
-      loadApplications();
+      await updateApplication(draggedApp.id, { status });
+      // Reload applications
+      const updatedApps = await getAllApplications();
+      setApplications(updatedApps);
     }
 
     setDraggedApp(null);
@@ -395,7 +408,7 @@ function TrackerContent() {
       return (
         app.companyName.toLowerCase().includes(query) ||
         app.positionTitle.toLowerCase().includes(query) ||
-        app.location.toLowerCase().includes(query)
+        (app.location && app.location.toLowerCase().includes(query))
       );
     }
     return true;
@@ -772,8 +785,7 @@ function TrackerContent() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           <span className="truncate block max-w-[150px]">
-                            {app.location || "—"}
-                            {app.isRemote && <span className="text-green-600 ml-1">• Remote</span>}
+                            {app.location ? `${app.location}${app.isRemote ? ' • Remote' : ''}` : "—"}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
@@ -1189,33 +1201,7 @@ function TrackerContent() {
                   </div>
                 )}
 
-                {/* Timeline */}
-                {selectedApp.history && selectedApp.history.length > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-3">Timeline</p>
-                    <div className="space-y-3">
-                      {selectedApp.history.map((entry, index) => (
-                        <div key={index} className="flex gap-3">
-                          <div className="flex flex-col items-center">
-                            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${getStatusColor(entry.status)}`}>
-                              {getStatusIcon(entry.status)}
-                            </div>
-                            {index < selectedApp.history.length - 1 && (
-                              <div className="h-full w-0.5 bg-gray-200 my-1" />
-                            )}
-                          </div>
-                          <div className="flex-1 pb-3">
-                            <p className="font-medium text-gray-900 capitalize">{entry.status}</p>
-                            <p className="text-sm text-gray-500">{entry.note}</p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {new Date(entry.date).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Action Buttons */}
                 <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-100">

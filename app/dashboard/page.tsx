@@ -332,7 +332,7 @@ function DashboardContent() {
       }
       return true;
     })
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -36,13 +36,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate average response time (days from applied to any response)
+    // TODO: Fix this calculation after resolving Prisma client caching issue
     const respondedApps = applications.filter(app =>
-      app.status !== 'saved' && app.status !== 'applied' && app.appliedAt
+      app.status !== 'saved' && app.status !== 'applied'
     );
 
     if (respondedApps.length > 0) {
+      // Use createdAt as fallback for now
       const totalResponseTime = respondedApps.reduce((sum, app) => {
-        const responseTime = app.updatedAt.getTime() - (app.appliedAt.getTime() || app.createdAt.getTime());
+        const responseTime = app.updatedAt.getTime() - app.createdAt.getTime();
         return sum + responseTime;
       }, 0);
 
