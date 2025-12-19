@@ -25,8 +25,8 @@ export async function POST(req: NextRequest) {
 
     } else if (fileName.endsWith('.pdf')) {
       // Use pdf-parse for server-side PDF extraction
-      const pdf = require('pdf-parse');
-      const data = await pdf(buffer);
+      const pdfParse = require('pdf-parse') as any;
+      const data = await pdfParse(buffer);
       text = data.text;
 
     } else {
