@@ -28,6 +28,7 @@ model User {
   generatedResumes GeneratedResume[]
   builderResumes   BuilderResume[]
   interviewPreps   InterviewPrep[]
+  linkedInOptimizations LinkedInOptimization[]
 }
 
 model Account {
@@ -256,4 +257,36 @@ enum SessionStatus {
   IN_PROGRESS
   COMPLETED
   ABANDONED
+}
+
+// LinkedIn Profile Optimization
+model LinkedInOptimization {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Input data
+  resumeContent       String   @db.Text
+  linkedinUrl         String?
+  currentHeadline     String?
+  currentAbout        String?  @db.Text
+  targetRole          String?
+
+  // Analysis results
+  consistencyScore    Int      @default(0)
+  keywordsMatch       Int      @default(0)
+  experienceAlign     Int      @default(0)
+  skillsCoverage      Int      @default(0)
+
+  // Generated content
+  suggestedHeadlines  Json     // Array of 3 headline options
+  optimizedAbout      String?  @db.Text
+  missingKeywords     Json     // Array of keywords to add
+  skillsToAdd         Json     // Array of skills
+  experienceTips      Json     // Array of improvement suggestions
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
 }
