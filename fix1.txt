@@ -1,0 +1,47 @@
+Fix Template/Download Flow
+
+File to modify: app/(pages)/generate/page.tsx (or wherever the Generate page results are rendered)
+
+Current Problem: When user selects a template (Modern, Traditional, or ATS-Optimized), they see 3 download buttons: "Tailored Resume", "ATS-Optimized Version", and "Cover Letter". This is confusing because:
+
+The "ATS-Optimized Version" button is redundant when ATS template is selected
+Users expect the template selection to apply to their resume download
+Required Changes:
+
+Remove the "ATS-Optimized Version" as a separate download option
+
+Rename "Tailored Resume" to reflect the selected template:
+
+If Modern template selected → "Download Modern Resume"
+If Traditional template selected → "Download Traditional Resume"
+If ATS-Optimized template selected → "Download ATS Resume"
+Keep only 2 download cards:
+
+Resume (using selected template + selected color)
+Cover Letter
+Update the download function to use the selected template when generating the resume
+
+Expected UI After Fix:
+
+Choose Resume Template:  [Modern ✓]  [Traditional]  [ATS-Optimized]
+
+Customize Color:  [Blue ✓] [Green] [Purple] [Red] [Teal] [Orange]
+
+Select Download Format:  [PDF Format]  [DOCX Format ✓]
+
+┌─────────────────────┐    ┌─────────────────────┐
+│   Modern Resume     │    │    Cover Letter     │
+│                     │    │                     │
+│   [Preview...]      │    │   [Preview...]      │
+│                     │    │                     │
+│ [Download as DOCX]  │    │ [Download as DOCX]  │
+└─────────────────────┘    └─────────────────────┘
+
+        [Generate Another Resume]
+Do NOT change:
+
+Template selection functionality
+Color selection functionality
+Format toggle (PDF/DOCX)
+Cover Letter generation
+The actual PDF/DOCX generation functions in lib/documentGenerator.ts

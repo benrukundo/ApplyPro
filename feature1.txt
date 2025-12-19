@@ -1,0 +1,1649 @@
+Phase 2 Feature Specifications
+________________________________________
+Feature 1: Interview Preparation Module
+Overview
+AI-powered interview preparation that generates personalized questions, suggested answers, and mock interview practice based on the user's resume and target job description.
+________________________________________
+User Flow
+┌─────────────────────────────────────────────────────────────────┐
+│  1. Entry Points                                                │
+│     - After generating a resume → "Prepare for Interview" CTA   │
+│     - Navigation: Dashboard | Tracker | Generate | Build |      │
+│                   Interview Prep | ATS Checker                  │
+│     - From Tracker: Job card → "Prep for Interview" button      │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  2. Input Screen                                                │
+│     - Select saved resume OR upload new                         │
+│     - Paste job description OR select from Tracker              │
+│     - Select interview type:                                    │
+│       [ ] Phone Screening                                       │
+│       [ ] Technical Interview                                   │
+│       [ ] Behavioral Interview                                  │
+│       [ ] HR/Culture Fit                                        │
+│       [ ] Final Round/Executive                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  3. Generated Content                                           │
+│     - 10-15 likely interview questions                          │
+│     - Suggested answers using STAR method                       │
+│     - Key talking points from resume                            │
+│     - Questions to ask the interviewer                          │
+│     - Company-specific insights (if available)                  │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  4. Practice Mode (Optional)                                    │
+│     - Mock interview simulation                                 │
+│     - AI asks questions one by one                              │
+│     - User types/records answers                                │
+│     - AI provides feedback on answers                           │
+└─────────────────────────────────────────────────────────────────┘
+________________________________________
+UI Wireframe - Main Interview Prep Page
+┌────────────────────────────────────────────────────────────────────────┐
+│  ApplyPro    Dashboard  Tracker  Generate  Build  Interview  ATS      │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  ← Back                                          Pro Monthly 12/100    │
+│                                                                        │
+│                    🎯 Interview Preparation                            │
+│         Get ready to ace your interview with AI-powered prep          │
+│                                                                        │
+│  ┌─────────────────────────────┐  ┌─────────────────────────────┐     │
+│  │  📄 Your Resume             │  │  💼 Target Job              │     │
+│  │                             │  │                             │     │
+│  │  [Select from saved ▼]     │  │  [Select from Tracker ▼]   │     │
+│  │                             │  │                             │     │
+│  │  Or upload new resume       │  │  Or paste job description   │     │
+│  │  ┌─────────────────────┐   │  │  ┌─────────────────────┐   │     │
+│  │  │   Drop file here    │   │  │  │                     │   │     │
+│  │  └─────────────────────┘   │  │  │                     │   │     │
+│  │                             │  │  └─────────────────────┘   │     │
+│  └─────────────────────────────┘  └─────────────────────────────┘     │
+│                                                                        │
+│  📋 Interview Type                                                     │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐  │
+│  │   📞 Phone   │ │  💻 Technical │ │  🧠 Behavioral│ │  👥 HR/Culture│ │
+│  │  Screening   │ │   Interview  │ │   Interview  │ │     Fit      │  │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘  │
+│                                                                        │
+│              ┌─────────────────────────────────┐                       │
+│              │    🚀 Generate Interview Prep    │                      │
+│              └─────────────────────────────────┘                       │
+│                                                                        │
+│         Generating will use 1 of your 100 monthly credits             │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+________________________________________
+UI Wireframe - Results Page
+┌────────────────────────────────────────────────────────────────────────┐
+│  ✅ Your Interview Prep is Ready!                                      │
+│                                                                        │
+│  IT Officer at Africa Health Sciences University                       │
+│  Interview Type: Behavioral Interview                                  │
+│                                                                        │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐                      │
+│  │Questions│ │ Answers │ │Key Points│ │Ask Them │                      │
+│  │  (12)   │ │  Guide  │ │   (8)   │ │  (5)    │                      │
+│  └────┬────┘ └─────────┘ └─────────┘ └─────────┘                      │
+│       ↓ (selected tab)                                                 │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │                                                                 │   │
+│  │  1. Tell me about yourself and your experience in IT.          │   │
+│  │     ┌─────────────────────────────────────────────────────┐    │   │
+│  │     │ 💡 Suggested Answer:                                 │    │   │
+│  │     │ "I'm an IT professional with 16+ years of experience│    │   │
+│  │     │ in healthcare and academic environments. Most       │    │   │
+│  │     │ recently, I served as ICT Manager at The Sustainable│    │   │
+│  │     │ Development Goals Center for Africa, where I..."    │    │   │
+│  │     │                                        [Expand ↓]   │    │   │
+│  │     └─────────────────────────────────────────────────────┘    │   │
+│  │                                                                 │   │
+│  │  2. Describe a time you implemented a new system.              │   │
+│  │     [Show Answer ↓]                                             │   │
+│  │                                                                 │   │
+│  │  3. How do you handle technical support requests?              │   │
+│  │     [Show Answer ↓]                                             │   │
+│  │                                                                 │   │
+│  │  4. Tell me about a challenging project you managed.           │   │
+│  │     [Show Answer ↓]                                             │   │
+│  │                                                                 │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                        │
+│  ┌─────────────────────┐  ┌─────────────────────┐                     │
+│  │  📥 Download as PDF  │  │  🎤 Start Mock Interview │                │
+│  └─────────────────────┘  └─────────────────────┘                     │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+________________________________________
+Mock Interview Flow
+┌────────────────────────────────────────────────────────────────────────┐
+│                       🎤 Mock Interview                                │
+│                                                                        │
+│  Question 3 of 10                           ⏱️ 2:34                    │
+│  ━━━━━━━━━━━━━━━━━━━━━━●━━━━━━━━━━━━━━━━━━━                           │
+│                                                                        │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │                                                                 │   │
+│  │  "Describe a situation where you had to troubleshoot           │   │
+│  │   a critical system failure. How did you handle it?"           │   │
+│  │                                                                 │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                        │
+│  Your Answer:                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │                                                                 │   │
+│  │  Type your answer here...                                       │   │
+│  │                                                                 │   │
+│  │                                                                 │   │
+│  │                                                                 │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│                                                                        │
+│  ┌────────────┐  ┌────────────┐  ┌─────────────────┐                  │
+│  │  ⏭️ Skip    │  │ 💡 Hint    │  │  ✓ Submit Answer │                 │
+│  └────────────┘  └────────────┘  └─────────────────┘                  │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+________________________________________
+AI Feedback on Answer
+┌────────────────────────────────────────────────────────────────────────┐
+│                      📊 Answer Feedback                                │
+│                                                                        │
+│  Overall Score: 78/100                                                 │
+│                                                                        │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │  ✅ Strengths:                                                   │  │
+│  │  • Good use of specific example                                  │  │
+│  │  • Mentioned measurable outcome (restored in 2 hours)            │  │
+│  │  • Showed leadership and calm under pressure                     │  │
+│  │                                                                   │  │
+│  │  ⚠️ Could Improve:                                               │  │
+│  │  • Add more context about the situation (STAR - Situation)       │  │
+│  │  • Mention what you learned from the experience                  │  │
+│  │  • Include team collaboration if applicable                      │  │
+│  │                                                                   │  │
+│  │  💡 Enhanced Answer:                                             │  │
+│  │  "During my time at SDG Center, our main server crashed during  │  │
+│  │  a critical board meeting presentation. As the ICT Manager, I   │  │
+│  │  immediately assessed the situation, identified a failed RAID   │  │
+│  │  controller, and coordinated with my team to implement our      │  │
+│  │  disaster recovery plan. Within 2 hours, we restored full       │  │
+│  │  functionality. This experience reinforced the importance of    │  │
+│  │  having tested backup procedures and clear escalation paths."   │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+│              ┌───────────────────┐  ┌───────────────────┐             │
+│              │   ← Previous Q    │  │    Next Q →       │             │
+│              └───────────────────┘  └───────────────────┘             │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+________________________________________
+Database Schema Additions
+model InterviewPrep {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  resumeId        String?
+  jobDescription  String   @db.Text
+  jobTitle        String
+  company         String?
+  interviewType   InterviewType
+  questions       Json     // Array of {question, suggestedAnswer, category}
+  keyPoints       Json     // Array of talking points
+  questionsToAsk  Json     // Array of questions for interviewer
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  mockSessions    MockInterviewSession[]
+}
+
+model MockInterviewSession {
+  id              String   @id @default(cuid())
+  prepId          String
+  prep            InterviewPrep @relation(fields: [prepId], references: [id])
+  answers         Json     // Array of {questionIndex, userAnswer, feedback, score}
+  overallScore    Int?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+}
+
+enum InterviewType {
+  PHONE_SCREENING
+  TECHNICAL
+  BEHAVIORAL
+  HR_CULTURE
+  FINAL_ROUND
+}
+________________________________________
+API Routes Needed
+Route	Method	Purpose
+/api/interview-prep/generate	POST	Generate questions & answers
+/api/interview-prep/[id]	GET	Retrieve saved prep
+/api/interview-prep/list	GET	List user's prep sessions
+/api/interview-prep/mock/start	POST	Start mock interview
+/api/interview-prep/mock/submit	POST	Submit answer, get feedback
+/api/interview-prep/mock/complete	POST	Complete session, get summary
+/api/interview-prep/download	POST	Generate PDF of prep materials
+________________________________________
+Pricing Integration
+Plan	Interview Prep Credits
+Free	1 prep (no mock interview)
+Pay-per-use	$2 per prep
+Pro Monthly	10 preps included
+Pro Yearly	15 preps/month
+________________________________________
+________________________________________
+
+Interview Preparation Module - Implementation Guide
+________________________________________
+Step 1: Database Schema
+File: prisma/schema.prisma
+Add these models to your existing schema:
+// Interview Preparation
+model InterviewPrep {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Input data
+  resumeContent   String            @db.Text
+  jobDescription  String            @db.Text
+  jobTitle        String
+  company         String?
+  interviewType   InterviewType     @default(BEHAVIORAL)
+  
+  // Generated content
+  questions       Json              // Array of {question, suggestedAnswer, category, difficulty}
+  keyTalkingPoints Json             // Array of talking points from resume
+  questionsToAsk  Json              // Array of questions to ask interviewer
+  companyInsights String?           @db.Text
+  
+  // Metadata
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  // Relations
+  mockSessions    MockInterviewSession[]
+  
+  @@index([userId])
+}
+
+model MockInterviewSession {
+  id              String        @id @default(cuid())
+  prepId          String
+  prep            InterviewPrep @relation(fields: [prepId], references: [id], onDelete: Cascade)
+  
+  // Session data
+  answers         Json          // Array of {questionIndex, userAnswer, feedback, score, strengths, improvements}
+  currentQuestion Int           @default(0)
+  totalQuestions  Int
+  overallScore    Int?
+  overallFeedback String?       @db.Text
+  
+  // Status
+  status          SessionStatus @default(IN_PROGRESS)
+  startedAt       DateTime      @default(now())
+  completedAt     DateTime?
+  
+  @@index([prepId])
+}
+
+enum InterviewType {
+  PHONE_SCREENING
+  TECHNICAL
+  BEHAVIORAL
+  HR_CULTURE
+  FINAL_ROUND
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+After adding, run:
+npx prisma migrate dev --name add_interview_prep
+npx prisma generate
+________________________________________
+Step 2: API Routes
+Route 1: Generate Interview Prep
+File: app/api/interview-prep/generate/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { resumeContent, jobDescription, jobTitle, company, interviewType } = await req.json();
+
+    // Validate inputs
+    if (!resumeContent || !jobDescription || !jobTitle) {
+      return NextResponse.json(
+        { error: 'Resume, job description, and job title are required' },
+        { status: 400 }
+      );
+    }
+
+    // Check user credits/subscription
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { subscription: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // TODO: Add credit check logic based on your subscription model
+
+    // Generate interview prep using Claude
+    const systemPrompt = `You are an expert career coach and interview preparation specialist with 20+ years of experience helping candidates succeed in interviews across all industries.
+
+Your task is to generate comprehensive interview preparation materials based on the candidate's resume and the target job description.
+
+You must return a valid JSON object with this exact structure:
+{
+  "questions": [
+    {
+      "question": "The interview question",
+      "suggestedAnswer": "A detailed suggested answer using the STAR method where applicable, incorporating specific examples from the candidate's resume",
+      "category": "One of: introduction, experience, behavioral, technical, situational, motivation, culture_fit",
+      "difficulty": "One of: easy, medium, hard",
+      "tips": "Brief tips for answering this specific question"
+    }
+  ],
+  "keyTalkingPoints": [
+    {
+      "point": "A key achievement or skill to emphasize",
+      "evidence": "Specific example from resume that supports this",
+      "relevance": "Why this matters for the target role"
+    }
+  ],
+  "questionsToAsk": [
+    {
+      "question": "A thoughtful question to ask the interviewer",
+      "purpose": "Why this question is valuable to ask",
+      "category": "One of: role, team, company, growth, culture"
+    }
+  ],
+  "companyInsights": "Brief insights about what the company likely values based on the job description, and how the candidate should position themselves"
+}
+
+IMPORTANT GUIDELINES:
+1. Generate 12-15 questions appropriate for the interview type
+2. Tailor all answers to use SPECIFIC examples from the candidate's resume
+3. Use the STAR method (Situation, Task, Action, Result) for behavioral questions
+4. Include metrics and achievements from the resume where possible
+5. Questions should progress from easy to hard
+6. Include a mix of categories appropriate for the interview type
+7. Make suggested answers conversational, not robotic
+8. Key talking points should highlight the candidate's strongest qualifications for THIS specific role
+9. Questions to ask should show genuine interest and research`;
+
+    const userPrompt = `INTERVIEW TYPE: ${interviewType.replace('_', ' ')}
+
+TARGET POSITION: ${jobTitle}${company ? ` at ${company}` : ''}
+
+CANDIDATE'S RESUME:
+${resumeContent}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+Generate comprehensive interview preparation materials. Remember to:
+- Use specific examples from the resume in suggested answers
+- Tailor questions to the ${interviewType.replace('_', ' ').toLowerCase()} format
+- Include industry-specific questions relevant to the role
+- Make answers authentic and personal to this candidate`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8000,
+      messages: [
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+      system: systemPrompt,
+    });
+
+    // Extract the text content
+    const textContent = response.content.find((block) => block.type === 'text');
+    if (!textContent || textContent.type !== 'text') {
+      throw new Error('No text response from AI');
+    }
+
+    // Parse the JSON response
+    let prepData;
+    try {
+      // Extract JSON from the response (handle potential markdown code blocks)
+      let jsonString = textContent.text;
+      const jsonMatch = jsonString.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonString = jsonMatch[1];
+      }
+      prepData = JSON.parse(jsonString.trim());
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', textContent.text);
+      throw new Error('Failed to parse interview prep data');
+    }
+
+    // Save to database
+    const interviewPrep = await prisma.interviewPrep.create({
+      data: {
+        userId: session.user.id,
+        resumeContent,
+        jobDescription,
+        jobTitle,
+        company: company || null,
+        interviewType: interviewType as any,
+        questions: prepData.questions,
+        keyTalkingPoints: prepData.keyTalkingPoints,
+        questionsToAsk: prepData.questionsToAsk,
+        companyInsights: prepData.companyInsights || null,
+      },
+    });
+
+    // TODO: Deduct credit from user's account
+
+    return NextResponse.json({
+      success: true,
+      prepId: interviewPrep.id,
+      data: {
+        questions: prepData.questions,
+        keyTalkingPoints: prepData.keyTalkingPoints,
+        questionsToAsk: prepData.questionsToAsk,
+        companyInsights: prepData.companyInsights,
+      },
+    });
+  } catch (error) {
+    console.error('Interview prep generation error:', error);
+    return NextResponse.json(
+      { error: 'Failed to generate interview preparation' },
+      { status: 500 }
+    );
+  }
+}
+________________________________________
+Route 2: Get Interview Prep by ID
+File: app/api/interview-prep/[id]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const interviewPrep = await prisma.interviewPrep.findFirst({
+      where: {
+        id: params.id,
+        userId: session.user.id,
+      },
+      include: {
+        mockSessions: {
+          orderBy: { startedAt: 'desc' },
+          take: 5,
+        },
+      },
+    });
+
+    if (!interviewPrep) {
+      return NextResponse.json({ error: 'Interview prep not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: interviewPrep,
+    });
+  } catch (error) {
+    console.error('Get interview prep error:', error);
+    return NextResponse.json(
+      { error: 'Failed to retrieve interview preparation' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await prisma.interviewPrep.deleteMany({
+      where: {
+        id: params.id,
+        userId: session.user.id,
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete interview prep error:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete interview preparation' },
+      { status: 500 }
+    );
+  }
+}
+________________________________________
+Route 3: List User's Interview Preps
+File: app/api/interview-prep/list/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const preps = await prisma.interviewPrep.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        jobTitle: true,
+        company: true,
+        interviewType: true,
+        createdAt: true,
+        _count: {
+          select: { mockSessions: true },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: preps,
+    });
+  } catch (error) {
+    console.error('List interview preps error:', error);
+    return NextResponse.json(
+      { error: 'Failed to list interview preparations' },
+      { status: 500 }
+    );
+  }
+}
+________________________________________
+Route 4: Mock Interview - Start Session
+File: app/api/interview-prep/mock/start/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { prepId, questionCount = 10 } = await req.json();
+
+    // Verify prep belongs to user
+    const prep = await prisma.interviewPrep.findFirst({
+      where: {
+        id: prepId,
+        userId: session.user.id,
+      },
+    });
+
+    if (!prep) {
+      return NextResponse.json({ error: 'Interview prep not found' }, { status: 404 });
+    }
+
+    const questions = prep.questions as any[];
+    const totalQuestions = Math.min(questionCount, questions.length);
+
+    // Create mock session
+    const mockSession = await prisma.mockInterviewSession.create({
+      data: {
+        prepId,
+        totalQuestions,
+        answers: [],
+        currentQuestion: 0,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      sessionId: mockSession.id,
+      totalQuestions,
+      firstQuestion: questions[0],
+    });
+  } catch (error) {
+    console.error('Start mock interview error:', error);
+    return NextResponse.json(
+      { error: 'Failed to start mock interview' },
+      { status: 500 }
+    );
+  }
+}
+________________________________________
+Route 5: Mock Interview - Submit Answer
+File: app/api/interview-prep/mock/submit/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { sessionId, questionIndex, userAnswer } = await req.json();
+
+    // Get session with prep data
+    const mockSession = await prisma.mockInterviewSession.findFirst({
+      where: { id: sessionId },
+      include: {
+        prep: {
+          select: {
+            userId: true,
+            questions: true,
+            jobTitle: true,
+            company: true,
+          },
+        },
+      },
+    });
+
+    if (!mockSession || mockSession.prep.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    const questions = mockSession.prep.questions as any[];
+    const currentQuestion = questions[questionIndex];
+
+    if (!currentQuestion) {
+      return NextResponse.json({ error: 'Invalid question index' }, { status: 400 });
+    }
+
+    // Get AI feedback on the answer
+    const feedbackPrompt = `You are an expert interview coach evaluating a candidate's answer.
+
+POSITION: ${mockSession.prep.jobTitle}${mockSession.prep.company ? ` at ${mockSession.prep.company}` : ''}
+
+QUESTION: ${currentQuestion.question}
+
+IDEAL ANSWER GUIDANCE: ${currentQuestion.suggestedAnswer}
+
+CANDIDATE'S ANSWER: ${userAnswer}
+
+Evaluate the answer and return a JSON object:
+{
+  "score": <number 0-100>,
+  "strengths": ["strength 1", "strength 2"],
+  "improvements": ["improvement 1", "improvement 2"],
+  "enhancedAnswer": "A better version of their answer, keeping their style but improving content",
+  "briefFeedback": "2-3 sentence summary of feedback"
+}
+
+Be encouraging but honest. Focus on:
+1. Use of specific examples (STAR method)
+2. Relevance to the role
+3. Confidence and clarity
+4. Metrics and achievements mentioned`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [
+        {
+          role: 'user',
+          content: feedbackPrompt,
+        },
+      ],
+    });
+
+    const textContent = response.content.find((block) => block.type === 'text');
+    if (!textContent || textContent.type !== 'text') {
+      throw new Error('No feedback from AI');
+    }
+
+    let feedback;
+    try {
+      let jsonString = textContent.text;
+      const jsonMatch = jsonString.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonString = jsonMatch[1];
+      }
+      feedback = JSON.parse(jsonString.trim());
+    } catch {
+      feedback = {
+        score: 70,
+        strengths: ['Answer provided'],
+        improvements: ['Could add more specific examples'],
+        enhancedAnswer: userAnswer,
+        briefFeedback: 'Good effort. Try to include more specific examples from your experience.',
+      };
+    }
+
+    // Update session with this answer
+    const currentAnswers = mockSession.answers as any[];
+    currentAnswers.push({
+      questionIndex,
+      question: currentQuestion.question,
+      userAnswer,
+      feedback,
+    });
+
+    const nextQuestionIndex = questionIndex + 1;
+    const isComplete = nextQuestionIndex >= mockSession.totalQuestions;
+
+    await prisma.mockInterviewSession.update({
+      where: { id: sessionId },
+      data: {
+        answers: currentAnswers,
+        currentQuestion: nextQuestionIndex,
+        status: isComplete ? 'COMPLETED' : 'IN_PROGRESS',
+        completedAt: isComplete ? new Date() : null,
+        overallScore: isComplete
+          ? Math.round(
+              currentAnswers.reduce((sum, a) => sum + (a.feedback?.score || 0), 0) /
+                currentAnswers.length
+            )
+          : null,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      feedback,
+      isComplete,
+      nextQuestion: isComplete ? null : questions[nextQuestionIndex],
+      nextQuestionIndex: isComplete ? null : nextQuestionIndex,
+      progress: {
+        current: questionIndex + 1,
+        total: mockSession.totalQuestions,
+      },
+    });
+  } catch (error) {
+    console.error('Submit answer error:', error);
+    return NextResponse.json(
+      { error: 'Failed to submit answer' },
+      { status: 500 }
+    );
+  }
+}
+________________________________________
+Route 6: Mock Interview - Get Session Summary
+File: app/api/interview-prep/mock/[sessionId]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { sessionId: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const mockSession = await prisma.mockInterviewSession.findFirst({
+      where: { id: params.sessionId },
+      include: {
+        prep: {
+          select: {
+            userId: true,
+            jobTitle: true,
+            company: true,
+            interviewType: true,
+          },
+        },
+      },
+    });
+
+    if (!mockSession || mockSession.prep.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    const answers = mockSession.answers as any[];
+    
+    // Calculate summary statistics
+    const scores = answers.map((a) => a.feedback?.score || 0);
+    const avgScore = scores.length > 0 
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : 0;
+
+    const allStrengths = answers.flatMap((a) => a.feedback?.strengths || []);
+    const allImprovements = answers.flatMap((a) => a.feedback?.improvements || []);
+
+    // Get unique strengths and improvements (top 5 each)
+    const uniqueStrengths = [...new Set(allStrengths)].slice(0, 5);
+    const uniqueImprovements = [...new Set(allImprovements)].slice(0, 5);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        sessionId: mockSession.id,
+        jobTitle: mockSession.prep.jobTitle,
+        company: mockSession.prep.company,
+        interviewType: mockSession.prep.interviewType,
+        status: mockSession.status,
+        totalQuestions: mockSession.totalQuestions,
+        answeredQuestions: answers.length,
+        overallScore: avgScore,
+        answers,
+        summary: {
+          strengths: uniqueStrengths,
+          improvements: uniqueImprovements,
+        },
+        startedAt: mockSession.startedAt,
+        completedAt: mockSession.completedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Get session summary error:', error);
+    return NextResponse.json(
+      { error: 'Failed to get session summary' },
+      { status: 500 }
+    );
+  }
+}
+________________________________________
+Step 3: Frontend Page
+File: app/(pages)/interview-prep/page.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import {
+  FileText,
+  Briefcase,
+  Phone,
+  Code,
+  Brain,
+  Users,
+  Award,
+  ChevronDown,
+  ChevronUp,
+  ,
+  Check,
+  Download,
+  MessageSquare,
+  Lightbulb,
+  HelpCircle,
+  ArrowLeft,
+  Loader2,
+  PlayCircle,
+} from 'lucide-react';
+
+// Types
+interface Question {
+  question: string;
+  suggestedAnswer: string;
+  category: string;
+  difficulty: string;
+  tips: string;
+}
+
+interface TalkingPoint {
+  point: string;
+  evidence: string;
+  relevance: string;
+}
+
+interface QuestionToAsk {
+  question: string;
+  purpose: string;
+  category: string;
+}
+
+interface PrepData {
+  questions: Question[];
+  keyTalkingPoints: TalkingPoint[];
+  questionsToAsk: QuestionToAsk[];
+  companyInsights: string;
+}
+
+const interviewTypes = [
+  {
+    id: 'PHONE_SCREENING',
+    name: 'Phone Screening',
+    icon: Phone,
+    description: 'Initial recruiter call, basic qualifications',
+    color: 'bg-blue-50 border-blue-200 text-blue-700',
+  },
+  {
+    id: 'TECHNICAL',
+    name: 'Technical',
+    icon: Code,
+    description: 'Skills assessment, problem-solving',
+    color: 'bg-purple-50 border-purple-200 text-purple-700',
+  },
+  {
+    id: 'BEHAVIORAL',
+    name: 'Behavioral',
+    icon: Brain,
+    description: 'Past experiences, STAR method',
+    color: 'bg-green-50 border-green-200 text-green-700',
+  },
+  {
+    id: 'HR_CULTURE',
+    name: 'HR/Culture Fit',
+    icon: Users,
+    description: 'Values alignment, team dynamics',
+    color: 'bg-orange-50 border-orange-200 text-orange-700',
+  },
+  {
+    id: 'FINAL_ROUND',
+    name: 'Final Round',
+    icon: Award,
+    description: 'Executive interview, decision stage',
+    color: 'bg-red-50 border-red-200 text-red-700',
+  },
+];
+
+export default function InterviewPrepPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  // Input state
+  const [resumeContent, setResumeContent] = useState('');
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [jobDescription, setJobDescription] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
+  const [company, setCompany] = useState('');
+  const [selectedType, setSelectedType] = useState('BEHAVIORAL');
+
+  // UI state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState(0);
+  const [error, setError] = useState('');
+
+  // Results state
+  const [prepId, setPrepId] = useState<string | null>(null);
+  const [prepData, setPrepData] = useState<PrepData | null>(null);
+  const [activeTab, setActiveTab] = useState('questions');
+  const [expandedQuestions, setExpandedQuestions] = useState<number[]>([0]);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  // Handle file upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setResumeFile(file);
+
+    // Extract text from file
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/extract-text', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setResumeContent(data.text);
+      }
+    } catch (err) {
+      console.error('Failed to extract text:', err);
+    }
+  };
+
+  // Generate interview prep
+  const handleGenerate = async () => {
+    if (!resumeContent || !jobDescription || !jobTitle) {
+      setError('Please provide your resume, job description, and job title');
+      return;
+    }
+
+    setError('');
+    setIsGenerating(true);
+    setGenerationStep(1);
+
+    try {
+      // Simulate progress steps
+      const progressInterval = setInterval(() => {
+        setGenerationStep((prev) => (prev < 4 ? prev + 1 : prev));
+      }, 2000);
+
+      const response = await fetch('/api/interview-prep/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeContent,
+          jobDescription,
+          jobTitle,
+          company,
+          interviewType: selectedType,
+        }),
+      });
+
+      clearInterval(progressInterval);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate');
+      }
+
+      const result = await response.json();
+      setPrepId(result.prepId);
+      setPrepData(result.data);
+      setGenerationStep(5);
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate interview preparation');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Toggle question expansion
+  const toggleQuestion = (index: number) => {
+    setExpandedQuestions((prev) =>
+      prev.includes(index)
+        ? prev.filter((i) => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  //  to clipboard
+  const ToClipboard = async (text: string, index: number) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  // Get difficulty badge color
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy':
+        return 'bg-green-100 text-green-700';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'hard':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  // Get category badge color
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      introduction: 'bg-blue-100 text-blue-700',
+      experience: 'bg-purple-100 text-purple-700',
+      behavioral: 'bg-green-100 text-green-700',
+      technical: 'bg-orange-100 text-orange-700',
+      situational: 'bg-pink-100 text-pink-700',
+      motivation: 'bg-cyan-100 text-cyan-700',
+      culture_fit: 'bg-indigo-100 text-indigo-700',
+    };
+    return colors[category] || 'bg-gray-100 text-gray-700';
+  };
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Title Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            🎯 Interview Preparation
+          </h1>
+          <p className="text-gray-600">
+            Get AI-powered interview questions and answers tailored to your experience
+          </p>
+        </div>
+
+        {!prepData ? (
+          /* Input Form */
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+              {/* Resume Input */}
+              <div className="mb-6">
+                <label className="flex items-center text-lg font-semibold text-gray-800 mb-3">
+                  <FileText className="w-5 h-5 mr-2 text-blue-600" />
+                  Your Resume
+                </label>
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,.txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="resume-upload"
+                  />
+                  <label
+                    htmlFor="resume-upload"
+                    className="cursor-pointer"
+                  >
+                    <FileText className="w-10 h-10 mx-auto text-gray-400 mb-2" />
+                    <p className="text-gray-600">
+                      {resumeFile ? resumeFile.name : 'Drop your resume here or click to upload'}
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">PDF, DOCX, or TXT</p>
+                  </label>
+                </div>
+                {resumeContent && (
+                  <p className="text-sm text-green-600 mt-2 flex items-center">
+                    <Check className="w-4 h-4 mr-1" />
+                    Resume loaded ({resumeContent.length} characters)
+                  </p>
+                )}
+              </div>
+
+              {/* Job Description Input */}
+              <div className="mb-6">
+                <label className="flex items-center text-lg font-semibold text-gray-800 mb-3">
+                  <Briefcase className="w-5 h-5 mr-2 text-blue-600" />
+                  Job Description
+                </label>
+                <textarea
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  placeholder="Paste the job description here..."
+                  className="w-full h-40 p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  {jobDescription.length} characters
+                </p>
+              </div>
+
+              {/* Job Title & Company */}
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Job Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="e.g., IT Officer"
+                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="e.g., Africa Health Sciences University"
+                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Interview Type Selection */}
+              <div className="mb-8">
+                <label className="block text-lg font-semibold text-gray-800 mb-3">
+                  Interview Type
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {interviewTypes.map((type) => {
+                    const Icon = type.icon;
+                    const isSelected = selectedType === type.id;
+                    return (
+                      <button
+                        key={type.id}
+                        onClick={() => setSelectedType(type.id)}
+                        className={`p-4 rounded-xl border-2 text-center transition-all ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <Icon
+                          className={`w-6 h-6 mx-auto mb-2 ${
+                            isSelected ? 'text-blue-600' : 'text-gray-400'
+                          }`}
+                        />
+                        <p
+                          className={`text-sm font-medium ${
+                            isSelected ? 'text-blue-700' : 'text-gray-700'
+                          }`}
+                        >
+                          {type.name}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 hidden md:block">
+                          {type.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+                  {error}
+                </div>
+              )}
+
+              {/* Generate Button */}
+              <button
+                onClick={handleGenerate}
+                disabled={isGenerating || !resumeContent || !jobDescription || !jobTitle}
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    {generationStep === 1 && 'Analyzing your resume...'}
+                    {generationStep === 2 && 'Matching with job description...'}
+                    {generationStep === 3 && 'Generating questions...'}
+                    {generationStep === 4 && 'Creating suggested answers...'}
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-5 h-5 mr-2" />
+                    Generate Interview Prep
+                  </>
+                )}
+              </button>
+
+              {/* Progress Indicators */}
+              {isGenerating && (
+                <div className="mt-6 space-y-2">
+                  {[
+                    'Analyzing your resume',
+                    'Matching with job description',
+                    'Generating questions',
+                    'Creating suggested answers',
+                  ].map((step, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center text-sm ${
+                        generationStep > index + 1
+                          ? 'text-green-600'
+                          : generationStep === index + 1
+                          ? 'text-blue-600'
+                          : 'text-gray-400'
+                      }`}
+                    >
+                      {generationStep > index + 1 ? (
+                        <Check className="w-4 h-4 mr-2" />
+                      ) : generationStep === index + 1 ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <div className="w-4 h-4 mr-2 rounded-full border-2 border-current" />
+                      )}
+                      {step}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Results Section */
+          <div className="max-w-5xl mx-auto">
+            {/* Success Header */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-green-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Your Interview Prep is Ready!
+              </h2>
+              <p className="text-gray-600">
+                {jobTitle}
+                {company && ` at ${company}`} •{' '}
+                {interviewTypes.find((t) => t.id === selectedType)?.name} Interview
+              </p>
+            </div>
+
+            {/* Tabs */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="flex border-b">
+                {[
+                  { id: 'questions', label: 'Questions', count: prepData.questions.length, icon: MessageSquare },
+                  { id: 'talking-points', label: 'Key Points', count: prepData.keyTalkingPoints.length, icon: Lightbulb },
+                  { id: 'ask-them', label: 'Ask Them', count: prepData.questionsToAsk.length, icon: HelpCircle },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex-1 py-4 px-6 font-medium transition-colors flex items-center justify-center ${
+                        activeTab === tab.id
+                          ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 mr-2" />
+                      {tab.label}
+                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-gray-200">
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="p-6">
+                {/* Questions Tab */}
+                {activeTab === 'questions' && (
+                  <div className="space-y-4">
+                    {prepData.questions.map((q, index) => (
+                      <div
+                        key={index}
+                        className="border border-gray-200 rounded-xl overflow-hidden"
+                      >
+                        <button
+                          onClick={() => toggleQuestion(index)}
+                          className="w-full p-4 flex items-start justify-between text-left hover:bg-gray-50"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-medium text-gray-500">
+                                Q{index + 1}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-xs ${getCategoryColor(
+                                  q.category
+                                )}`}
+                              >
+                                {q.category.replace('_', ' ')}
+                              </span>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-xs ${getDifficultyColor(
+                                  q.difficulty
+                                )}`}
+                              >
+                                {q.difficulty}
+                              </span>
+                            </div>
+                            <p className="font-medium text-gray-900">{q.question}</p>
+                          </div>
+                          {expandedQuestions.includes(index) ? (
+                            <ChevronUp className="w-5 h-5 text-gray-400 ml-4" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-gray-400 ml-4" />
+                          )}
+                        </button>
+
+                        {expandedQuestions.includes(index) && (
+                          <div className="px-4 pb-4 border-t bg-gray-50">
+                            <div className="mt-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium text-gray-700 flex items-center">
+                                  <Lightbulb className="w-4 h-4 mr-2 text-yellow-500" />
+                                  Suggested Answer
+                                </h4>
+                                <button
+                                  onClick={() =>
+                                    ToClipboard(q.suggestedAnswer, index)
+                                  }
+                                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
+                                >
+                                  {copiedIndex === index ? (
+                                    <>
+                                      <Check className="w-4 h-4 mr-1" />
+                                      Copied!
+                                    </>
+                                  ) : (
+                                    <>
+                                      < className="w-4 h-4 mr-1" />
+                                      
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                              <p className="text-gray-700 whitespace-pre-line leading-relaxed">
+                                {q.suggestedAnswer}
+                              </p>
+                            </div>
+
+                            {q.tips && (
+                              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                                <p className="text-sm text-blue-700">
+                                  <strong>💡 Tip:</strong> {q.tips}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Key Talking Points Tab */}
+                {activeTab === 'talking-points' && (
+                  <div className="space-y-4">
+                    {prepData.keyTalkingPoints.map((point, index) => (
+                      <div
+                        key={index}
+                        className="p-4 border border-gray-200 rounded-xl"
+                      >
+                        <h4 className="font-semibold text-gray-900 mb-2">
+                          {point.point}
+                        </h4>
+                        <div className="grid md:grid-cols-2 gap-4 text-sm">
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-gray-500 mb-1">Evidence:</p>
+                            <p className="text-gray-700">{point.evidence}</p>
+                          </div>
+                          <div className="p-3 bg-blue-50 rounded-lg">
+                            <p className="text-blue-600 mb-1">Why it matters:</p>
+                            <p className="text-gray-700">{point.relevance}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Questions to Ask Tab */}
+                {activeTab === 'ask-them' && (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl mb-6">
+                      <p className="text-yellow-800">
+                        <strong>Pro tip:</strong> Asking thoughtful questions shows genuine
+                        interest and helps you evaluate if the role is right for you.
+                      </p>
+                    </div>
+                    {prepData.questionsToAsk.map((q, index) => (
+                      <div
+                        key={index}
+                        className="p-4 border border-gray-200 rounded-xl"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-xs mb-2 ${
+                                q.category === 'role'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : q.category === 'team'
+                                  ? 'bg-green-100 text-green-700'
+                                  : q.category === 'company'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : q.category === 'growth'
+                                  ? 'bg-orange-100 text-orange-700'
+                                  : 'bg-pink-100 text-pink-700'
+                              }`}
+                            >
+                              {q.category}
+                            </span>
+                            <p className="font-medium text-gray-900">{q.question}</p>
+                            <p className="text-sm text-gray-600 mt-2">{q.purpose}</p>
+                          </div>
+                          <button
+                            onClick={() =>
+                              ToClipboard(q.question, index + 1000)
+                            }
+                            className="text-gray-400 hover:text-blue-600 ml-4"
+                          >
+                            {copiedIndex === index + 1000 ? (
+                              <Check className="w-5 h-5 text-green-600" />
+                            ) : (
+                              < className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="p-6 border-t bg-gray-50 flex flex-wrap gap-4 justify-center">
+                <button
+                  onClick={() => router.push(`/interview-prep/mock/${prepId}`)}
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 flex items-center"
+                >
+                  <PlayCircle className="w-5 h-5 mr-2" />
+                  Start Mock Interview
+                </button>
+                <button
+                  onClick={() => {
+                    // TODO: Implement PDF download
+                  }}
+                  className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center"
+                >
+                  <Download className="w-5 h-5 mr-2" />
+                  Download as PDF
+                </button>
+                <button
+                  onClick={() => {
+                    setPrepData(null);
+                    setPrepId(null);
+                  }}
+                  className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50"
+                >
+                  Prepare for Another Interview
+                </button>
+              </div>
+            </div>
+
+            {/* Company Insights */}
+            {prepData.companyInsights && (
+              <div className="mt-6 bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <Briefcase className="w-5 h-5 mr-2 text-blue-600" />
+                  Company Insights
+                </h3>
+                <p className="text-gray-700 leading-relaxed">
+                  {prepData.companyInsights}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+________________________________________
+Step 4: Add Navigation Link
+Update your navigation component to include the Interview Prep link:
+// In your navigation component
+{
+  name: 'Interview Prep',
+  href: '/interview-prep',
+  icon: Brain, // or MessageSquare
+}
+________________________________________
+Summary - Files to Create/Modify
+File	Action
+prisma/schema.prisma	Add InterviewPrep and MockInterviewSession models
+app/api/interview-prep/generate/route.ts	Create
+app/api/interview-prep/[id]/route.ts	Create
+app/api/interview-prep/list/route.ts	Create
+app/api/interview-prep/mock/start/route.ts	Create
+app/api/interview-prep/mock/submit/route.ts	Create
+app/api/interview-prep/mock/[sessionId]/route.ts	Create
+app/(pages)/interview-prep/page.tsx	Create
+Navigation component	Update to add Interview Prep link
+________________________________________
+Git Commands
+After implementing:
+npx prisma migrate dev --name add_interview_prep
+npx prisma generate
+git add .
+git commit -m "Feature: Add Interview Preparation Module with AI-powered questions and mock interviews"
+git push origin main
+

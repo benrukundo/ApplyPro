@@ -1,0 +1,1962 @@
+Let's build the LinkedIn Profile Optimizer! I'll provide the complete implementation guide.
+
+LinkedIn Profile Optimizer - Implementation Guide
+Step 1: Database Schema
+File: prisma/schema.prisma
+
+Add this model to your existing schema:
+
+// LinkedIn Profile Optimization
+model LinkedInOptimization {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Input data
+  resumeContent       String   @db.Text
+  linkedinUrl         String?
+  currentHeadline     String?
+  currentAbout        String?  @db.Text
+  targetRole          String?
+  
+  // Analysis results
+  consistencyScore    Int      @default(0)
+  keywordsMatch       Int      @default(0)
+  experienceAlign     Int      @default(0)
+  skillsCoverage      Int      @default(0)
+  
+  // Generated content
+  suggestedHeadlines  Json     // Array of 3 headline options
+  optimizedAbout      String?  @db.Text
+  missingKeywords     Json     // Array of keywords to add
+  skillsToAdd         Json     // Array of skills
+  experienceTips      Json     // Array of improvement suggestions
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([userId])
+}
+After adding, run:
+
+Copynpx prisma db push
+npx prisma generate
+Step 2: API Routes
+Route 1: Analyze LinkedIn Profile
+File: app/api/linkedin/analyze/route.ts
+
+Copyimport { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { 
+      resumeContent, 
+      linkedinUrl, 
+      currentHeadline, 
+      currentAbout, 
+      targetRole 
+    } = await req.json();
+
+    // Validate inputs
+    if (!resumeContent) {
+      return NextResponse.json(
+        { error: 'Resume content is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!currentHeadline && !currentAbout) {
+      return NextResponse.json(
+        { error: 'Please provide your current LinkedIn headline or about section' },
+        { status: 400 }
+      );
+    }
+
+    // Generate LinkedIn optimization using Claude
+    const systemPrompt = `You are an expert LinkedIn profile optimizer and personal branding specialist with 15+ years of experience helping professionals maximize their LinkedIn presence.
+
+Your task is to analyze a user's LinkedIn profile against their resume and provide comprehensive optimization recommendations.
+
+You must return a valid JSON object with this exact structure:
+{
+  "consistencyScore": <number 0-100>,
+  "keywordsMatch": <number 0-100>,
+  "experienceAlign": <number 0-100>,
+  "skillsCoverage": <number 0-100>,
+  "analysis": {
+    "strengths": ["strength 1", "strength 2"],
+    "weaknesses": ["weakness 1", "weakness 2"],
+    "opportunities": ["opportunity 1", "opportunity 2"]
+  },
+  "suggestedHeadlines": [
+    {
+      "headline": "Full headline text (max 220 characters)",
+      "strategy": "visibility|job_search|thought_leadership",
+      "explanation": "Why this headline works"
+    },
+    {
+      "headline": "Second option...",
+      "strategy": "...",
+      "explanation": "..."
+    },
+    {
+      "headline": "Third option...",
+      "strategy": "...",
+      "explanation": "..."
+    }
+  ],
+  "optimizedAbout": "Full optimized About section (1500-2000 characters) with emojis, bullet points, and call-to-action",
+  "missingKeywords": [
+    {
+      "keyword": "keyword",
+      "priority": "high|medium|low",
+      "context": "Where/how to use this keyword"
+    }
+  ],
+  "skillsToAdd": [
+    {
+      "skill": "Skill name",
+      "category": "technical|soft|industry",
+      "reason": "Why add this skill"
+    }
+  ],
+  "experienceTips": [
+    {
+      "section": "Which experience entry",
+      "currentIssue": "What's wrong",
+      "suggestion": "How to improve",
+      "example": "Example improved text"
+    }
+  ]
+}
+
+OPTIMIZATION GUIDELINES:
+
+1. HEADLINE (220 chars max):
+   - Include target role/title
+   - Add 2-3 key skills or specializations
+   - Use | or • to separate elements
+   - Include industry keywords for searchability
+   - Consider adding value proposition or achievement
+
+2. ABOUT SECTION (2600 chars max, aim for 1500-2000):
+   - Start with a hook (emoji + compelling statement)
+   - Use first person, conversational tone
+   - Include 3-4 key achievements with metrics
+   - Add bullet points for scanability
+   - Include relevant keywords naturally
+   - End with call-to-action
+   - Use strategic emojis (🎯 💡 🚀 📊 etc.)
+
+3. KEYWORDS:
+   - Identify industry-specific terms
+   - Include job title variations
+   - Add technical skills and tools
+   - Consider certification names
+   - Include soft skills that are searchable
+
+4. SKILLS:
+   - Prioritize skills that appear in target job descriptions
+   - Include both technical and soft skills
+   - Add industry-specific tools and technologies
+   - Consider emerging skills in the field
+
+5. EXPERIENCE TIPS:
+   - Each bullet should start with action verb
+   - Include metrics and achievements
+   - Use keywords from target industry
+   - Show progression and impact`;
+
+    const userPrompt = `ANALYZE AND OPTIMIZE THIS LINKEDIN PROFILE:
+
+${targetRole ? `TARGET ROLE: ${targetRole}` : ''}
+
+CURRENT LINKEDIN HEADLINE:
+${currentHeadline || 'Not provided'}
+
+CURRENT LINKEDIN ABOUT SECTION:
+${currentAbout || 'Not provided'}
+
+LINKEDIN URL: ${linkedinUrl || 'Not provided'}
+
+RESUME CONTENT:
+${resumeContent}
+
+Please analyze the LinkedIn profile against the resume and provide comprehensive optimization recommendations. Focus on:
+1. Consistency between LinkedIn and resume
+2. Missing keywords that should be added
+3. Three headline options (for visibility, job search, and thought leadership)
+4. A fully rewritten, optimized About section
+5. Skills to add
+6. Specific tips for improving experience descriptions`;
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8000,
+      messages: [
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+      system: systemPrompt,
+    });
+
+    // Extract the text content
+    const textContent = response.content.find((block) => block.type === 'text');
+    if (!textContent || textContent.type !== 'text') {
+      throw new Error('No text response from AI');
+    }
+
+    // Parse the JSON response
+    let optimizationData;
+    try {
+      let jsonString = textContent.text;
+      const jsonMatch = jsonString.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        jsonString = jsonMatch[1];
+      }
+      optimizationData = JSON.parse(jsonString.trim());
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', textContent.text);
+      throw new Error('Failed to parse optimization data');
+    }
+
+    // Save to database
+    const linkedinOptimization = await prisma.linkedInOptimization.create({
+      data: {
+        userId: session.user.id,
+        resumeContent,
+        linkedinUrl: linkedinUrl || null,
+        currentHeadline: currentHeadline || null,
+        currentAbout: currentAbout || null,
+        targetRole: targetRole || null,
+        consistencyScore: optimizationData.consistencyScore || 0,
+        keywordsMatch: optimizationData.keywordsMatch || 0,
+        experienceAlign: optimizationData.experienceAlign || 0,
+        skillsCoverage: optimizationData.skillsCoverage || 0,
+        suggestedHeadlines: optimizationData.suggestedHeadlines || [],
+        optimizedAbout: optimizationData.optimizedAbout || null,
+        missingKeywords: optimizationData.missingKeywords || [],
+        skillsToAdd: optimizationData.skillsToAdd || [],
+        experienceTips: optimizationData.experienceTips || [],
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      optimizationId: linkedinOptimization.id,
+      data: {
+        scores: {
+          consistency: optimizationData.consistencyScore,
+          keywords: optimizationData.keywordsMatch,
+          experience: optimizationData.experienceAlign,
+          skills: optimizationData.skillsCoverage,
+          overall: Math.round(
+            (optimizationData.consistencyScore +
+              optimizationData.keywordsMatch +
+              optimizationData.experienceAlign +
+              optimizationData.skillsCoverage) / 4
+          ),
+        },
+        analysis: optimizationData.analysis,
+        suggestedHeadlines: optimizationData.suggestedHeadlines,
+        optimizedAbout: optimizationData.optimizedAbout,
+        missingKeywords: optimizationData.missingKeywords,
+        skillsToAdd: optimizationData.skillsToAdd,
+        experienceTips: optimizationData.experienceTips,
+      },
+    });
+  } catch (error) {
+    console.error('LinkedIn optimization error:', error);
+    return NextResponse.json(
+      { error: 'Failed to analyze LinkedIn profile' },
+      { status: 500 }
+    );
+  }
+}
+Route 2: Get Optimization by ID
+File: app/api/linkedin/[id]/route.ts
+
+Copyimport { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const optimization = await prisma.linkedInOptimization.findFirst({
+      where: {
+        id: id,
+        userId: session.user.id,
+      },
+    });
+
+    if (!optimization) {
+      return NextResponse.json({ error: 'Optimization not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: optimization,
+    });
+  } catch (error) {
+    console.error('Get optimization error:', error);
+    return NextResponse.json(
+      { error: 'Failed to retrieve optimization' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await prisma.linkedInOptimization.deleteMany({
+      where: {
+        id: id,
+        userId: session.user.id,
+      },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete optimization error:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete optimization' },
+      { status: 500 }
+    );
+  }
+}
+Route 3: List User's Optimizations
+File: app/api/linkedin/list/route.ts
+
+Copyimport { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const optimizations = await prisma.linkedInOptimization.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        targetRole: true,
+        currentHeadline: true,
+        consistencyScore: true,
+        keywordsMatch: true,
+        experienceAlign: true,
+        skillsCoverage: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: optimizations,
+    });
+  } catch (error) {
+    console.error('List optimizations error:', error);
+    return NextResponse.json(
+      { error: 'Failed to list optimizations' },
+      { status: 500 }
+    );
+  }
+}
+Step 3: Main Frontend Page
+File: app/linkedin-optimizer/page.tsx
+
+Copy'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import {
+  Linkedin,
+  FileText,
+  Target,
+  Upload,
+  Check,
+  Copy,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  ArrowLeft,
+  Sparkles,
+  TrendingUp,
+  Search,
+  Award,
+  Lightbulb,
+  AlertCircle,
+  ExternalLink,
+  BookOpen,
+  Briefcase,
+  Eye,
+} from 'lucide-react';
+
+// Types
+interface Headline {
+  headline: string;
+  strategy: string;
+  explanation: string;
+}
+
+interface Keyword {
+  keyword: string;
+  priority: string;
+  context: string;
+}
+
+interface Skill {
+  skill: string;
+  category: string;
+  reason: string;
+}
+
+interface ExperienceTip {
+  section: string;
+  currentIssue: string;
+  suggestion: string;
+  example: string;
+}
+
+interface Analysis {
+  strengths: string[];
+  weaknesses: string[];
+  opportunities: string[];
+}
+
+interface OptimizationData {
+  scores: {
+    consistency: number;
+    keywords: number;
+    experience: number;
+    skills: number;
+    overall: number;
+  };
+  analysis: Analysis;
+  suggestedHeadlines: Headline[];
+  optimizedAbout: string;
+  missingKeywords: Keyword[];
+  skillsToAdd: Skill[];
+  experienceTips: ExperienceTip[];
+}
+
+export default function LinkedInOptimizerPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  // Input state
+  const [resumeContent, setResumeContent] = useState('');
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [currentHeadline, setCurrentHeadline] = useState('');
+  const [currentAbout, setCurrentAbout] = useState('');
+  const [targetRole, setTargetRole] = useState('');
+
+  // UI state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
+  const [error, setError] = useState('');
+  const [savedCount, setSavedCount] = useState(0);
+
+  // Results state
+  const [optimizationId, setOptimizationId] = useState<string | null>(null);
+  const [optimizationData, setOptimizationData] = useState<OptimizationData | null>(null);
+  const [activeTab, setActiveTab] = useState('headline');
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
+  const [expandedTips, setExpandedTips] = useState<number[]>([0]);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  // Fetch saved optimizations count
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const response = await fetch('/api/linkedin/list');
+        if (response.ok) {
+          const data = await response.json();
+          setSavedCount(data.data?.length || 0);
+        }
+      } catch (err) {
+        console.error('Failed to fetch saved count:', err);
+      }
+    };
+    
+    if (session?.user) {
+      fetchCount();
+    }
+  }, [session]);
+
+  // Handle file upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setResumeFile(file);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch('/api/extract-text', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setResumeContent(data.text);
+      }
+    } catch (err) {
+      console.error('Failed to extract text:', err);
+    }
+  };
+
+  // Analyze LinkedIn profile
+  const handleAnalyze = async () => {
+    if (!resumeContent) {
+      setError('Please upload your resume first');
+      return;
+    }
+
+    if (!currentHeadline && !currentAbout) {
+      setError('Please provide your current LinkedIn headline or about section');
+      return;
+    }
+
+    setError('');
+    setIsAnalyzing(true);
+    setAnalysisStep(1);
+
+    try {
+      const progressInterval = setInterval(() => {
+        setAnalysisStep((prev) => (prev < 4 ? prev + 1 : prev));
+      }, 2500);
+
+      const response = await fetch('/api/linkedin/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resumeContent,
+          linkedinUrl,
+          currentHeadline,
+          currentAbout,
+          targetRole,
+        }),
+      });
+
+      clearInterval(progressInterval);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze');
+      }
+
+      const result = await response.json();
+      setOptimizationId(result.optimizationId);
+      setOptimizationData(result.data);
+      setAnalysisStep(5);
+      setSavedCount((prev) => prev + 1);
+    } catch (err: any) {
+      setError(err.message || 'Failed to analyze LinkedIn profile');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Copy to clipboard
+  const copyToClipboard = async (text: string, itemId: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedItem(itemId);
+    setTimeout(() => setCopiedItem(null), 2000);
+  };
+
+  // Toggle tip expansion
+  const toggleTip = (index: number) => {
+    setExpandedTips((prev) =>
+      prev.includes(index)
+        ? prev.filter((i) => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  // Get score color
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  // Get score background
+  const getScoreBg = (score: number) => {
+    if (score >= 80) return 'bg-green-500';
+    if (score >= 60) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  // Get priority color
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-100 text-red-700';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'low':
+        return 'bg-green-100 text-green-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  // Get category color
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'technical':
+        return 'bg-blue-100 text-blue-700';
+      case 'soft':
+        return 'bg-purple-100 text-purple-700';
+      case 'industry':
+        return 'bg-green-100 text-green-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  // Get strategy icon
+  const getStrategyIcon = (strategy: string) => {
+    switch (strategy) {
+      case 'visibility':
+        return <Eye className="w-4 h-4" />;
+      case 'job_search':
+        return <Search className="w-4 h-4" />;
+      case 'thought_leadership':
+        return <Award className="w-4 h-4" />;
+      default:
+        return <Sparkles className="w-4 h-4" />;
+    }
+  };
+
+  // Get strategy label
+  const getStrategyLabel = (strategy: string) => {
+    switch (strategy) {
+      case 'visibility':
+        return 'Best for Visibility';
+      case 'job_search':
+        return 'Best for Job Search';
+      case 'thought_leadership':
+        return 'Best for Thought Leadership';
+      default:
+        return strategy;
+    }
+  };
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Title Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center justify-center">
+            <Linkedin className="w-8 h-8 mr-3 text-[#0077B5]" />
+            LinkedIn Profile Optimizer
+          </h1>
+          <p className="text-gray-600">
+            Align your LinkedIn profile with your resume for maximum visibility
+          </p>
+        </div>
+
+        {/* Quick Access to Saved */}
+        {savedCount > 0 && !optimizationData && (
+          <div className="flex justify-center mb-6">
+            <button
+              onClick={() => router.push('/linkedin-optimizer/saved')}
+              className="flex items-center px-4 py-2 bg-white border border-[#0077B5] text-[#0077B5] rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View Saved Optimizations
+              <span className="ml-2 px-2 py-0.5 bg-[#0077B5] text-white text-xs rounded-full">
+                {savedCount}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {!optimizationData ? (
+          /* Input Form */
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+              {/* Resume Upload */}
+              <div className="mb-6">
+                <label className="flex items-center text-lg font-semibold text-gray-800 mb-3">
+                  <FileText className="w-5 h-5 mr-2 text-[#0077B5]" />
+                  Your Resume
+                </label>
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-[#0077B5] transition-colors">
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,.txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="resume-upload"
+                  />
+                  <label htmlFor="resume-upload" className="cursor-pointer">
+                    <Upload className="w-10 h-10 mx-auto text-gray-400 mb-2" />
+                    <p className="text-gray-600">
+                      {resumeFile ? resumeFile.name : 'Drop your resume here or click to upload'}
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">PDF, DOCX, or TXT</p>
+                  </label>
+                </div>
+                {resumeContent && (
+                  <p className="text-sm text-green-600 mt-2 flex items-center">
+                    <Check className="w-4 h-4 mr-1" />
+                    Resume loaded ({resumeContent.length} characters)
+                  </p>
+                )}
+              </div>
+
+              {/* LinkedIn URL (Optional) */}
+              <div className="mb-6">
+                <label className="flex items-center text-lg font-semibold text-gray-800 mb-3">
+                  <Linkedin className="w-5 h-5 mr-2 text-[#0077B5]" />
+                  LinkedIn Profile URL
+                  <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+                </label>
+                <input
+                  type="url"
+                  value={linkedinUrl}
+                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                  placeholder="https://linkedin.com/in/your-profile"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0077B5] focus:border-transparent"
+                />
+              </div>
+
+              {/* Current Headline */}
+              <div className="mb-6">
+                <label className="flex items-center text-lg font-semibold text-gray-800 mb-3">
+                  <Sparkles className="w-5 h-5 mr-2 text-[#0077B5]" />
+                  Current LinkedIn Headline
+                </label>
+                <input
+                  type="text"
+                  value={currentHeadline}
+                  onChange={(e) => setCurrentHeadline(e.target.value)}
+                  placeholder="e.g., IT Officer | E-Health Systems Specialist"
+                  maxLength={220}
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0077B5] focus:border-transparent"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  {currentHeadline.length}/220 characters
+                </p>
+              </div>
+
+              {/* Current About Section */}
+              <div className="mb-6">
+                <label className="flex items-center text-lg font-semibold text-gray-800 mb-3">
+                  <BookOpen className="w-5 h-5 mr-2 text-[#0077B5]" />
+                  Current LinkedIn About Section
+                </label>
+                <textarea
+                  value={currentAbout}
+                  onChange={(e) => setCurrentAbout(e.target.value)}
+                  placeholder="Paste your current LinkedIn About section here..."
+                  className="w-full h-40 p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0077B5] focus:border-transparent resize-none"
+                  maxLength={2600}
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  {currentAbout.length}/2600 characters
+                </p>
+              </div>
+
+              {/* Target Role */}
+              <div className="mb-8">
+                <label className="flex items-center text-lg font-semibold text-gray-800 mb-3">
+                  <Target className="w-5 h-5 mr-2 text-[#0077B5]" />
+                  Target Role
+                  <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                  placeholder="e.g., Health Informatics Manager"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0077B5] focus:border-transparent"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Optimizes your profile for this specific role
+                </p>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center">
+                  <AlertCircle className="w-5 h-5 mr-2" />
+                  {error}
+                </div>
+              )}
+
+              {/* Analyze Button */}
+              <button
+                onClick={handleAnalyze}
+                disabled={isAnalyzing || !resumeContent || (!currentHeadline && !currentAbout)}
+                className="w-full py-4 bg-[#0077B5] text-white font-semibold rounded-xl hover:bg-[#006097] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    {analysisStep === 1 && 'Analyzing your resume...'}
+                    {analysisStep === 2 && 'Comparing with LinkedIn...'}
+                    {analysisStep === 3 && 'Identifying optimization opportunities...'}
+                    {analysisStep === 4 && 'Generating recommendations...'}
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="w-5 h-5 mr-2" />
+                    Analyze & Optimize Profile
+                  </>
+                )}
+              </button>
+
+              {/* Progress Indicators */}
+              {isAnalyzing && (
+                <div className="mt-6 space-y-2">
+                  {[
+                    'Analyzing your resume',
+                    'Comparing with LinkedIn profile',
+                    'Identifying optimization opportunities',
+                    'Generating recommendations',
+                  ].map((step, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center text-sm ${
+                        analysisStep > index + 1
+                          ? 'text-green-600'
+                          : analysisStep === index + 1
+                          ? 'text-[#0077B5]'
+                          : 'text-gray-400'
+                      }`}
+                    >
+                      {analysisStep > index + 1 ? (
+                        <Check className="w-4 h-4 mr-2" />
+                      ) : analysisStep === index + 1 ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <div className="w-4 h-4 mr-2 rounded-full border-2 border-current" />
+                      )}
+                      {step}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Results Section */
+          <div className="max-w-5xl mx-auto">
+            {/* Success Header with Scores */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">
+                LinkedIn Analysis Complete!
+              </h2>
+              <p className="text-gray-600 text-center mb-2">
+                Automatically saved to your account
+              </p>
+              <div className="flex justify-center">
+                <button
+                  onClick={() => router.push('/linkedin-optimizer/saved')}
+                  className="text-[#0077B5] hover:underline text-sm flex items-center"
+                >
+                  View all saved optimizations
+                  <ExternalLink className="w-3 h-3 ml-1" />
+                </button>
+              </div>
+
+              {/* Score Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+                <div className="text-center p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-600 mb-1">Overall</p>
+                  <p className={`text-3xl font-bold ${getScoreColor(optimizationData.scores.overall)}`}>
+                    {optimizationData.scores.overall}%
+                  </p>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-600 mb-1">Consistency</p>
+                  <p className={`text-2xl font-bold ${getScoreColor(optimizationData.scores.consistency)}`}>
+                    {optimizationData.scores.consistency}%
+                  </p>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-600 mb-1">Keywords</p>
+                  <p className={`text-2xl font-bold ${getScoreColor(optimizationData.scores.keywords)}`}>
+                    {optimizationData.scores.keywords}%
+                  </p>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-600 mb-1">Experience</p>
+                  <p className={`text-2xl font-bold ${getScoreColor(optimizationData.scores.experience)}`}>
+                    {optimizationData.scores.experience}%
+                  </p>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-xl">
+                  <p className="text-sm text-gray-600 mb-1">Skills</p>
+                  <p className={`text-2xl font-bold ${getScoreColor(optimizationData.scores.skills)}`}>
+                    {optimizationData.scores.skills}%
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="flex border-b overflow-x-auto">
+                {[
+                  { id: 'headline', label: 'Headlines', icon: Sparkles },
+                  { id: 'about', label: 'About Section', icon: BookOpen },
+                  { id: 'keywords', label: 'Keywords', icon: Search },
+                  { id: 'skills', label: 'Skills', icon: Award },
+                  { id: 'tips', label: 'Experience Tips', icon: Lightbulb },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex-1 min-w-[120px] py-4 px-4 font-medium transition-colors flex items-center justify-center ${
+                        activeTab === tab.id
+                          ? 'text-[#0077B5] border-b-2 border-[#0077B5] bg-blue-50'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 mr-2" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="p-6">
+                {/* Headlines Tab */}
+                {activeTab === 'headline' && (
+                  <div className="space-y-4">
+                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <p className="text-blue-800">
+                        <strong>Pro tip:</strong> Your headline is the first thing recruiters see. 
+                        Choose one that matches your goals!
+                      </p>
+                    </div>
+                    {optimizationData.suggestedHeadlines.map((headline, index) => (
+                      <div
+                        key={index}
+                        className="p-4 border border-gray-200 rounded-xl hover:border-[#0077B5] transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
+                            headline.strategy === 'visibility'
+                              ? 'bg-purple-100 text-purple-700'
+                              : headline.strategy === 'job_search'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {getStrategyIcon(headline.strategy)}
+                            <span className="ml-1">{getStrategyLabel(headline.strategy)}</span>
+                          </span>
+                          <button
+                            onClick={() => copyToClipboard(headline.headline, `headline-${index}`)}
+                            className="text-gray-400 hover:text-[#0077B5] p-2"
+                          >
+                            {copiedItem === `headline-${index}` ? (
+                              <Check className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <Copy className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-lg font-medium text-gray-900 mb-2">
+                          {headline.headline}
+                        </p>
+                        <p className="text-sm text-gray-600">{headline.explanation}</p>
+                        <p className="text-xs text-gray-400 mt-2">
+                          {headline.headline.length}/220 characters
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* About Section Tab */}
+                {activeTab === 'about' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Optimized About Section
+                      </h3>
+                      <button
+                        onClick={() => copyToClipboard(optimizationData.optimizedAbout, 'about')}
+                        className="flex items-center px-4 py-2 bg-[#0077B5] text-white rounded-lg hover:bg-[#006097]"
+                      >
+                        {copiedItem === 'about' ? (
+                          <>
+                            <Check className="w-4 h-4 mr-2" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4 mr-2" />
+                            Copy to Clipboard
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="p-6 bg-gray-50 rounded-xl border border-gray-200">
+                      <p className="whitespace-pre-line text-gray-800 leading-relaxed">
+                        {optimizationData.optimizedAbout}
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">
+                      {optimizationData.optimizedAbout?.length || 0}/2600 characters
+                    </p>
+                  </div>
+                )}
+
+                {/* Keywords Tab */}
+                {activeTab === 'keywords' && (
+                  <div>
+                    <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                      <p className="text-yellow-800">
+                        <strong>Add these keywords</strong> to your profile to improve search visibility 
+                        and match rate with job postings.
+                      </p>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {optimizationData.missingKeywords.map((keyword, index) => (
+                        <div
+                          key={index}
+                          className="p-4 border border-gray-200 rounded-xl flex items-start justify-between"
+                        >
+                          <div>
+                            <div className="flex items-center mb-2">
+                              <span className="font-semibold text-gray-900 mr-2">
+                                {keyword.keyword}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs ${getPriorityColor(keyword.priority)}`}>
+                                {keyword.priority}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600">{keyword.context}</p>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(keyword.keyword, `keyword-${index}`)}
+                            className="text-gray-400 hover:text-[#0077B5] p-1"
+                          >
+                            {copiedItem === `keyword-${index}` ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Skills Tab */}
+                {activeTab === 'skills' && (
+                  <div>
+                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+                      <p className="text-green-800">
+                        <strong>Add these skills</strong> to your LinkedIn profile. 
+                        Endorsements help boost your profile visibility!
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      {optimizationData.skillsToAdd.map((skill, index) => (
+                        <div
+                          key={index}
+                          className="p-4 border border-gray-200 rounded-xl flex items-center justify-between"
+                        >
+                          <div className="flex items-center">
+                            <span className={`px-3 py-1 rounded-full text-sm mr-3 ${getCategoryColor(skill.category)}`}>
+                              {skill.category}
+                            </span>
+                            <div>
+                              <p className="font-medium text-gray-900">{skill.skill}</p>
+                              <p className="text-sm text-gray-600">{skill.reason}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(skill.skill, `skill-${index}`)}
+                            className="text-gray-400 hover:text-[#0077B5] p-2"
+                          >
+                            {copiedItem === `skill-${index}` ? (
+                              <Check className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const allSkills = optimizationData.skillsToAdd.map(s => s.skill).join(', ');
+                        copyToClipboard(allSkills, 'all-skills');
+                      }}
+                      className="mt-4 w-full py-3 border border-[#0077B5] text-[#0077B5] rounded-xl hover:bg-blue-50"
+                    >
+                      {copiedItem === 'all-skills' ? 'Copied All Skills!' : 'Copy All Skills'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Experience Tips Tab */}
+                {activeTab === 'tips' && (
+                  <div className="space-y-4">
+                    {optimizationData.experienceTips.map((tip, index) => (
+                      <div
+                        key={index}
+                        className="border border-gray-200 rounded-xl overflow-hidden"
+                      >
+                        <button
+                          onClick={() => toggleTip(index)}
+                          className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50"
+                        >
+                          <div className="flex items-center">
+                            <Briefcase className="w-5 h-5 text-[#0077B5] mr-3" />
+                            <span className="font-medium text-gray-900">{tip.section}</span>
+                          </div>
+                          {expandedTips.includes(index) ? (
+                            <ChevronUp className="w-5 h-5 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                          )}
+                        </button>
+                        {expandedTips.includes(index) && (
+                          <div className="px-4 pb-4 border-t bg-gray-50">
+                            <div className="mt-4 space-y-4">
+                              <div>
+                                <p className="text-sm font-medium text-red-600 mb-1">
+                                  ⚠️ Current Issue:
+                                </p>
+                                <p className="text-gray-700">{tip.currentIssue}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-green-600 mb-1">
+                                  ✅ Suggestion:
+                                </p>
+                                <p className="text-gray-700">{tip.suggestion}</p>
+                              </div>
+                              <div>
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-sm font-medium text-[#0077B5]">
+                                    💡 Example:
+                                  </p>
+                                  <button
+                                    onClick={() => copyToClipboard(tip.example, `tip-${index}`)}
+                                    className="text-gray-400 hover:text-[#0077B5]"
+                                  >
+                                    {copiedItem === `tip-${index}` ? (
+                                      <Check className="w-4 h-4 text-green-600" />
+                                    ) : (
+                                      <Copy className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                </div>
+                                <p className="text-gray-700 bg-white p-3 rounded-lg border">
+                                  {tip.example}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="p-6 border-t bg-gray-50 flex flex-wrap gap-4 justify-center">
+                <a
+                  href="https://www.linkedin.com/in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-3 bg-[#0077B5] text-white font-semibold rounded-xl hover:bg-[#006097] flex items-center"
+                >
+                  <Linkedin className="w-5 h-5 mr-2" />
+                  Open LinkedIn to Edit
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </a>
+                <button
+                  onClick={() => {
+                    setOptimizationData(null);
+                    setOptimizationId(null);
+                  }}
+                  className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50"
+                >
+                  Analyze Another Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+Step 4: Saved Optimizations List Page
+File: app/linkedin-optimizer/saved/page.tsx
+
+Copy'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import {
+  Linkedin,
+  ArrowLeft,
+  Eye,
+  Trash2,
+  Loader2,
+  Calendar,
+  Target,
+  TrendingUp,
+  AlertCircle,
+} from 'lucide-react';
+
+interface SavedOptimization {
+  id: string;
+  targetRole: string | null;
+  currentHeadline: string | null;
+  consistencyScore: number;
+  keywordsMatch: number;
+  experienceAlign: number;
+  skillsCoverage: number;
+  createdAt: string;
+}
+
+export default function SavedOptimizationsPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [optimizations, setOptimizations] = useState<SavedOptimization[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    const fetchOptimizations = async () => {
+      try {
+        const response = await fetch('/api/linkedin/list');
+        if (response.ok) {
+          const data = await response.json();
+          setOptimizations(data.data || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch optimizations:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (session?.user) {
+      fetchOptimizations();
+    }
+  }, [session]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch(`/api/linkedin/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setOptimizations((prev) => prev.filter((o) => o.id !== id));
+      }
+    } catch (err) {
+      console.error('Failed to delete:', err);
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
+  const getOverallScore = (opt: SavedOptimization) => {
+    return Math.round(
+      (opt.consistencyScore + opt.keywordsMatch + opt.experienceAlign + opt.skillsCoverage) / 4
+    );
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600 bg-green-100';
+    if (score >= 60) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  if (status === 'loading' || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0077B5]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <button
+            onClick={() => router.push('/linkedin-optimizer')}
+            className="flex items-center text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to LinkedIn Optimizer
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Title */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center justify-center">
+            <Linkedin className="w-8 h-8 mr-3 text-[#0077B5]" />
+            Saved LinkedIn Optimizations
+          </h1>
+          <p className="text-gray-600">
+            Review your previous LinkedIn profile analyses
+          </p>
+        </div>
+
+        {/* Optimizations Grid */}
+        {optimizations.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <Linkedin className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              No saved optimizations yet
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Analyze your LinkedIn profile to get personalized optimization recommendations.
+            </p>
+            <button
+              onClick={() => router.push('/linkedin-optimizer')}
+              className="px-6 py-3 bg-[#0077B5] text-white font-semibold rounded-xl hover:bg-[#006097]"
+            >
+              Optimize Your Profile
+            </button>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {optimizations.map((opt) => {
+              const overallScore = getOverallScore(opt);
+              return (
+                <div
+                  key={opt.id}
+                  className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                >
+                  {/* Card Header */}
+                  <div className="p-4 border-b bg-gradient-to-r from-[#0077B5] to-[#00A0DC]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-white">
+                        <Linkedin className="w-5 h-5 mr-2" />
+                        <span className="font-medium">Profile Analysis</span>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-bold ${getScoreColor(overallScore)}`}>
+                        {overallScore}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-4">
+                    {opt.targetRole && (
+                      <div className="flex items-center text-gray-700 mb-3">
+                        <Target className="w-4 h-4 mr-2 text-[#0077B5]" />
+                        <span className="font-medium">{opt.targetRole}</span>
+                      </div>
+                    )}
+
+                    {opt.currentHeadline && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        "{opt.currentHeadline}"
+                      </p>
+                    )}
+
+                    {/* Score Breakdown */}
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="text-center p-2 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500">Consistency</p>
+                        <p className="font-bold text-gray-900">{opt.consistencyScore}%</p>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500">Keywords</p>
+                        <p className="font-bold text-gray-900">{opt.keywordsMatch}%</p>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500">Experience</p>
+                        <p className="font-bold text-gray-900">{opt.experienceAlign}%</p>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500">Skills</p>
+                        <p className="font-bold text-gray-900">{opt.skillsCoverage}%</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center text-sm text-gray-500 mb-4">
+                      <Calendar className="w-4 h-4 mr-1" />
+                      {formatDate(opt.createdAt)}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => router.push(`/linkedin-optimizer/view/${opt.id}`)}
+                        className="flex-1 flex items-center justify-center px-4 py-2 bg-[#0077B5] text-white rounded-lg hover:bg-[#006097]"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
+                      </button>
+                      <button
+                        onClick={() => setDeleteId(opt.id)}
+                        className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Delete Confirmation */}
+                  {deleteId === opt.id && (
+                    <div className="p-4 bg-red-50 border-t border-red-200">
+                      <p className="text-sm text-red-700 mb-3">
+                        Delete this optimization?
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDelete(opt.id)}
+                          className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={() => setDeleteId(null)}
+                          className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+Step 5: View Optimization Detail Page
+File: app/linkedin-optimizer/view/[id]/page.tsx
+
+Copy'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter, useParams } from 'next/navigation';
+import {
+  Linkedin,
+  ArrowLeft,
+  Loader2,
+  Sparkles,
+  BookOpen,
+  Search,
+  Award,
+  Lightbulb,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Briefcase,
+  Eye,
+} from 'lucide-react';
+
+export default function ViewOptimizationPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const params = useParams();
+  const [optimization, setOptimization] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('headline');
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
+  const [expandedTips, setExpandedTips] = useState<number[]>([0]);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    const fetchOptimization = async () => {
+      try {
+        const response = await fetch(`/api/linkedin/${params.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setOptimization(data.data);
+        } else {
+          router.push('/linkedin-optimizer/saved');
+        }
+      } catch (err) {
+        console.error('Failed to fetch optimization:', err);
+        router.push('/linkedin-optimizer/saved');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (session?.user && params.id) {
+      fetchOptimization();
+    }
+  }, [session, params.id, router]);
+
+  const copyToClipboard = async (text: string, itemId: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedItem(itemId);
+    setTimeout(() => setCopiedItem(null), 2000);
+  };
+
+  const toggleTip = (index: number) => {
+    setExpandedTips((prev) =>
+      prev.includes(index)
+        ? prev.filter((i) => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-100 text-red-700';
+      case 'medium': return 'bg-yellow-100 text-yellow-700';
+      case 'low': return 'bg-green-100 text-green-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'technical': return 'bg-blue-100 text-blue-700';
+      case 'soft': return 'bg-purple-100 text-purple-700';
+      case 'industry': return 'bg-green-100 text-green-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getStrategyLabel = (strategy: string) => {
+    switch (strategy) {
+      case 'visibility': return 'Best for Visibility';
+      case 'job_search': return 'Best for Job Search';
+      case 'thought_leadership': return 'Best for Thought Leadership';
+      default: return strategy;
+    }
+  };
+
+  if (status === 'loading' || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0077B5]" />
+      </div>
+    );
+  }
+
+  if (!optimization) {
+    return null;
+  }
+
+  const overallScore = Math.round(
+    (optimization.consistencyScore +
+      optimization.keywordsMatch +
+      optimization.experienceAlign +
+      optimization.skillsCoverage) / 4
+  );
+
+  const suggestedHeadlines = optimization.suggestedHeadlines || [];
+  const missingKeywords = optimization.missingKeywords || [];
+  const skillsToAdd = optimization.skillsToAdd || [];
+  const experienceTips = optimization.experienceTips || [];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <button
+            onClick={() => router.push('/linkedin-optimizer/saved')}
+            className="flex items-center text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Saved Optimizations
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Score Header */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+                <Linkedin className="w-7 h-7 mr-3 text-[#0077B5]" />
+                LinkedIn Profile Analysis
+              </h1>
+              {optimization.targetRole && (
+                <p className="text-gray-600 mt-1">Target: {optimization.targetRole}</p>
+              )}
+            </div>
+            <div className={`text-4xl font-bold ${getScoreColor(overallScore)}`}>
+              {overallScore}%
+            </div>
+          </div>
+
+          {/* Score Cards */}
+          <div className="grid grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-gray-50 rounded-xl">
+              <p className="text-sm text-gray-600">Consistency</p>
+              <p className={`text-2xl font-bold ${getScoreColor(optimization.consistencyScore)}`}>
+                {optimization.consistencyScore}%
+              </p>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-xl">
+              <p className="text-sm text-gray-600">Keywords</p>
+              <p className={`text-2xl font-bold ${getScoreColor(optimization.keywordsMatch)}`}>
+                {optimization.keywordsMatch}%
+              </p>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-xl">
+              <p className="text-sm text-gray-600">Experience</p>
+              <p className={`text-2xl font-bold ${getScoreColor(optimization.experienceAlign)}`}>
+                {optimization.experienceAlign}%
+              </p>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded-xl">
+              <p className="text-sm text-gray-600">Skills</p>
+              <p className={`text-2xl font-bold ${getScoreColor(optimization.skillsCoverage)}`}>
+                {optimization.skillsCoverage}%
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          <div className="flex border-b overflow-x-auto">
+            {[
+              { id: 'headline', label: 'Headlines', icon: Sparkles, count: suggestedHeadlines.length },
+              { id: 'about', label: 'About', icon: BookOpen },
+              { id: 'keywords', label: 'Keywords', icon: Search, count: missingKeywords.length },
+              { id: 'skills', label: 'Skills', icon: Award, count: skillsToAdd.length },
+              { id: 'tips', label: 'Tips', icon: Lightbulb, count: experienceTips.length },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 min-w-[100px] py-4 px-3 font-medium transition-colors flex items-center justify-center ${
+                    activeTab === tab.id
+                      ? 'text-[#0077B5] border-b-2 border-[#0077B5] bg-blue-50'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 mr-1" />
+                  {tab.label}
+                  {tab.count !== undefined && (
+                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-gray-200 rounded-full">
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="p-6">
+            {/* Headlines Tab */}
+            {activeTab === 'headline' && (
+              <div className="space-y-4">
+                {suggestedHeadlines.map((headline: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-xl">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                        {getStrategyLabel(headline.strategy)}
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(headline.headline, `headline-${index}`)}
+                        className="text-gray-400 hover:text-[#0077B5]"
+                      >
+                        {copiedItem === `headline-${index}` ? (
+                          <Check className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <Copy className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-lg font-medium mb-2">{headline.headline}</p>
+                    <p className="text-sm text-gray-600">{headline.explanation}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* About Tab */}
+            {activeTab === 'about' && (
+              <div>
+                <div className="flex justify-between mb-4">
+                  <h3 className="font-semibold">Optimized About Section</h3>
+                  <button
+                    onClick={() => copyToClipboard(optimization.optimizedAbout || '', 'about')}
+                    className="flex items-center px-4 py-2 bg-[#0077B5] text-white rounded-lg"
+                  >
+                    {copiedItem === 'about' ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                    Copy
+                  </button>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl whitespace-pre-line">
+                  {optimization.optimizedAbout}
+                </div>
+              </div>
+            )}
+
+            {/* Keywords Tab */}
+            {activeTab === 'keywords' && (
+              <div className="grid md:grid-cols-2 gap-4">
+                {missingKeywords.map((keyword: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-xl flex justify-between">
+                    <div>
+                      <div className="flex items-center mb-1">
+                        <span className="font-medium mr-2">{keyword.keyword}</span>
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${getPriorityColor(keyword.priority)}`}>
+                          {keyword.priority}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">{keyword.context}</p>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(keyword.keyword, `kw-${index}`)}
+                      className="text-gray-400 hover:text-[#0077B5]"
+                    >
+                      {copiedItem === `kw-${index}` ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Skills Tab */}
+            {activeTab === 'skills' && (
+              <div className="space-y-3">
+                {skillsToAdd.map((skill: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-xl flex justify-between items-center">
+                    <div className="flex items-center">
+                      <span className={`px-3 py-1 rounded-full text-sm mr-3 ${getCategoryColor(skill.category)}`}>
+                        {skill.category}
+                      </span>
+                      <div>
+                        <p className="font-medium">{skill.skill}</p>
+                        <p className="text-sm text-gray-600">{skill.reason}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(skill.skill, `skill-${index}`)}
+                      className="text-gray-400 hover:text-[#0077B5]"
+                    >
+                      {copiedItem === `skill-${index}` ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Tips Tab */}
+            {activeTab === 'tips' && (
+              <div className="space-y-4">
+                {experienceTips.map((tip: any, index: number) => (
+                  <div key={index} className="border rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => toggleTip(index)}
+                      className="w-full p-4 flex justify-between items-center hover:bg-gray-50"
+                    >
+                      <div className="flex items-center">
+                        <Briefcase className="w-5 h-5 text-[#0077B5] mr-3" />
+                        <span className="font-medium">{tip.section}</span>
+                      </div>
+                      {expandedTips.includes(index) ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </button>
+                    {expandedTips.includes(index) && (
+                      <div className="p-4 border-t bg-gray-50 space-y-3">
+                        <div>
+                          <p className="text-sm font-medium text-red-600">⚠️ Issue:</p>
+                          <p>{tip.currentIssue}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-600">✅ Suggestion:</p>
+                          <p>{tip.suggestion}</p>
+                        </div>
+                        <div>
+                          <div className="flex justify-between">
+                            <p className="text-sm font-medium text-[#0077B5]">💡 Example:</p>
+                            <button onClick={() => copyToClipboard(tip.example, `tip-${index}`)}>
+                              {copiedItem === `tip-${index}` ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          <p className="bg-white p-3 rounded-lg border mt-1">{tip.example}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="p-6 border-t bg-gray-50 flex justify-center gap-4">
+            <a
+              href="https://www.linkedin.com/in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-3 bg-[#0077B5] text-white font-semibold rounded-xl hover:bg-[#006097] flex items-center"
+            >
+              <Linkedin className="w-5 h-5 mr-2" />
+              Open LinkedIn
+              <ExternalLink className="w-4 h-4 ml-2" />
+            </a>
+            <button
+              onClick={() => router.push('/linkedin-optimizer')}
+              className="px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-50"
+            >
+              New Analysis
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+Step 6: Update Navigation
+Add LinkedIn Optimizer to your navbar:
+
+Copy// In app/components/Navbar.tsx - add to navigation items
+{
+  name: 'LinkedIn',
+  href: '/linkedin-optimizer',
+  icon: Linkedin, // from lucide-react
+}
+Summary - Files to Create/Modify
+File	Action
+prisma/schema.prisma	Add LinkedInOptimization model
+app/api/linkedin/analyze/route.ts	Create
+app/api/linkedin/[id]/route.ts	Create
+app/api/linkedin/list/route.ts	Create
+app/linkedin-optimizer/page.tsx	Create
+app/linkedin-optimizer/saved/page.tsx	Create
+app/linkedin-optimizer/view/[id]/page.tsx	Create
+Navigation component	Add LinkedIn Optimizer link
+Git Commands
+Copynpx prisma db push
+npx prisma generate
+git add .
+git commit -m "Feature: Add LinkedIn Profile Optimizer with AI-powered analysis and recommendations"
+git push origin main
+This provides the complete LinkedIn Profile Optimizer feature!
