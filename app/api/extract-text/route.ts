@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     if (fileName.endsWith('.txt')) {
       // Plain text file
       text = buffer.toString('utf-8');
+
     } else if (fileName.endsWith('.docx')) {
       // DOCX file
       try {
@@ -35,60 +36,31 @@ export async function POST(req: NextRequest) {
           { status: 500 }
         );
       }
+
     } else if (fileName.endsWith('.pdf')) {
-      // PDF file - try multiple methods
+      // PDF file - use pdf-parse
       try {
-        // Method 1: Try pdf-parse with proper path
-        const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
+        // @ts-ignore - pdf-parse doesn't have proper type definitions
+        const pdfParse = (await import('pdf-parse')).default;
         const pdfData = await pdfParse(buffer);
         text = pdfData.text;
       } catch (pdfError: any) {
-        console.error('PDF extraction method 1 failed:', pdfError);
+        console.error('PDF extraction error:', pdfError);
 
-        // Method 2: Try alternative import
-        try {
-          const pdf = await import('pdf-parse');
-          const pdfParseFn = pdf.default || pdf;
-          const pdfData = await pdfParseFn(buffer);
-          text = pdfData.text;
-        } catch (altError) {
-          console.error('PDF extraction method 2 failed:', altError);
-
-          // Method 3: Try pdfjs-dist as last resort
-          try {
-            const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-
-            const uint8Array = new Uint8Array(arrayBuffer);
-            const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
-            const pdfDocument = await loadingTask.promise;
-
-            const textParts: string[] = [];
-
-            for (let i = 1; i <= pdfDocument.numPages; i++) {
-              const page = await pdfDocument.getPage(i);
-              const textContent = await page.getTextContent();
-              const pageText = textContent.items
-                .map((item: any) => item.str)
-                .join(' ');
-              textParts.push(pageText);
-            }
-
-            text = textParts.join('\n\n');
-          } catch (pdfjsError) {
-            console.error('PDF extraction method 3 (pdfjs) failed:', pdfjsError);
-            return NextResponse.json(
-              { error: 'Failed to extract text from PDF. Please try a DOCX or TXT file instead.' },
-              { status: 500 }
-            );
-          }
-        }
+        // If pdf-parse fails, return a helpful error
+        return NextResponse.json(
+          { error: 'Failed to extract text from PDF. Please try uploading a DOCX file instead.' },
+          { status: 500 }
+        );
       }
+
     } else if (fileName.endsWith('.doc')) {
-      // Old .doc format - not fully supported
+      // Old .doc format - not supported
       return NextResponse.json(
         { error: 'Old .doc format is not supported. Please convert to .docx or .pdf' },
         { status: 400 }
       );
+
     } else {
       return NextResponse.json(
         { error: 'Unsupported file format. Please upload PDF, DOCX, or TXT file.' },
@@ -117,6 +89,7 @@ export async function POST(req: NextRequest) {
       fileSize: file.size,
       characterCount: text.length,
     });
+
   } catch (error: any) {
     console.error('Text extraction error:', error);
     return NextResponse.json(
