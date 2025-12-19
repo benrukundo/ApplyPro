@@ -169,22 +169,6 @@ export default function GeneratePage() {
     loadSubscription();
   }, [session?.user?.id]);
 
-  // Extract text from PDF
-  const extractPdfText = async (file: File): Promise<string> => {
-    const pdfParse = (await import('pdf-parse' as any)).default;
-    const arrayBuffer = await file.arrayBuffer();
-    const data = await pdfParse(Buffer.from(arrayBuffer));
-    return data.text;
-  };
-
-  // Extract text from DOCX
-  const extractDocxText = async (file: File): Promise<string> => {
-    const mammoth = (await import('mammoth' as any)).default;
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value;
-  };
-
   // Handle file drop
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setError('');
@@ -220,14 +204,25 @@ export default function GeneratePage() {
     try {
       setResumeFile(file);
 
-      let text = '';
-      if (fileName.endsWith('.pdf')) {
-        text = await extractPdfText(file);
-      } else if (fileName.endsWith('.docx')) {
-        text = await extractDocxText(file);
+      // Use server-side extraction for all file types
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/extract-text', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setResumeText(data.text);
+      } else {
+        setError(data.error || 'Failed to extract text from file');
+        setResumeFile(null);
+        setResumeText('');
       }
 
-      setResumeText(text);
       setIsExtracting(false);
     } catch (err) {
       console.error('Error extracting text:', err);

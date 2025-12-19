@@ -133,53 +133,27 @@ export default function LinkedInOptimizerPage() {
     if (!file) return;
 
     setResumeFile(file);
-    setError(''); // Clear any previous errors
+    setError('');
 
-    const fileName = file.name.toLowerCase();
+    const formData = new FormData();
+    formData.append('file', file);
 
     try {
-      if (fileName.endsWith('.pdf')) {
-        // Extract PDF text on client side (no server needed)
-        console.log('Extracting text from PDF client-side...');
-        const { extractTextFromPDF } = await import('@/lib/pdfExtractor');
-        const text = await extractTextFromPDF(file);
+      const response = await fetch('/api/extract-text', {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (!text || text.trim().length < 50) {
-          setError('Could not extract text from PDF. The file may be image-based (scanned). Please try a DOCX file.');
-          return;
-        }
+      const data = await response.json();
 
-        setResumeContent(text);
-        console.log('PDF text extracted successfully:', text.length, 'characters');
-
-      } else if (fileName.endsWith('.docx') || fileName.endsWith('.txt')) {
-        // For DOCX and TXT, use server-side extraction
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/extract-text', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setResumeContent(data.text);
-        } else {
-          const errorData = await response.json();
-          setError(errorData.error || 'Failed to extract text from file');
-        }
-
-      } else if (fileName.endsWith('.doc')) {
-        setError('Old .doc format is not supported. Please save as .docx or .pdf');
-
+      if (response.ok && data.success) {
+        setResumeContent(data.text);
       } else {
-        setError('Unsupported file format. Please upload PDF, DOCX, or TXT file.');
+        setError(data.error || 'Failed to extract text from file');
       }
-
     } catch (err: any) {
-      console.error('File extraction error:', err);
-      setError(err.message || 'Failed to read file. Please try another file.');
+      console.error('Upload error:', err);
+      setError('Failed to process file. Please try again.');
     }
   };
 

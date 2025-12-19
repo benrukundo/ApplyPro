@@ -6,10 +6,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
     const fileName = file.name.toLowerCase();
@@ -19,67 +16,40 @@ export async function POST(req: NextRequest) {
     let text = '';
 
     if (fileName.endsWith('.txt')) {
-      // Plain text file
       text = buffer.toString('utf-8');
 
     } else if (fileName.endsWith('.docx')) {
-      // DOCX file
-      try {
-        const mammoth = await import('mammoth');
-        const result = await mammoth.extractRawText({ buffer });
-        text = result.value;
-      } catch (docxError: any) {
-        console.error('DOCX extraction error:', docxError);
-        return NextResponse.json(
-          { error: 'Failed to extract text from DOCX file: ' + docxError.message },
-          { status: 500 }
-        );
-      }
+      const mammoth = await import('mammoth');
+      const result = await mammoth.extractRawText({ buffer });
+      text = result.value;
 
     } else if (fileName.endsWith('.pdf')) {
-      // PDF should be handled client-side, but provide fallback message
-      return NextResponse.json(
-        { error: 'PDF files should be processed in browser. Please refresh and try again.' },
-        { status: 400 }
-      );
-
-    } else if (fileName.endsWith('.doc')) {
-      return NextResponse.json(
-        { error: 'Old .doc format is not supported. Please convert to .docx' },
-        { status: 400 }
-      );
+      // Use pdf-parse for server-side PDF extraction
+      const pdf = require('pdf-parse');
+      const data = await pdf(buffer);
+      text = data.text;
 
     } else {
       return NextResponse.json(
-        { error: 'Unsupported file format. Please upload DOCX or TXT file.' },
+        { error: 'Unsupported format. Use PDF, DOCX, or TXT.' },
         { status: 400 }
       );
     }
 
-    // Clean up the extracted text
-    text = text
-      .replace(/\r\n/g, '\n')
-      .replace(/\r/g, '\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
+    // Clean text
+    text = text.replace(/\s+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 
     if (!text || text.length < 20) {
       return NextResponse.json(
-        { error: 'Could not extract meaningful text from file.' },
+        { error: 'Could not extract text from file.' },
         { status: 400 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      text,
-      fileName: file.name,
-      fileSize: file.size,
-      characterCount: text.length,
-    });
+    return NextResponse.json({ success: true, text });
 
   } catch (error: any) {
-    console.error('Text extraction error:', error);
+    console.error('Extraction error:', error);
     return NextResponse.json(
       { error: 'Failed to process file: ' + error.message },
       { status: 500 }
