@@ -1,0 +1,322 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String?
+  email         String?    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?    // For email/password auth (hashed)
+  googleId      String?    @unique
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  subscriptions    Subscription[]
+  usageLogs        UsageLog[]
+  generatedResumes GeneratedResume[]
+  builderResumes   BuilderResume[]
+  interviewPreps   InterviewPrep[]
+  linkedInOptimizations LinkedInOptimization[]
+  jobApplications JobApplication[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Subscription {
+  id                String    @id @default(cuid())
+  userId            String
+  paddleId          String?   @unique
+  gumroadId         String?   @unique  // Keep for backward compatibility
+  plan              String    // 'monthly', 'yearly', 'pay-per-use'
+  status            String    @default("active") // 'active', 'cancelled', 'paused', 'past_due', 'failed'
+  monthlyUsageCount Int       @default(0)
+  monthlyLimit      Int       @default(100)
+  lastResetDate     DateTime  @default(now())
+  currentPeriodEnd  DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([paddleId])
+}
+
+model UsageLog {
+  id              String   @id @default(cuid())
+  userId          String
+  generationCount Int      @default(1)
+  generatedAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, generatedAt])
+}
+
+// NEW: Store generated resumes for history
+model GeneratedResume {
+  id            String   @id @default(cuid())
+  userId        String
+  
+  // Job info (optional, extracted if possible)
+  jobTitle      String?
+  company       String?
+  jobUrl        String?
+  
+  // Generated content
+  fullResume    String   @db.Text
+  atsResume     String   @db.Text
+  coverLetter   String   @db.Text
+  matchScore    Int
+  
+  // Original inputs (truncated for storage)
+  originalResumeSnippet    String?  @db.Text  // First 500 chars
+  jobDescriptionSnippet    String?  @db.Text  // First 500 chars
+  
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// Job Application Tracker - moved from localStorage to database for cross-device sync
+model JobApplication {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Job details
+  companyName   String
+  positionTitle String
+  jobUrl        String?
+  location      String?
+  salary        String?
+  isRemote      Boolean  @default(false)
+  jobSource     String   @default("other") // linkedin, indeed, company_website, referral, recruiter, other
+
+  // Application status
+  status        String   @default("saved") // saved, applied, interview, offer, rejected
+  appliedDate   DateTime?
+  notes         String?  @db.Text
+
+  // Follow-up and priority
+  followUpDate  DateTime?
+  priority      String   @default("medium") // low, medium, high
+
+  // Contact information
+  contactPerson String?
+  contactEmail  String?
+
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Status change history
+  statusHistory JobApplicationStatusHistory[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([userId, priority])
+}
+
+// Status change history for job applications
+model JobApplicationStatusHistory {
+  id            String   @id @default(cuid())
+  applicationId String
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  status        String   // saved, applied, interview, offer, rejected
+  changedAt     DateTime @default(now())
+  note          String?  @db.Text
+
+  @@index([applicationId, changedAt])
+}
+
+// Resume Builder - saves user progress and generated resumes
+model BuilderResume {
+  id            String   @id @default(cuid())
+  userId        String
+  
+  // Step 1: Target Job
+  targetJobTitle    String?
+  targetIndustry    String?
+  experienceLevel   String?
+  
+  // Step 2: Personal Info
+  fullName      String?
+  email         String?
+  phone         String?
+  location      String?
+  linkedin      String?
+  portfolio     String?
+  
+  // Step 3: Education (JSON array)
+  education     String?  @db.Text
+  
+  // Step 4: Work Experience (JSON array)
+  experience    String?  @db.Text
+  
+  // Step 5: Skills (JSON array)
+  skills        String?  @db.Text
+  
+  // Step 6: Summary (AI generated or custom)
+  summary       String?  @db.Text
+  
+  // Generated Output
+  generatedResume   String?  @db.Text
+  generatedAt       DateTime?
+  
+  // Wizard state
+  currentStep   Int      @default(1)
+  isComplete    Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Interview Preparation Module
+model InterviewPrep {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Input data
+  resumeContent   String            @db.Text
+  jobDescription  String            @db.Text
+  jobTitle        String
+  company         String?
+  interviewType   InterviewType     @default(BEHAVIORAL)
+
+  // Generated content
+  questions       Json              // Array of {question, suggestedAnswer, category, difficulty, tips}
+  keyTalkingPoints Json             // Array of {point, evidence, relevance}
+  questionsToAsk  Json              // Array of {question, purpose, category}
+  companyInsights String?           @db.Text
+
+  // Metadata
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  mockSessions    MockInterviewSession[]
+
+  @@index([userId])
+}
+
+model MockInterviewSession {
+  id              String        @id @default(cuid())
+  prepId          String
+  prep            InterviewPrep @relation(fields: [prepId], references: [id], onDelete: Cascade)
+
+  // Session data
+  answers         Json          // Array of {questionIndex, question, userAnswer, feedback}
+  currentQuestion Int           @default(0)
+  totalQuestions  Int
+  overallScore    Int?
+  overallFeedback String?       @db.Text
+
+  // Status
+  status          SessionStatus @default(IN_PROGRESS)
+  startedAt       DateTime      @default(now())
+  completedAt     DateTime?
+
+  @@index([prepId])
+}
+
+enum InterviewType {
+  PHONE_SCREENING
+  TECHNICAL
+  BEHAVIORAL
+  HR_CULTURE
+  FINAL_ROUND
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+// LinkedIn Profile Optimization
+model LinkedInOptimization {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Input data
+  resumeContent       String   @db.Text
+  linkedinUrl         String?
+  currentHeadline     String?
+  currentAbout        String?  @db.Text
+  targetRole          String?
+
+  // Analysis results
+  consistencyScore    Int      @default(0)
+  keywordsMatch       Int      @default(0)
+  experienceAlign     Int      @default(0)
+  skillsCoverage      Int      @default(0)
+
+  // Generated content
+  suggestedHeadlines  Json     // Array of 3 headline options
+  optimizedAbout      String?  @db.Text
+  missingKeywords     Json     // Array of keywords to add
+  skillsToAdd         Json     // Array of skills
+  experienceTips      Json     // Array of improvement suggestions
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+}

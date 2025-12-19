@@ -60,24 +60,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Debug logging
-    console.log('Session:', JSON.stringify(session, null, 2));
-    console.log('User ID:', session?.user?.id);
-
     if (!session?.user?.id) {
-      console.error('No user ID found in session');
-      return NextResponse.json({ error: 'Unauthorized - No user ID' }, { status: 401 });
-    }
-
-    // Verify user exists in database
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    });
-
-    if (!user) {
-      console.error('User not found in database:', session.user.id);
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
