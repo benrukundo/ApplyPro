@@ -246,10 +246,10 @@ export async function filterApplications(
 
     // Client-side filtering for dates (since API doesn't support date range yet)
     if (dateFrom) {
-      applications = applications.filter(app => app.createdAt.getTime() >= dateFrom);
+      applications = applications.filter((app: Application) => app.createdAt.getTime() >= dateFrom);
     }
     if (dateTo) {
-      applications = applications.filter(app => app.createdAt.getTime() <= dateTo);
+      applications = applications.filter((app: Application) => app.createdAt.getTime() <= dateTo);
     }
 
     return applications;
