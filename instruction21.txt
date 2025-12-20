@@ -1,0 +1,43 @@
+TASK: Commit the Generate page redesign changes to GitHub
+
+REPOSITORY: https://github.com/benrukundo/ApplyPro
+
+STEPS:
+
+1. First, ensure all changes are saved:
+   - app/generate/page.tsx (the new redesigned version)
+   - app/globals.css (if the animation utilities were added)
+
+2. Stage the changes:
+   git add app/generate/page.tsx
+   git add app/globals.css
+
+3. Create a descriptive commit:
+   git commit -m "redesign: complete Generate page UI overhaul
+
+   - Add 3-step visual workflow indicator
+   - Restructure layout with sticky action panel (5-column grid)
+   - Enhance upload dropzone with rich drag/hover/success states
+   - Demote 'Build from Scratch' to subtle link
+   - Improve button hierarchy (primary gradient, secondary outlined)
+   - Add generation progress checklist with icons
+   - Polish visual design (shadows, spacing, micro-interactions)
+   - Add paste from clipboard functionality
+   - Improve mobile responsiveness
+   - Add animation utilities to globals.css"
+
+4. Push to GitHub:
+   git push origin main
+
+   (Or if using a different branch):
+   git push origin <branch-name>
+
+5. Confirm the push was successful and report back with:
+   - The commit hash
+   - Any errors encountered
+   - Confirmation that changes are visible on GitHub
+
+IMPORTANT:
+- If there are any uncommitted changes in other files, do NOT include them in this commit
+- If authentication is required, pause and ask for credentials
+- If there are merge conflicts, report them before attempting to resolve

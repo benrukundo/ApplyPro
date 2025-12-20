@@ -1,0 +1,1227 @@
+TASK: Replace the entire Generate page with the redesigned version
+
+FILE TO UPDATE: app/generate/page.tsx
+
+IMPORTANT: 
+1. Create a backup of the current file first
+2. Replace the ENTIRE contents with the new code below
+3. Do not modify any API routes - only the page component
+4. Test that the page loads without TypeScript errors
+
+BACKUP COMMAND:
+copy "app\generate\page.tsx" "C:\ApplyPro\debug-files\generate-page-backup.txt"
+
+Then replace app/generate/page.tsx with the following code:
+
+New Generate Page Code
+
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useDropzone } from 'react-dropzone';
+import Link from 'next/link';
+import {
+  Upload,
+  FileText,
+  Loader2,
+  CheckCircle2,
+  ArrowLeft,
+  ArrowRight,
+  TrendingUp,
+  AlertCircle,
+  Sparkles,
+  Target,
+  Search,
+  Briefcase,
+  XCircle,
+  AlertTriangle,
+  Lock,
+  Download,
+  Palette,
+  Check,
+  Copy,
+  Info,
+  X,
+  File,
+  ClipboardPaste,
+} from 'lucide-react';
+import {
+  generatePDF,
+  generateDOCX,
+  generateCoverLetterPDF,
+  generateCoverLetterDOCX,
+  type ColorPreset
+} from '@/lib/documentGenerator';
+import { trackEvent } from '@/components/PostHogProvider';
+
+export const dynamic = 'force-dynamic';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MIN_JOB_DESC_LENGTH = 100;
+
+// Color presets for Modern template
+const colorPresets = [
+  { key: 'blue' as ColorPreset, name: 'Blue', hex: '#2563eb', bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-600', accent: 'bg-blue-600' },
+  { key: 'green' as ColorPreset, name: 'Green', hex: '#16a34a', bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-600', accent: 'bg-green-600' },
+  { key: 'purple' as ColorPreset, name: 'Purple', hex: '#9333ea', bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-600', accent: 'bg-purple-600' },
+  { key: 'red' as ColorPreset, name: 'Red', hex: '#dc2626', bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-600', accent: 'bg-red-600' },
+  { key: 'teal' as ColorPreset, name: 'Teal', hex: '#0d9488', bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-600', accent: 'bg-teal-600' },
+  { key: 'orange' as ColorPreset, name: 'Orange', hex: '#ea580c', bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-600', accent: 'bg-orange-600' },
+];
+
+interface PreviewData {
+  overallScore: number;
+  atsScore: number;
+  keywordScore: number;
+  experienceScore: number;
+  skillsScore: number;
+  matchedKeywords: string[];
+  missingKeywords: Array<{ keyword: string; priority: string; context: string }>;
+  improvements: Array<{ issue: string; fix: string; impact: string }>;
+  strengths: string[];
+  insights: string[];
+  previewText: string;
+  keywordStats: {
+    matched: number;
+    total: number;
+  };
+}
+
+interface SubscriptionInfo {
+  plan: 'free' | 'monthly' | 'yearly' | 'pay-per-use' | null;
+  status: 'active' | 'cancelled' | 'failed' | null;
+  monthlyUsageCount: number;
+  monthlyLimit: number;
+  daysUntilReset: number;
+  isActive: boolean;
+}
+
+interface GeneratedResume {
+  fullResume: string;
+  atsOptimizedResume: string;
+  coverLetter: string;
+  matchScore: number;
+}
+
+// Step indicator component
+function StepIndicator({ currentStep, resumeReady, jobDescReady }: { currentStep: number; resumeReady: boolean; jobDescReady: boolean }) {
+  const steps = [
+    { num: 1, label: 'Upload Resume', completed: resumeReady },
+    { num: 2, label: 'Add Job Description', completed: jobDescReady },
+    { num: 3, label: 'Generate', completed: false },
+  ];
+
+  return (
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {steps.map((step, idx) => (
+        <div key={step.num} className="flex items-center">
+          <div className="flex items-center gap-2">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                step.completed
+                  ? 'bg-green-500 text-white'
+                  : currentStep === step.num
+                    ? 'bg-blue-600 text-white ring-4 ring-blue-100'
+                    : 'bg-gray-200 text-gray-500'
+              }`}
+            >
+              {step.completed ? <Check className="w-4 h-4" /> : step.num}
+            </div>
+            <span
+              className={`text-sm font-medium hidden sm:block ${
+                step.completed ? 'text-green-600' : currentStep === step.num ? 'text-blue-600' : 'text-gray-400'
+              }`}
+            >
+              {step.label}
+            </span>
+          </div>
+          {idx < steps.length - 1 && (
+            <ArrowRight className={`w-4 h-4 mx-3 ${step.completed ? 'text-green-400' : 'text-gray-300'}`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function GeneratePage() {
+  const { data: session, status: sessionStatus } = useSession();
+
+  // Subscription state
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState('');
+
+  // Resume input state
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeText, setResumeText] = useState<string>('');
+  const [jobDescription, setJobDescription] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [apiError, setApiError] = useState<string>('');
+  const [generatedResume, setGeneratedResume] = useState<GeneratedResume | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<'pdf' | 'docx'>('pdf');
+  const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'traditional' | 'ats'>('modern');
+  const [selectedColor, setSelectedColor] = useState(colorPresets[0]);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [generationStep, setGenerationStep] = useState<number>(0);
+  const [copiedCoverLetter, setCopiedCoverLetter] = useState(false);
+
+  // Calculate current workflow step
+  const currentWorkflowStep = resumeText ? (jobDescription.length >= MIN_JOB_DESC_LENGTH ? 3 : 2) : 1;
+
+  // Load user preferences from localStorage
+  useEffect(() => {
+    try {
+      const savedTemplate = localStorage.getItem('applypro_preferred_template') as 'modern' | 'traditional' | 'ats' | null;
+      const savedColorKey = localStorage.getItem('applypro_preferred_color');
+
+      if (savedTemplate) {
+        setSelectedTemplate(savedTemplate);
+      }
+      if (savedColorKey) {
+        const color = colorPresets.find(c => c.key === savedColorKey);
+        if (color) {
+          setSelectedColor(color);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading preferences:', err);
+    }
+  }, []);
+
+  // Save preferences to localStorage when they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('applypro_preferred_template', selectedTemplate);
+      localStorage.setItem('applypro_preferred_color', selectedColor.key);
+    } catch (err) {
+      console.error('Error saving preferences:', err);
+    }
+  }, [selectedTemplate, selectedColor]);
+
+  // Load subscription info only when user is logged in
+  useEffect(() => {
+    const loadSubscription = async () => {
+      if (!session?.user?.id) {
+        setSubscription(null);
+        return;
+      }
+
+      setIsLoadingSubscription(true);
+      try {
+        const response = await fetch('/api/user/subscription');
+        const data = await response.json();
+
+        if (response.ok) {
+          setSubscription(data.subscription);
+        } else {
+          setSubscriptionError(data.error || 'Failed to load subscription');
+        }
+      } catch (err) {
+        console.error('Error loading subscription:', err);
+        setSubscriptionError('Failed to load subscription info');
+      } finally {
+        setIsLoadingSubscription(false);
+      }
+    };
+
+    loadSubscription();
+  }, [session?.user?.id]);
+
+  // Handle file drop
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    setError('');
+    setIsExtracting(true);
+
+    const file = acceptedFiles[0];
+
+    if (!file) {
+      setIsExtracting(false);
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError('File size must be less than 5MB');
+      setIsExtracting(false);
+      return;
+    }
+
+    const fileType = file.type;
+    const fileName = file.name.toLowerCase();
+
+    if (
+      fileType !== 'application/pdf' &&
+      fileType !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' &&
+      !fileName.endsWith('.pdf') &&
+      !fileName.endsWith('.docx')
+    ) {
+      setError('Please upload a PDF or DOCX file');
+      setIsExtracting(false);
+      return;
+    }
+
+    try {
+      setResumeFile(file);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/extract-text', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setResumeText(data.text);
+      } else {
+        setError(data.error || 'Failed to extract text from file');
+        setResumeFile(null);
+        setResumeText('');
+      }
+
+      setIsExtracting(false);
+    } catch (err) {
+      console.error('Error extracting text:', err);
+      setError('Failed to read file. Please try another file.');
+      setResumeFile(null);
+      setResumeText('');
+      setIsExtracting(false);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+    },
+    maxFiles: 1,
+    multiple: false,
+  });
+
+  // Remove uploaded file
+  const handleRemoveFile = () => {
+    setResumeFile(null);
+    setResumeText('');
+    setPreviewData(null);
+  };
+
+  // Paste from clipboard
+  const handlePasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setJobDescription(text);
+      }
+    } catch (err) {
+      console.error('Failed to paste:', err);
+    }
+  };
+
+  // Free analysis - no auth required
+  const handleAnalyze = async () => {
+    setIsAnalyzing(true);
+    setApiError('');
+    setPreviewData(null);
+
+    try {
+      const response = await fetch('/api/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          resumeText,
+          jobDescription,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to analyze resume');
+      }
+
+      trackEvent('resume_analyzed', {
+        overall_score: data.overallScore,
+        ats_score: data.atsScore,
+        matched_keywords_count: data.matchedKeywords?.length || 0,
+      });
+
+      setPreviewData(data);
+    } catch (err) {
+      console.error('Error analyzing resume:', err);
+      setApiError(
+        err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Download handler using documentGenerator
+  const handleDownload = async (type: 'resume' | 'cover', format: 'pdf' | 'docx') => {
+    setIsDownloading(true);
+    setError('');
+
+    try {
+      const timestamp = new Date().toISOString().split('T')[0];
+
+      let content = '';
+      if (type === 'cover') {
+        content = generatedResume?.coverLetter || '';
+      } else {
+        content = generatedResume?.fullResume || '';
+      }
+
+      if (!content) {
+        throw new Error('No content available to download');
+      }
+
+      let blob: Blob;
+      let fileName: string;
+
+      if (type === 'cover') {
+        if (format === 'pdf') {
+          blob = await generateCoverLetterPDF(content, 'modern', selectedColor.key);
+          fileName = `Cover_Letter_${timestamp}.pdf`;
+        } else {
+          blob = await generateCoverLetterDOCX(content, 'modern', selectedColor.key);
+          fileName = `Cover_Letter_${timestamp}.docx`;
+        }
+      } else {
+        const templateName = selectedTemplate.charAt(0).toUpperCase() + selectedTemplate.slice(1);
+        const baseName = `${templateName}_Resume`;
+
+        if (format === 'pdf') {
+          blob = await generatePDF(content, selectedTemplate, selectedColor.key);
+          fileName = `${baseName}_${timestamp}.pdf`;
+        } else {
+          blob = await generateDOCX(content, selectedTemplate, selectedColor.key);
+          fileName = `${baseName}_${timestamp}.docx`;
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      trackEvent('resume_downloaded', {
+        type: type,
+        format: format,
+        template: selectedTemplate,
+        color: selectedColor.key,
+      });
+
+    } catch (err) {
+      console.error('Error generating document:', err);
+      setError(`Failed to download ${format.toUpperCase()}. Please try again.`);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Paid generation - requires auth + subscription
+  const handleGenerate = async () => {
+    if (!session?.user?.id) {
+      window.location.href = '/login?callbackUrl=/generate';
+      return;
+    }
+
+    if (!subscription?.isActive) {
+      setError('Please purchase a subscription to generate resumes.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setGenerationStep(0);
+
+    try {
+      setGenerationStep(1);
+      const checkResponse = await fetch('/api/user/can-generate');
+      const checkData = await checkResponse.json();
+
+      if (!checkData.allowed) {
+        setError(checkData.reason || 'You cannot generate a resume at this time.');
+        setIsLoading(false);
+        setGenerationStep(0);
+        return;
+      }
+
+      setGenerationStep(2);
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      setGenerationStep(3);
+      const generateResponse = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          resumeText,
+          jobDescription,
+        }),
+      });
+
+      const generateData = await generateResponse.json();
+
+      if (!generateResponse.ok) {
+        throw new Error(generateData.error || 'Failed to generate resume');
+      }
+
+      setGenerationStep(4);
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      try {
+        localStorage.setItem('applypro_resume_text', resumeText);
+        localStorage.setItem('applypro_job_description', jobDescription);
+        localStorage.setItem('applypro_generated_content', JSON.stringify(generateData));
+      } catch (err) {
+        console.error('Error saving to localStorage:', err);
+      }
+
+      trackEvent('resume_generated', {
+        match_score: generateData.matchScore,
+        plan: subscription.plan,
+        usage_count: subscription.monthlyUsageCount + 1,
+        usage_limit: subscription.monthlyLimit,
+      });
+
+      setGeneratedResume(generateData);
+      setShowResults(true);
+      setGenerationStep(0);
+
+      setTimeout(() => {
+        const resultsSection = document.getElementById('results-section');
+        if (resultsSection) {
+          resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } catch (err) {
+      console.error('Error generating resume:', err);
+
+      trackEvent('resume_generation_failed', {
+        error: err instanceof Error ? err.message : 'Unknown error',
+        plan: subscription?.plan,
+      });
+
+      setError(
+        err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
+      );
+      setGenerationStep(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Copy cover letter to clipboard
+  const handleCopyCoverLetter = async () => {
+    if (!generatedResume?.coverLetter) return;
+
+    try {
+      await navigator.clipboard.writeText(generatedResume.coverLetter);
+      setCopiedCoverLetter(true);
+      setTimeout(() => setCopiedCoverLetter(false), 2000);
+
+      trackEvent('cover_letter_copied', {
+        template: selectedTemplate,
+      });
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const canGenerate = session?.user?.id && subscription?.isActive;
+  const isReadyToGenerate = resumeText && jobDescription.length >= MIN_JOB_DESC_LENGTH;
+
+  if (sessionStatus === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 pt-20 pb-12">
+      <div className="container mx-auto px-4 max-w-6xl">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <Link
+            href={session ? "/dashboard" : "/"}
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Back to {session ? "Dashboard" : "Home"}
+          </Link>
+
+          {session?.user && subscription?.isActive && (
+            <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <div className="text-right">
+                <p className="text-sm font-semibold text-gray-900">
+                  {subscription.plan === 'monthly' ? 'Pro Monthly' : subscription.plan === 'yearly' ? 'Pro Yearly' : 'Pay-Per-Use'}
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-600 rounded-full transition-all"
+                      style={{ width: `${(subscription.monthlyUsageCount / subscription.monthlyLimit) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {subscription.monthlyUsageCount}/{subscription.monthlyLimit}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!session?.user && (
+            <Link
+              href="/login?callbackUrl=/generate"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors text-sm"
+            >
+              Sign In
+            </Link>
+          )}
+
+          {session?.user && !subscription?.isActive && !isLoadingSubscription && (
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all text-sm shadow-lg shadow-blue-500/25"
+            >
+              <Sparkles className="w-4 h-4" />
+              Upgrade to Pro
+            </Link>
+          )}
+        </div>
+
+        {/* Page Title */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+            Resume Analyzer & Generator
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Match your resume to any job description in 60 seconds
+          </p>
+        </div>
+
+        {/* Step Indicator */}
+        <StepIndicator 
+          currentStep={currentWorkflowStep} 
+          resumeReady={!!resumeText} 
+          jobDescReady={jobDescription.length >= MIN_JOB_DESC_LENGTH} 
+        />
+
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-5 gap-6">
+          {/* Left Column - Inputs (3/5 width) */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Resume Upload Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 transition-all hover:shadow-md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${resumeText ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                    {resumeText ? <Check className="w-3.5 h-3.5" /> : '1'}
+                  </div>
+                  Your Resume
+                </h2>
+                {!resumeText && (
+                  <Link
+                    href="/build-resume"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Build from scratch
+                  </Link>
+                )}
+              </div>
+
+              {!resumeFile ? (
+                <div
+                  {...getRootProps()}
+                  className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${
+                    isDragActive
+                      ? 'border-blue-500 bg-blue-50 scale-[1.02]'
+                      : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'
+                  }`}
+                >
+                  <input {...getInputProps()} />
+                  <div className={`w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center transition-colors ${isDragActive ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                    <Upload className={`w-6 h-6 ${isDragActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                  </div>
+                  <p className="text-base font-semibold text-gray-900 mb-1">
+                    {isDragActive ? 'Drop your file here' : 'Drag and drop your resume'}
+                  </p>
+                  <p className="text-sm text-gray-500 mb-3">or click to browse</p>
+                  <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5" />
+                      PDF
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <File className="w-3.5 h-3.5" />
+                      DOCX
+                    </span>
+                    <span>Max 5MB</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                  {isExtracting ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{resumeFile.name}</p>
+                        <p className="text-xs text-blue-600">Extracting text...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{resumeFile.name}</p>
+                          <p className="text-xs text-green-600">Ready to analyze</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleRemoveFile}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Job Description Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 transition-all hover:shadow-md">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${jobDescription.length >= MIN_JOB_DESC_LENGTH ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                    {jobDescription.length >= MIN_JOB_DESC_LENGTH ? <Check className="w-3.5 h-3.5" /> : '2'}
+                  </div>
+                  Job Description
+                </h2>
+                <button
+                  onClick={handlePasteFromClipboard}
+                  className="text-sm text-gray-500 hover:text-blue-600 font-medium flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-blue-50 transition-colors"
+                >
+                  <ClipboardPaste className="w-3.5 h-3.5" />
+                  Paste
+                </button>
+              </div>
+
+              <textarea
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Paste the full job description here. Include requirements, responsibilities, and qualifications for best results..."
+                className="w-full h-44 p-4 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none text-gray-700 text-sm transition-all"
+              />
+
+              <div className="flex items-center justify-between mt-3">
+                <p className={`text-sm ${jobDescription.length >= MIN_JOB_DESC_LENGTH ? 'text-green-600' : 'text-gray-400'}`}>
+                  {jobDescription.length >= MIN_JOB_DESC_LENGTH ? (
+                    <span className="flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" />
+                      {jobDescription.length} characters
+                    </span>
+                  ) : (
+                    `${jobDescription.length} / ${MIN_JOB_DESC_LENGTH} minimum characters`
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Error Messages */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-800 text-sm">{error}</p>
+                  {error.includes('subscription') && (
+                    <Link href="/pricing" className="text-red-600 text-sm font-medium hover:underline mt-1 inline-block">
+                      View pricing plans →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {apiError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-red-800 text-sm">{apiError}</p>
+              </div>
+            )}
+
+            {subscriptionError && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-amber-800 text-sm">{subscriptionError}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Actions (2/5 width) */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:sticky lg:top-24">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isReadyToGenerate ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
+                  3
+                </div>
+                Generate
+              </h2>
+
+              {/* Status Summary */}
+              <div className="space-y-2 mb-6">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Resume</span>
+                  {resumeText ? (
+                    <span className="text-green-600 flex items-center gap-1 font-medium">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Ready
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">Not uploaded</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Job Description</span>
+                  {jobDescription.length >= MIN_JOB_DESC_LENGTH ? (
+                    <span className="text-green-600 flex items-center gap-1 font-medium">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Ready
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">{Math.max(0, MIN_JOB_DESC_LENGTH - jobDescription.length)} chars needed</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleGenerate}
+                  disabled={!isReadyToGenerate || isLoading}
+                  className="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/25 disabled:shadow-none flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      {generationStep === 1 && 'Analyzing...'}
+                      {generationStep === 2 && 'Matching...'}
+                      {generationStep === 3 && 'Creating...'}
+                      {generationStep === 4 && 'Finalizing...'}
+                      {generationStep === 0 && 'Processing...'}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      Generate Tailored Resume
+                      {!canGenerate && <Lock className="w-4 h-4 ml-1" />}
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleAnalyze}
+                  disabled={!isReadyToGenerate || isAnalyzing}
+                  className="w-full px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-medium hover:border-blue-300 hover:bg-blue-50 disabled:bg-gray-50 disabled:border-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4" />
+                      Quick Analysis (Free)
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Generation Progress */}
+              {isLoading && (
+                <div className="mt-4 space-y-2">
+                  {[
+                    { step: 1, label: 'Analyzing your resume' },
+                    { step: 2, label: 'Matching with job' },
+                    { step: 3, label: 'Creating content' },
+                    { step: 4, label: 'Generating cover letter' },
+                  ].map((item) => (
+                    <div
+                      key={item.step}
+                      className={`flex items-center gap-2 text-sm transition-all ${
+                        generationStep > item.step
+                          ? 'text-green-600'
+                          : generationStep === item.step
+                            ? 'text-blue-600'
+                            : 'text-gray-300'
+                      }`}
+                    >
+                      {generationStep > item.step ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : generationStep === item.step ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <div className="w-4 h-4 border-2 border-current rounded-full" />
+                      )}
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Help Text */}
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                {!session?.user ? (
+                  <p className="text-xs text-gray-500 text-center">
+                    <Link href="/login?callbackUrl=/generate" className="text-blue-600 hover:underline font-medium">
+                      Sign in
+                    </Link>{' '}
+                    to generate tailored resumes
+                  </p>
+                ) : !subscription?.isActive ? (
+                  <p className="text-xs text-gray-500 text-center">
+                    <Link href="/pricing" className="text-blue-600 hover:underline font-medium">
+                      Upgrade to Pro
+                    </Link>{' '}
+                    to generate tailored resumes
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 text-center">
+                    Uses 1 of your {subscription.monthlyLimit} monthly generations
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Analysis Results */}
+        {previewData && !showResults && (
+          <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+              Analysis Results
+            </h3>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl">
+                <p className="text-sm text-blue-600 font-medium mb-1">Overall Match</p>
+                <p className="text-3xl font-bold text-blue-700">{previewData.overallScore}%</p>
+              </div>
+              <div className="p-4 bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl">
+                <p className="text-sm text-green-600 font-medium mb-1">ATS Score</p>
+                <p className="text-3xl font-bold text-green-700">{previewData.atsScore}%</p>
+              </div>
+              <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl">
+                <p className="text-sm text-purple-600 font-medium mb-1">Keywords</p>
+                <p className="text-3xl font-bold text-purple-700">{previewData.keywordStats?.matched || 0}/{previewData.keywordStats?.total || 0}</p>
+              </div>
+              <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-xl">
+                <p className="text-sm text-amber-600 font-medium mb-1">Experience</p>
+                <p className="text-3xl font-bold text-amber-700">{previewData.experienceScore}%</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-xl mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-3">Matched Keywords</p>
+              <div className="flex flex-wrap gap-2">
+                {previewData.matchedKeywords.slice(0, 8).map((keyword, idx) => (
+                  <span key={idx} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                    {keyword}
+                  </span>
+                ))}
+                {previewData.matchedKeywords.length > 8 && (
+                  <span className="px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-sm">
+                    +{previewData.matchedKeywords.length - 8} more
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {!canGenerate && (
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
+                <p className="text-sm font-medium text-gray-900 mb-2">
+                  Want a tailored resume that matches this job?
+                </p>
+                <Link
+                  href={session?.user ? '/pricing' : '/login?callbackUrl=/generate'}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {session?.user ? 'Upgrade to Generate' : 'Sign In to Generate'}
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Generated Resume Results Section */}
+        {showResults && generatedResume && (
+          <div id="results-section" className="mt-12 pt-12 border-t border-gray-200">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium mb-4">
+                <CheckCircle2 className="w-4 h-4" />
+                Resume Generated Successfully
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Your Tailored Resume is Ready!
+              </h2>
+              <div className="inline-block bg-white rounded-2xl shadow-lg p-6">
+                <p className="text-sm text-gray-500 mb-2">Match Score</p>
+                <p className={`text-5xl font-bold ${
+                  generatedResume.matchScore >= 80 ? 'text-green-600' : 
+                  generatedResume.matchScore >= 60 ? 'text-yellow-600' : 'text-red-600'
+                }`}>
+                  {generatedResume.matchScore}%
+                </p>
+              </div>
+            </div>
+
+            {/* Template & Color Selection */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Customize & Download</h3>
+              
+              {/* Template Selection */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {[
+                  { id: 'modern', name: 'Modern', desc: 'Two-column layout' },
+                  { id: 'traditional', name: 'Traditional', desc: 'Classic single-column' },
+                  { id: 'ats', name: 'ATS-Optimized', desc: 'Machine-readable' },
+                ].map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => {
+                      setSelectedTemplate(template.id as 'modern' | 'traditional' | 'ats');
+                      trackEvent('template_selected', { template: template.id });
+                    }}
+                    className={`p-4 rounded-xl border-2 transition-all text-left ${
+                      selectedTemplate === template.id
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <p className="font-semibold text-gray-900 text-sm">{template.name}</p>
+                    <p className="text-xs text-gray-500">{template.desc}</p>
+                  </button>
+                ))}
+              </div>
+
+              {/* Color Selection - Modern Template Only */}
+              {selectedTemplate === 'modern' && (
+                <div className="mb-6">
+                  <p className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Accent Color
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {colorPresets.map((color) => (
+                      <button
+                        key={color.key}
+                        onClick={() => {
+                          setSelectedColor(color);
+                          trackEvent('color_selected', { color: color.key });
+                        }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                          selectedColor.key === color.key
+                            ? `${color.border} ${color.bg}`
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: color.hex }} />
+                        <span className="text-sm font-medium text-gray-700">{color.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Format Selection */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDownloadFormat('pdf')}
+                  className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                    downloadFormat === 'pdf' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  PDF Format
+                </button>
+                <button
+                  onClick={() => setDownloadFormat('docx')}
+                  className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-all ${
+                    downloadFormat === 'docx' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  DOCX Format
+                </button>
+              </div>
+            </div>
+
+            {/* Resume and Cover Letter Cards */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Resume */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  Resume
+                </h3>
+                <div className="bg-gray-50 p-4 rounded-xl max-h-80 overflow-y-auto border border-gray-200 mb-4">
+                  <div className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed font-mono">
+                    {generatedResume.fullResume}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDownload('resume', downloadFormat)}
+                  disabled={isDownloading}
+                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Download Resume ({downloadFormat.toUpperCase()})
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Cover Letter */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-purple-600" />
+                  Cover Letter
+                </h3>
+                <div className="bg-gray-50 p-4 rounded-xl max-h-80 overflow-y-auto border border-gray-200 mb-4">
+                  <div className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                    {generatedResume.coverLetter}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCopyCoverLetter}
+                    className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {copiedCoverLetter ? (
+                      <>
+                        <Check className="w-4 h-4 text-green-600" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDownload('cover', downloadFormat)}
+                    disabled={isDownloading}
+                    className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Generate Another */}
+            <div className="mt-10 text-center">
+              <button
+                onClick={() => {
+                  setShowResults(false);
+                  setGeneratedResume(null);
+                  setPreviewData(null);
+                  setResumeFile(null);
+                  setResumeText('');
+                  setJobDescription('');
+                }}
+                className="px-8 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
+              >
+                Generate Another Resume
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+
+
+Additional CSS Updates (Optional Enhancement)
+smoother animations, have the AI agent also add these styles to app/globals.css:
+
+TASK: Add animation utilities to globals.css
+
+FILE TO UPDATE: app/globals.css
+
+ADD the following CSS at the end of the file (after existing styles):
+
+/* Enhanced hover transitions */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Smooth gradient animations */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+/* Focus ring styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+
