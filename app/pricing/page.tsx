@@ -9,8 +9,12 @@ import {
   Sparkles,
   Zap,
   Crown,
-  ArrowLeft,
   Loader2,
+  Shield,
+  CreditCard,
+  RefreshCw,
+  ChevronDown,
+  Gift,
 } from 'lucide-react';
 import PaddleCheckout from '@/components/PaddleCheckout';
 
@@ -31,6 +35,7 @@ const plans = [
       'Never expires',
     ],
     icon: Zap,
+    color: 'amber',
     popular: false,
     buttonText: 'Buy Resume Pack',
   },
@@ -51,6 +56,7 @@ const plans = [
       'Cancel anytime',
     ],
     icon: Sparkles,
+    color: 'blue',
     popular: true,
     buttonText: 'Start Monthly',
   },
@@ -72,8 +78,33 @@ const plans = [
       'Save 35% vs monthly',
     ],
     icon: Crown,
+    color: 'purple',
     popular: false,
     buttonText: 'Start Yearly',
+    badge: 'BEST VALUE',
+  },
+];
+
+const faqs = [
+  {
+    question: "What's included in all plans?",
+    answer: "All plans include AI-powered resume tailoring, multiple professional templates, ATS optimization, custom cover letters, and downloads in both PDF and DOCX formats."
+  },
+  {
+    question: "Can I cancel my subscription?",
+    answer: "Yes! Monthly and yearly subscriptions can be cancelled anytime from your dashboard. You'll retain access until the end of your billing period."
+  },
+  {
+    question: "What happens when I reach my monthly limit?",
+    answer: "Your limit resets at the start of each billing cycle. If you need more resumes before then, you can upgrade to a higher plan or purchase a Resume Pack."
+  },
+  {
+    question: "Is my payment information secure?",
+    answer: "Absolutely! All payments are processed securely through Paddle, a trusted payment processor. We never store your payment information on our servers."
+  },
+  {
+    question: "What if I'm not satisfied?",
+    answer: "We offer a 14-day money-back guarantee on unused purchases. If you haven't used any generations, contact us for a full refund."
   },
 ];
 
@@ -81,6 +112,7 @@ export default function PricingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [successMessage, setSuccessMessage] = useState('');
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const handleSuccess = () => {
     setSuccessMessage('Payment successful! Redirecting to dashboard...');
@@ -91,72 +123,94 @@ export default function PricingPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20">
-      <div className="container mx-auto px-4 max-w-6xl">
-        {/* Back Link */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mb-8 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Home
-        </Link>
+    <div className="min-h-screen bg-slate-50 pt-20 pb-16 relative overflow-hidden">
+      {/* Background Decoration */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-blue-100/50 to-purple-100/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-100/40 to-cyan-100/40 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
+      <div className="container mx-auto px-4 max-w-6xl relative z-10">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Simple, Transparent Pricing
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
             Choose the plan that fits your job search. All plans include our AI-powered
             resume tailoring and all premium templates.
           </p>
+
+          {/* Free Tools Notice */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+            <Gift className="w-4 h-4" />
+            <span>Free tools available: ATS Checker, Resume Builder, Job Tracker</span>
+          </div>
         </div>
 
         {/* Success Message */}
         {successMessage && (
-          <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-center">
-            <p className="text-green-800 font-medium">{successMessage}</p>
+          <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-center animate-fadeIn">
+            <p className="text-green-800 font-medium flex items-center justify-center gap-2">
+              <Check className="w-5 h-5" />
+              {successMessage}
+            </p>
           </div>
         )}
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
+        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-16">
           {plans.map((plan) => {
             const Icon = plan.icon;
+            const isPopular = plan.popular;
 
             return (
               <div
                 key={plan.id}
-                className={`relative bg-white rounded-2xl shadow-lg overflow-hidden transition-transform hover:scale-105 ${
-                  plan.popular ? 'ring-2 ring-blue-600' : ''
+                className={`relative bg-white rounded-2xl overflow-hidden transition-all duration-300 ${
+                  isPopular
+                    ? 'shadow-2xl shadow-blue-500/20 ring-2 ring-blue-600 scale-105 z-10'
+                    : 'shadow-lg hover:shadow-xl hover:scale-[1.02]'
                 }`}
               >
                 {/* Popular Badge */}
-                {plan.popular && (
-                  <div className="absolute top-0 right-0 bg-blue-600 text-white px-4 py-1 text-sm font-semibold rounded-bl-lg">
-                    Most Popular
+                {isPopular && (
+                  <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 text-center text-sm font-semibold">
+                    ⭐ MOST POPULAR
                   </div>
                 )}
 
-                <div className="p-8">
+                {/* Best Value Badge */}
+                {plan.badge && !isPopular && (
+                  <div className="absolute top-4 right-4">
+                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                      {plan.badge}
+                    </span>
+                  </div>
+                )}
+
+                <div className={`p-8 ${isPopular ? 'pt-14' : ''}`}>
                   {/* Icon */}
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
-                    plan.popular ? 'bg-blue-100' : 'bg-gray-100'
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
+                    plan.color === 'blue' ? 'bg-blue-100' :
+                    plan.color === 'purple' ? 'bg-purple-100' :
+                    'bg-amber-100'
                   }`}>
-                    <Icon className={`w-6 h-6 ${plan.popular ? 'text-blue-600' : 'text-gray-600'}`} />
+                    <Icon className={`w-7 h-7 ${
+                      plan.color === 'blue' ? 'text-blue-600' :
+                      plan.color === 'purple' ? 'text-purple-600' :
+                      'text-amber-600'
+                    }`} />
                   </div>
 
                   {/* Plan Name */}
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                  <p className="text-gray-600 mb-6">{plan.description}</p>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-1">{plan.name}</h3>
+                  <p className="text-gray-500 mb-6">{plan.description}</p>
 
                   {/* Price */}
                   <div className="mb-6">
@@ -165,15 +219,25 @@ export default function PricingPage() {
                         ${plan.originalPrice}
                       </span>
                     )}
-                    <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
-                    <span className="text-gray-600">{plan.period}</span>
+                    <span className="text-5xl font-bold text-gray-900">${plan.price}</span>
+                    <span className="text-gray-500 text-lg">{plan.period}</span>
                   </div>
 
                   {/* Features */}
                   <ul className="space-y-3 mb-8">
                     {plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-3">
-                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          plan.color === 'blue' ? 'bg-blue-100' :
+                          plan.color === 'purple' ? 'bg-purple-100' :
+                          'bg-green-100'
+                        }`}>
+                          <Check className={`w-3 h-3 ${
+                            plan.color === 'blue' ? 'text-blue-600' :
+                            plan.color === 'purple' ? 'text-purple-600' :
+                            'text-green-600'
+                          }`} />
+                        </div>
                         <span className="text-gray-700">{feature}</span>
                       </li>
                     ))}
@@ -186,10 +250,12 @@ export default function PricingPage() {
                       userId={session.user.id}
                       userEmail={session.user.email || ''}
                       onSuccess={handleSuccess}
-                      className={`w-full py-3 px-6 rounded-xl font-semibold transition-all ${
-                        plan.popular
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                      className={`w-full py-3.5 px-6 rounded-xl font-semibold transition-all duration-200 ${
+                        isPopular
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/25'
+                          : plan.color === 'purple'
+                            ? 'bg-purple-600 text-white hover:bg-purple-700'
+                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                       }`}
                     >
                       {plan.buttonText}
@@ -197,10 +263,12 @@ export default function PricingPage() {
                   ) : (
                     <Link
                       href={`/login?callbackUrl=/pricing`}
-                      className={`block w-full py-3 px-6 rounded-xl font-semibold text-center transition-all ${
-                        plan.popular
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                      className={`block w-full py-3.5 px-6 rounded-xl font-semibold text-center transition-all duration-200 ${
+                        isPopular
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/25'
+                          : plan.color === 'purple'
+                            ? 'bg-purple-600 text-white hover:bg-purple-700'
+                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                       }`}
                     >
                       Sign in to Purchase
@@ -212,59 +280,67 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* FAQ or Additional Info */}
+        {/* Trust Signals */}
+        <div className="flex flex-wrap items-center justify-center gap-8 mb-16">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Shield className="w-5 h-5 text-green-600" />
+            <span className="text-sm font-medium">14-day money-back guarantee</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600">
+            <CreditCard className="w-5 h-5 text-blue-600" />
+            <span className="text-sm font-medium">Secure payment via Paddle</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600">
+            <RefreshCw className="w-5 h-5 text-purple-600" />
+            <span className="text-sm font-medium">Cancel anytime</span>
+          </div>
+        </div>
+
+        {/* FAQ Section */}
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
             Frequently Asked Questions
           </h2>
 
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                What's included in all plans?
-              </h3>
-              <p className="text-gray-600">
-                All plans include AI-powered resume tailoring, multiple professional templates,
-                ATS optimization, custom cover letters, and downloads in both PDF and DOCX formats.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Can I cancel my subscription?
-              </h3>
-              <p className="text-gray-600">
-                Yes! Monthly and yearly subscriptions can be cancelled anytime from your dashboard.
-                You'll retain access until the end of your billing period.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                What happens when I reach my monthly limit?
-              </h3>
-              <p className="text-gray-600">
-                Your limit resets at the start of each billing cycle. If you need more resumes
-                before then, you can upgrade to a higher plan or purchase a Resume Pack.
-              </p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Is my payment information secure?
-              </h3>
-              <p className="text-gray-600">
-                Absolutely! All payments are processed securely through Paddle, a trusted payment
-                processor. We never store your payment information on our servers.
-              </p>
-            </div>
+          <div className="space-y-3">
+            {faqs.map((faq, index) => (
+              <div
+                key={index}
+                className="border border-gray-200 rounded-xl overflow-hidden"
+              >
+                <button
+                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <span className="font-semibold text-gray-900 pr-4">
+                    {faq.question}
+                  </span>
+                  <ChevronDown
+                    className={`w-5 h-5 text-gray-500 flex-shrink-0 transition-transform duration-200 ${
+                      openFaq === index ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                {openFaq === index && (
+                  <div className="px-6 pb-4 text-gray-600 leading-relaxed animate-fadeIn">
+                    {faq.answer}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Bottom CTA */}
-        <div className="text-center mt-16">
-          <p className="text-gray-600 mb-4">
-            Have questions? <Link href="/contact" className="text-blue-600 hover:text-blue-700 font-semibold">Contact us</Link>
+        <div className="text-center mt-12">
+          <p className="text-gray-600">
+            Have questions?{' '}
+            <a
+              href="mailto:support@applypro.org"
+              className="text-blue-600 hover:text-blue-700 font-semibold"
+            >
+              Contact us
+            </a>
           </p>
         </div>
       </div>
