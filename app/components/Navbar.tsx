@@ -13,24 +13,52 @@ import {
   Linkedin, 
   ChevronDown,
   User,
-  Settings,
   CreditCard,
   FileText,
   Target,
   Search,
-  Sparkles
+  Sparkles,
+  Zap,
+  Crown,
+  Settings,
 } from "lucide-react";
+
+interface SubscriptionInfo {
+  plan: 'free' | 'monthly' | 'yearly' | 'pay-per-use' | null;
+  isActive: boolean;
+  monthlyUsageCount?: number;
+  monthlyLimit?: number;
+}
 
 export default function Navbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     await signOut({ redirect: true, callbackUrl: "/" });
   };
+
+  // Load subscription status
+  useEffect(() => {
+    const loadSubscription = async () => {
+      if (session?.user) {
+        try {
+          const response = await fetch('/api/user/subscription');
+          const data = await response.json();
+          if (response.ok) {
+            setSubscription(data.subscription);
+          }
+        } catch (err) {
+          console.error('Error loading subscription:', err);
+        }
+      }
+    };
+    loadSubscription();
+  }, [session?.user]);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -44,7 +72,7 @@ export default function Navbar() {
   }, []);
 
   // Don't show navbar on login/signup pages
-  if (pathname === "/login" || pathname === "/signup") {
+  if (pathname === "/login" || pathname === "/signup" || pathname === "/register") {
     return null;
   }
 
@@ -58,6 +86,9 @@ export default function Navbar() {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // Check if user has active subscription
+  const hasActiveSubscription = subscription?.isActive === true;
 
   const NavLink = ({ 
     href, 
@@ -76,8 +107,8 @@ export default function Navbar() {
         href={href}
         className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
           isActive
-            ? `${activeColor} bg-gray-100 dark:bg-gray-800`
-            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
+            ? `${activeColor} bg-gray-100`
+            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
         }`}
       >
         {Icon && <Icon className="w-4 h-4" />}
@@ -87,13 +118,13 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200/80 bg-white/80 backdrop-blur-xl dark:border-gray-800 dark:bg-gray-900/80">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200/80 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link
             href={session ? "/dashboard" : "/"}
-            className="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white"
+            className="flex items-center gap-2 text-xl font-bold text-gray-900"
           >
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
@@ -196,14 +227,37 @@ export default function Navbar() {
                           <User className="w-4 h-4 text-gray-400" />
                           Dashboard
                         </Link>
-                        <Link
-                          href="/pricing"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                          <CreditCard className="w-4 h-4 text-gray-400" />
-                          Subscription
-                        </Link>
+
+                        {/* Smart Subscription Link */}
+                        {hasActiveSubscription ? (
+                          <Link
+                            href="/dashboard"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Crown className="w-4 h-4 text-amber-500" />
+                              <span>Manage Plan</span>
+                            </div>
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                              Active
+                            </span>
+                          </Link>
+                        ) : (
+                          <Link
+                            href="/pricing"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Zap className="w-4 h-4 text-blue-500" />
+                              <span>Upgrade Plan</span>
+                            </div>
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                              Free
+                            </span>
+                          </Link>
+                        )}
                       </div>
 
                       {/* Logout */}
@@ -243,7 +297,7 @@ export default function Navbar() {
                   Sign in
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/register"
                   className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-md shadow-blue-500/20 transition-all"
                 >
                   Get Started
@@ -255,7 +309,7 @@ export default function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            className="lg:hidden rounded-lg p-2 text-gray-700 hover:bg-gray-100"
           >
             {mobileMenuOpen ? (
               <X className="h-6 w-6" />
@@ -267,20 +321,61 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 py-4 dark:border-gray-800">
+          <div className="lg:hidden border-t border-gray-200 py-4">
             <nav className="flex flex-col gap-2">
               {session ? (
                 <>
                   {/* User Info */}
                   <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-gray-50 rounded-xl">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                      {getInitials(session.user?.name)}
+                      {session.user?.image ? (
+                        <img 
+                          src={session.user.image} 
+                          alt="" 
+                          className="w-10 h-10 rounded-full"
+                        />
+                      ) : (
+                        getInitials(session.user?.name)
+                      )}
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900">{session.user?.name}</p>
                       <p className="text-xs text-gray-500">{session.user?.email}</p>
                     </div>
                   </div>
+
+                  {/* Smart Subscription Link - Mobile */}
+                  {hasActiveSubscription ? (
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Crown className="w-5 h-5 text-amber-500" />
+                        <span>Manage Plan</span>
+                      </div>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                        Active
+                      </span>
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/pricing"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Zap className="w-5 h-5 text-blue-500" />
+                        <span>Upgrade Plan</span>
+                      </div>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                        Free
+                      </span>
+                    </Link>
+                  )}
+
+                  <div className="h-px bg-gray-200 my-2" />
 
                   {/* Navigation Links */}
                   <Link
@@ -304,7 +399,7 @@ export default function Navbar() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
                   >
-                    <Sparkles className="w-5 h-5 text-gray-400" />
+                    <Sparkles className="w-5 h-5 text-blue-500" />
                     Generate Resume
                   </Link>
                   <Link
@@ -314,6 +409,14 @@ export default function Navbar() {
                   >
                     <PenTool className="w-5 h-5 text-purple-500" />
                     Build Resume
+                  </Link>
+                  <Link
+                    href="/ats-checker"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                  >
+                    <Search className="w-5 h-5 text-gray-400" />
+                    ATS Checker
                   </Link>
                   <Link
                     href="/interview-prep"
@@ -330,14 +433,6 @@ export default function Navbar() {
                   >
                     <Linkedin className="w-5 h-5 text-[#0077B5]" />
                     LinkedIn Optimizer
-                  </Link>
-                  <Link
-                    href="/ats-checker"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
-                  >
-                    <Search className="w-5 h-5 text-gray-400" />
-                    ATS Checker
                   </Link>
 
                   {/* Logout */}
@@ -398,7 +493,7 @@ export default function Navbar() {
                       Sign in
                     </Link>
                     <Link
-                      href="/signup"
+                      href="/register"
                       onClick={() => setMobileMenuOpen(false)}
                       className="px-4 py-2 text-center text-white bg-blue-600 rounded-lg font-semibold hover:bg-blue-700"
                     >
