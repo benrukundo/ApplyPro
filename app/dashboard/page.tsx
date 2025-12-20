@@ -710,27 +710,33 @@ function DashboardContent() {
               <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-0.5 transition-all" />
             </Link>
 
-            <div className="group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 opacity-75">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Brain className="w-5 h-5 text-gray-400" />
+            <Link
+              href="/interview-prep"
+              className="group flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-amber-200 hover:bg-amber-50/50 transition-all"
+            >
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Brain className="w-5 h-5 text-amber-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 text-sm">Interview Prep</p>
-                <p className="text-xs text-gray-500">Coming soon</p>
+                <p className="text-xs text-gray-500">Practice with AI</p>
               </div>
-              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-medium rounded-full">Soon</span>
-            </div>
+              <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all" />
+            </Link>
 
-            <div className="group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 opacity-75">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Linkedin className="w-5 h-5 text-gray-400" />
+            <Link
+              href="/linkedin-optimizer"
+              className="group flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-cyan-200 hover:bg-cyan-50/50 transition-all"
+            >
+              <div className="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Linkedin className="w-5 h-5 text-cyan-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-900 text-sm">LinkedIn</p>
-                <p className="text-xs text-gray-500">Coming soon</p>
+                <p className="text-xs text-gray-500">Optimize your profile</p>
               </div>
-              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-medium rounded-full">Soon</span>
-            </div>
+              <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-cyan-500 group-hover:translate-x-0.5 transition-all" />
+            </Link>
           </div>
 
           {/* Manage Subscription Link */}
