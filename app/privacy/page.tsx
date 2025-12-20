@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-20">
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
           <div className="mb-8">
@@ -24,7 +24,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-gray-600 mb-8">
-            Effective Date: December 2, 2025
+            Effective Date: December 20, 2025
           </p>
 
           <div className="prose prose-lg max-w-none space-y-8">
@@ -34,10 +34,15 @@ export default function PrivacyPage() {
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 Welcome to ApplyPro ("we," "our," or "us"). We are committed to
-                protecting your privacy and personal information. This Privacy
-                Policy explains how we collect, use, disclose, and safeguard
-                your information when you use our AI-powered resume tailoring
+                protecting your privacy and being transparent about our data practices.
+                This Privacy Policy explains how we collect, use, store, disclose, and
+                safeguard your information when you use our AI-powered resume tailoring
                 service at applypro.org.
+              </p>
+              <p className="text-gray-700 leading-relaxed mt-4">
+                We comply with the General Data Protection Regulation (GDPR) and other
+                applicable privacy laws. By using our Service, you consent to the data
+                practices described in this policy.
               </p>
             </section>
 
@@ -48,44 +53,77 @@ export default function PrivacyPage() {
               <div className="space-y-4">
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    2.1 Information You Provide
+                    2.1 Account Information
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed mb-2">
+                    When you sign in with Google OAuth, we collect:
+                  </p>
+                  <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                    <li>Name</li>
+                    <li>Email address</li>
+                    <li>Profile picture (if provided by Google)</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-medium text-gray-800 mb-2">
+                    2.2 Content You Provide
                   </h3>
                   <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                     <li>
-                      <strong>Account Information:</strong> Name, email address, and profile picture
-                      when you sign in with Google OAuth
+                      <strong>Resume Content:</strong> Your resume text, work experience,
+                      education, skills, and other professional information you upload or enter
                     </li>
                     <li>
-                      <strong>Resume Content:</strong> Your resume text,
-                      including work experience, education, and skills
+                      <strong>Job Descriptions:</strong> Job posting details you provide for
+                      resume tailoring
                     </li>
                     <li>
-                      <strong>Job Descriptions:</strong> Job posting details you
-                      provide for tailoring
+                      <strong>Generated Content:</strong> AI-generated resumes, cover letters,
+                      and related documents we create for you
                     </li>
                     <li>
-                      <strong>Payment Information:</strong> Billing information and transaction details
-                      (collected and stored by Paddle, not directly by us)
+                      <strong>Job Applications:</strong> Information about jobs you're tracking,
+                      including company names, positions, application status, and dates
                     </li>
                     <li>
-                      <strong>Subscription Data:</strong> Your subscription plan, status, and usage limits
+                      <strong>LinkedIn Profile Data:</strong> Your LinkedIn headline, summary,
+                      and experience sections if you use our LinkedIn Optimizer
                     </li>
                     <li>
-                      <strong>License Keys:</strong> License keys for Pay-Per-Use plan access verification
+                      <strong>Interview Preparation:</strong> Interview questions, answers, and
+                      preparation notes if you use our Interview Prep tool
                     </li>
                   </ul>
                 </div>
 
                 <div>
                   <h3 className="text-xl font-medium text-gray-800 mb-2">
-                    2.2 Automatically Collected Information
+                    2.3 Subscription & Payment Information
+                  </h3>
+                  <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                    <li>Subscription plan and status</li>
+                    <li>Usage counts and limits</li>
+                    <li>Subscription dates and billing periods</li>
+                    <li>
+                      <strong>Note:</strong> Payment card details are collected and stored by
+                      Paddle (our payment processor), not by us directly
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-medium text-gray-800 mb-2">
+                    2.4 Automatically Collected Information
                   </h3>
                   <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                     <li>Browser type and version</li>
                     <li>Operating system</li>
-                    <li>IP address (anonymized)</li>
-                    <li>Page views and navigation patterns</li>
-                    <li>Date and time of access</li>
+                    <li>IP address</li>
+                    <li>Pages visited and features used</li>
+                    <li>Date, time, and duration of visits</li>
+                    <li>Referring website or source</li>
+                    <li>Device information</li>
                   </ul>
                 </div>
               </div>
@@ -97,32 +135,36 @@ export default function PrivacyPage() {
               </h2>
               <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                 <li>
-                  <strong>Authentication:</strong> To create and manage your account using Google OAuth
+                  <strong>Provide Our Services:</strong> To generate tailored resumes,
+                  cover letters, and other career documents
                 </li>
                 <li>
-                  <strong>AI Processing:</strong> Your resume and job
-                  description are sent to Anthropic's Claude API for real-time
-                  processing and tailoring
+                  <strong>Store Your History:</strong> To save your generated resumes and
+                  cover letters so you can access them later
                 </li>
                 <li>
-                  <strong>Service Delivery:</strong> To generate tailored
-                  resumes and cover letters based on your input
+                  <strong>Track Applications:</strong> To help you manage and monitor your
+                  job applications
                 </li>
                 <li>
-                  <strong>Payment Processing:</strong> To process payments and manage subscriptions
-                  through Paddle
+                  <strong>AI Processing:</strong> To send your content to Anthropic's Claude
+                  API for AI-powered analysis and generation
                 </li>
                 <li>
-                  <strong>Subscription Management:</strong> To track your subscription plan, usage limits,
-                  and generation history
+                  <strong>Manage Subscriptions:</strong> To track usage limits, process
+                  renewals, and enforce fair use policies
                 </li>
                 <li>
-                  <strong>License Tracking:</strong> To manage Pay-Per-Use license keys and prevent
-                  unauthorized use
+                  <strong>Improve Our Service:</strong> To analyze usage patterns and improve
+                  our features (using aggregated, anonymized data)
                 </li>
                 <li>
-                  <strong>Service Improvement:</strong> To monitor performance
-                  and identify technical issues
+                  <strong>Communicate:</strong> To send service-related emails, usage alerts,
+                  and important updates
+                </li>
+                <li>
+                  <strong>Security:</strong> To detect and prevent fraud, abuse, and
+                  security incidents
                 </li>
               </ul>
             </section>
@@ -131,41 +173,98 @@ export default function PrivacyPage() {
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                 4. Data Storage and Retention
               </h2>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                <strong>Important:</strong> We prioritize data minimization and
-                privacy:
-              </p>
-              <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
-                <li>
-                  <strong>Account Data:</strong> Your name, email, profile picture, and subscription
-                  information are stored in our secure PostgreSQL database
-                </li>
-                <li>
-                  <strong>Resume Content:</strong> Your resume text and job descriptions are
-                  NOT permanently stored. They are processed in real-time and may be cached
-                  temporarily in your browser's localStorage for convenience
-                </li>
-                <li>
-                  <strong>Real-Time Processing:</strong> All AI processing
-                  happens in real-time during your session through Anthropic's Claude API
-                </li>
-                <li>
-                  <strong>License Keys and Usage:</strong> Pay-Per-Use license keys and usage counts
-                  are stored in our database to manage subscriptions and prevent unauthorized use
-                </li>
-                <li>
-                  <strong>Generation History:</strong> We track the number of resumes you've generated
-                  to enforce subscription limits, but do not store the actual resume content
-                </li>
-                <li>
-                  <strong>Data Retention:</strong> Account data is retained while your account is active.
-                  You may request account deletion at any time
-                </li>
-                <li>
-                  <strong>Server Logs:</strong> Basic error and access logs may be
-                  retained for up to 30 days for security and debugging purposes
-                </li>
-              </ul>
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-6 rounded-r-lg mb-4">
+                <p className="font-semibold text-blue-900 mb-2">
+                  Transparency Notice:
+                </p>
+                <p className="text-gray-700">
+                  We want to be clear about what data we store. Unlike some services that
+                  claim not to store data, we do store certain information to provide you
+                  with a better experience. Here's exactly what we keep:
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xl font-medium text-gray-800 mb-2">
+                    4.1 What We Store in Our Database
+                  </h3>
+                  <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                    <li>
+                      <strong>Account Data:</strong> Your name, email, profile picture, and
+                      account settings
+                    </li>
+                    <li>
+                      <strong>Generated Resumes:</strong> The full text of AI-generated resumes,
+                      ATS-optimized versions, and cover letters you create
+                    </li>
+                    <li>
+                      <strong>Generation Metadata:</strong> Job titles, company names, match
+                      scores, and creation dates for each generation
+                    </li>
+                    <li>
+                      <strong>Job Applications:</strong> Companies, positions, statuses, dates,
+                      and notes for jobs you track
+                    </li>
+                    <li>
+                      <strong>LinkedIn Optimizations:</strong> Your optimized headlines, summaries,
+                      and saved optimization history
+                    </li>
+                    <li>
+                      <strong>Interview Preparations:</strong> Generated questions, suggested
+                      answers, and preparation sessions
+                    </li>
+                    <li>
+                      <strong>Subscription Data:</strong> Plan type, usage counts, billing dates,
+                      and subscription status
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-medium text-gray-800 mb-2">
+                    4.2 What We Don't Store
+                  </h3>
+                  <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                    <li>
+                      <strong>Original Resume Files:</strong> Your uploaded PDF/DOCX files are
+                      processed for text extraction and then discarded
+                    </li>
+                    <li>
+                      <strong>Payment Card Details:</strong> These are handled entirely by
+                      Paddle and never touch our servers
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-medium text-gray-800 mb-2">
+                    4.3 Temporary Storage
+                  </h3>
+                  <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
+                    <li>
+                      <strong>Browser localStorage:</strong> May temporarily cache your resume
+                      text and job description for convenience during your session
+                    </li>
+                    <li>
+                      <strong>Server Logs:</strong> Access and error logs retained for up to
+                      30 days for security and debugging
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-medium text-gray-800 mb-2">
+                    4.4 Data Retention
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    We retain your data for as long as your account is active. You can delete
+                    your account and all associated data at any time by contacting us at
+                    support@applypro.org. Upon account deletion, we will remove all your
+                    personal data within 30 days, except where retention is required by law.
+                  </p>
+                </div>
+              </div>
             </section>
 
             <section>
@@ -173,59 +272,68 @@ export default function PrivacyPage() {
                 5. Data Security
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                We implement industry-standard security measures to protect your
-                information:
+                We implement industry-standard security measures to protect your information:
               </p>
               <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
-                <li>HTTPS encryption for all data transmission</li>
+                <li>HTTPS/TLS encryption for all data transmission</li>
+                <li>Encrypted database connections</li>
                 <li>Secure API communication with third-party services</li>
-                <li>No permanent storage of sensitive personal information</li>
                 <li>Regular security monitoring and updates</li>
-                <li>Access controls and authentication for administrative systems</li>
+                <li>Access controls and authentication for all systems</li>
+                <li>Secure hosting on Vercel's infrastructure</li>
               </ul>
+              <p className="text-gray-700 leading-relaxed mt-4">
+                While we take security seriously, no method of transmission over the Internet
+                is 100% secure. We cannot guarantee absolute security of your data.
+              </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                6. Your Rights (GDPR & CCPA Compliance)
+                6. Your Rights Under GDPR
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                You have the following rights regarding your personal data:
+                If you are in the European Economic Area (EEA), you have the following rights:
               </p>
               <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                 <li>
-                  <strong>Right to Access:</strong> Request information about
-                  data we process
+                  <strong>Right to Access:</strong> Request a copy of all personal data we
+                  hold about you
                 </li>
                 <li>
-                  <strong>Right to Deletion:</strong> Request deletion of your
-                  data (note: most data is not permanently stored)
+                  <strong>Right to Rectification:</strong> Request correction of inaccurate
+                  or incomplete data
                 </li>
                 <li>
-                  <strong>Right to Correction:</strong> Request correction of
-                  inaccurate data
+                  <strong>Right to Erasure:</strong> Request deletion of your personal data
+                  ("right to be forgotten")
                 </li>
                 <li>
-                  <strong>Right to Object:</strong> Object to certain data
-                  processing activities
+                  <strong>Right to Restrict Processing:</strong> Request that we limit how
+                  we use your data
                 </li>
                 <li>
-                  <strong>Right to Data Portability:</strong> Request a copy of
-                  your data in a structured format
+                  <strong>Right to Data Portability:</strong> Request your data in a
+                  structured, machine-readable format
                 </li>
                 <li>
-                  <strong>Right to Withdraw Consent:</strong> Withdraw consent
-                  at any time
+                  <strong>Right to Object:</strong> Object to processing of your data for
+                  certain purposes
+                </li>
+                <li>
+                  <strong>Right to Withdraw Consent:</strong> Withdraw your consent at any
+                  time (this won't affect the lawfulness of prior processing)
                 </li>
               </ul>
               <p className="text-gray-700 leading-relaxed mt-4">
-                To exercise any of these rights, please contact us at{" "}
+                To exercise any of these rights, contact us at{" "}
                 <a
                   href="mailto:support@applypro.org"
                   className="text-blue-600 hover:underline font-medium"
                 >
                   support@applypro.org
                 </a>
+                . We will respond within 30 days.
               </p>
             </section>
 
@@ -234,29 +342,86 @@ export default function PrivacyPage() {
                 7. Third-Party Services
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                We use the following trusted third-party services to provide our service:
+                We share data with the following third-party services to provide our Service:
               </p>
-              <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
-                <li>
-                  <strong>Google OAuth:</strong> For secure authentication. Google's Privacy Policy
-                  applies to data collected during sign-in
-                </li>
-                <li>
-                  <strong>Anthropic (Claude API):</strong> For AI-powered resume generation.
-                  Your resume content is processed by Anthropic's API. See Anthropic's Privacy Policy
-                  for details on their data handling
-                </li>
-                <li>
-                  <strong>Paddle:</strong> For payment processing and subscription management.
-                  Paddle handles all payment information. See Paddle's Privacy Policy for details
-                </li>
-                <li>
-                  <strong>Vercel:</strong> Our hosting provider. Server infrastructure and deployment
-                </li>
-              </ul>
+
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-2">Anthropic (Claude AI)</h4>
+                  <p className="text-gray-700 text-sm">
+                    <strong>Purpose:</strong> AI-powered resume analysis and generation<br />
+                    <strong>Data Shared:</strong> Resume content, job descriptions<br />
+                    <strong>Privacy Policy:</strong>{" "}
+                    <a href="https://www.anthropic.com/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                      anthropic.com/privacy
+                    </a>
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-2">Google OAuth</h4>
+                  <p className="text-gray-700 text-sm">
+                    <strong>Purpose:</strong> Secure authentication<br />
+                    <strong>Data Shared:</strong> Authentication tokens<br />
+                    <strong>Privacy Policy:</strong>{" "}
+                    <a href="https://policies.google.com/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                      policies.google.com/privacy
+                    </a>
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-2">Paddle</h4>
+                  <p className="text-gray-700 text-sm">
+                    <strong>Purpose:</strong> Payment processing, subscription management<br />
+                    <strong>Data Shared:</strong> Email, transaction details<br />
+                    <strong>Privacy Policy:</strong>{" "}
+                    <a href="https://www.paddle.com/legal/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                      paddle.com/legal/privacy
+                    </a>
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-2">PostHog</h4>
+                  <p className="text-gray-700 text-sm">
+                    <strong>Purpose:</strong> Product analytics, usage tracking<br />
+                    <strong>Data Shared:</strong> Page views, feature usage, anonymized user behavior<br />
+                    <strong>Privacy Policy:</strong>{" "}
+                    <a href="https://posthog.com/privacy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                      posthog.com/privacy
+                    </a>
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-2">Vercel</h4>
+                  <p className="text-gray-700 text-sm">
+                    <strong>Purpose:</strong> Website hosting, serverless infrastructure<br />
+                    <strong>Data Shared:</strong> Server logs, IP addresses<br />
+                    <strong>Privacy Policy:</strong>{" "}
+                    <a href="https://vercel.com/legal/privacy-policy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                      vercel.com/legal/privacy-policy
+                    </a>
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-2">Resend</h4>
+                  <p className="text-gray-700 text-sm">
+                    <strong>Purpose:</strong> Transactional email delivery<br />
+                    <strong>Data Shared:</strong> Email addresses, email content<br />
+                    <strong>Privacy Policy:</strong>{" "}
+                    <a href="https://resend.com/legal/privacy-policy" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                      resend.com/legal/privacy-policy
+                    </a>
+                  </p>
+                </div>
+              </div>
+
               <p className="text-gray-700 leading-relaxed mt-4">
-                These third parties have their own privacy policies and we encourage you to review them.
-                We only share the minimum necessary information with these services to provide our functionality.
+                We only share the minimum data necessary with these services to provide
+                our functionality. We do not sell your personal data to third parties.
               </p>
             </section>
 
@@ -264,27 +429,27 @@ export default function PrivacyPage() {
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                 8. Cookies and Tracking
               </h2>
-              <p className="text-gray-700 leading-relaxed">
-                We use minimal cookies and browser storage:
+              <p className="text-gray-700 leading-relaxed mb-4">
+                We use the following cookies and tracking technologies:
               </p>
-              <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4 mt-2">
+              <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                 <li>
-                  <strong>Authentication Cookies:</strong> NextAuth.js session cookies to keep
-                  you logged in (essential for service functionality)
+                  <strong>Essential Cookies:</strong> NextAuth.js session cookies required
+                  for authentication (necessary for the service to function)
                 </li>
                 <li>
-                  <strong>localStorage:</strong> May temporarily cache your resume text and job
-                  description for convenience while you're actively using the service
+                  <strong>Analytics:</strong> PostHog tracking to understand how users
+                  interact with our service and improve the user experience
                 </li>
                 <li>
-                  <strong>Essential Cookies:</strong> Required for basic site
-                  functionality and security
-                </li>
-                <li>
-                  <strong>No Third-Party Tracking:</strong> We do not use
-                  advertising, marketing, or analytics cookies
+                  <strong>localStorage:</strong> Browser storage for caching your resume
+                  text and preferences for convenience
                 </li>
               </ul>
+              <p className="text-gray-700 leading-relaxed mt-4">
+                You can disable cookies in your browser settings, but this may affect
+                the functionality of our Service.
+              </p>
             </section>
 
             <section>
@@ -292,11 +457,12 @@ export default function PrivacyPage() {
                 9. International Data Transfers
               </h2>
               <p className="text-gray-700 leading-relaxed">
-                Our services are hosted in the United States. By using ApplyPro,
-                you consent to the transfer of your information to the United
-                States and processing according to this Privacy Policy. We
-                ensure appropriate safeguards are in place for international
-                data transfers.
+                Our services and third-party providers are primarily located in the United
+                States. If you are accessing our Service from outside the United States,
+                your data will be transferred to, stored, and processed in the United States
+                and potentially other countries. By using our Service, you consent to these
+                transfers. We ensure appropriate safeguards are in place for international
+                data transfers in compliance with GDPR.
               </p>
             </section>
 
@@ -305,10 +471,11 @@ export default function PrivacyPage() {
                 10. Children's Privacy
               </h2>
               <p className="text-gray-700 leading-relaxed">
-                ApplyPro is not intended for users under the age of 18. We do
-                not knowingly collect personal information from children. If you
-                are a parent or guardian and believe your child has provided us
-                with personal information, please contact us immediately.
+                ApplyPro is not intended for users under the age of 16. We do not knowingly
+                collect personal information from children. If you are a parent or guardian
+                and believe your child has provided us with personal information, please
+                contact us immediately at support@applypro.org, and we will delete the
+                information.
               </p>
             </section>
 
@@ -317,11 +484,11 @@ export default function PrivacyPage() {
                 11. Changes to This Privacy Policy
               </h2>
               <p className="text-gray-700 leading-relaxed">
-                We may update this Privacy Policy from time to time. Changes
-                will be posted on this page with an updated "Effective Date." We
-                encourage you to review this Privacy Policy periodically for any
-                changes. Continued use of our service after changes constitutes
-                acceptance of the updated policy.
+                We may update this Privacy Policy from time to time. When we make significant
+                changes, we will notify you by email (if you have an account) and/or by
+                posting a prominent notice on our website. The "Effective Date" at the top
+                will be updated. Your continued use of our Service after changes are posted
+                constitutes acceptance of the updated policy.
               </p>
             </section>
 
@@ -331,8 +498,8 @@ export default function PrivacyPage() {
               </h2>
               <div className="bg-blue-50 p-6 rounded-lg">
                 <p className="text-gray-700 leading-relaxed mb-4">
-                  If you have any questions, concerns, or requests regarding
-                  this Privacy Policy or our data practices, please contact us:
+                  If you have any questions, concerns, or requests regarding this Privacy
+                  Policy or our data practices, please contact us:
                 </p>
                 <div className="space-y-2 text-gray-700">
                   <p>
@@ -362,9 +529,9 @@ export default function PrivacyPage() {
 
             <section className="border-t pt-8 mt-8">
               <p className="text-sm text-gray-600 italic">
-                This Privacy Policy was last updated on December 2, 2025. By
-                using ApplyPro, you acknowledge that you have read and
-                understood this Privacy Policy and agree to its terms.
+                This Privacy Policy was last updated on December 20, 2025. By using ApplyPro,
+                you acknowledge that you have read and understood this Privacy Policy and
+                agree to its terms.
               </p>
             </section>
           </div>
