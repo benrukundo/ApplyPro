@@ -108,9 +108,9 @@ export default function TermsPage() {
                 <div>
                   <h3 className="text-lg font-medium text-gray-800 mb-2">4.2 Payment Processing</h3>
                   <p className="text-gray-700 leading-relaxed">
-                    All payments are processed by Paddle, our merchant of record. Paddle handles
-                    billing, taxes, and payment processing. By making a purchase, you agree to
-                    Paddle's terms of service.
+                    All payments are processed securely through our trusted third-party payment
+                    processor. We do not store your credit card or banking details on our servers.
+                    By making a purchase, you agree to the payment processor's terms of service.
                   </p>
                 </div>
 
