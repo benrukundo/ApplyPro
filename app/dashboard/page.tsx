@@ -18,10 +18,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  AlertCircle,
   Loader2,
   Sparkles,
-  Calendar,
   TrendingUp,
   RefreshCw,
   FileText,
@@ -29,7 +27,6 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  CreditCard,
   ArrowRight,
   Zap,
   Target,
@@ -38,7 +35,8 @@ import {
   Linkedin,
   Search as SearchIcon,
   PenTool,
-  BarChart3,
+  Crown,
+  Calendar,
   ExternalLink,
 } from 'lucide-react';
 import CancelSubscriptionModal from '@/components/CancelSubscriptionModal';
@@ -73,95 +71,11 @@ interface GenerationHistory {
   coverLetter: string;
 }
 
-// Quick Action Card Component
-function QuickActionCard({
-  href,
-  icon: Icon,
-  title,
-  description,
-  color
-}: {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  color: string;
-}) {
-  const colorClasses: Record<string, { bg: string; iconBg: string; iconText: string; hover: string }> = {
-    blue: { bg: 'bg-blue-50', iconBg: 'bg-blue-100', iconText: 'text-blue-600', hover: 'hover:bg-blue-100 hover:border-blue-200' },
-    purple: { bg: 'bg-purple-50', iconBg: 'bg-purple-100', iconText: 'text-purple-600', hover: 'hover:bg-purple-100 hover:border-purple-200' },
-    green: { bg: 'bg-green-50', iconBg: 'bg-green-100', iconText: 'text-green-600', hover: 'hover:bg-green-100 hover:border-green-200' },
-    amber: { bg: 'bg-amber-50', iconBg: 'bg-amber-100', iconText: 'text-amber-600', hover: 'hover:bg-amber-100 hover:border-amber-200' },
-    cyan: { bg: 'bg-cyan-50', iconBg: 'bg-cyan-100', iconText: 'text-cyan-600', hover: 'hover:bg-cyan-100 hover:border-cyan-200' },
-  };
-
-  const colors = colorClasses[color] || colorClasses.blue;
-
-  return (
-    <Link
-      href={href}
-      className={`group p-4 rounded-xl border border-gray-200 ${colors.hover} transition-all duration-200`}
-    >
-      <div className="flex items-start gap-3">
-        <div className={`w-10 h-10 ${colors.iconBg} rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
-          <Icon className={`w-5 h-5 ${colors.iconText}`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm group-hover:text-gray-700">{title}</p>
-          <p className="text-xs text-gray-500 mt-0.5">{description}</p>
-        </div>
-        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
-      </div>
-    </Link>
-  );
-}
-
-// Stat Card Component
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-  trend,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  trend?: string;
-}) {
-  const colorClasses: Record<string, { iconBg: string; iconText: string; valueText: string }> = {
-    blue: { iconBg: 'bg-blue-100', iconText: 'text-blue-600', valueText: 'text-gray-900' },
-    green: { iconBg: 'bg-emerald-100', iconText: 'text-emerald-600', valueText: 'text-emerald-600' },
-    amber: { iconBg: 'bg-amber-100', iconText: 'text-amber-600', valueText: 'text-amber-600' },
-    purple: { iconBg: 'bg-purple-100', iconText: 'text-purple-600', valueText: 'text-purple-600' },
-  };
-
-  const colors = colorClasses[color] || colorClasses.blue;
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-gray-300 transition-all duration-200">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-500">{label}</p>
-          <p className={`text-3xl font-bold mt-1 ${colors.valueText}`}>{value}</p>
-          {trend && <p className="text-xs text-gray-400 mt-1">{trend}</p>}
-        </div>
-        <div className={`w-11 h-11 ${colors.iconBg} rounded-xl flex items-center justify-center`}>
-          <Icon className={`w-5 h-5 ${colors.iconText}`} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function DashboardContent() {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [applications, setApplications] = useState<Application[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -187,8 +101,6 @@ function DashboardContent() {
     averageResponseTime: 0,
     applicationsByMonth: [],
   });
-
-  const [upcomingFollowUps, setUpcomingFollowUps] = useState<Application[]>([]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -281,14 +193,12 @@ function DashboardContent() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [apps, statsData, followUps] = await Promise.all([
+        const [apps, statsData] = await Promise.all([
           getAllApplications(),
           getStatistics(),
-          getUpcomingFollowUps()
         ]);
         setApplications(apps);
         setStats(statsData);
-        setUpcomingFollowUps(followUps);
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -299,7 +209,7 @@ function DashboardContent() {
     }
   }, [session?.user?.id]);
 
-  const handleCancelSuccess = (message: string, effectiveDate: string) => {
+  const handleCancelSuccess = (message: string) => {
     setCancelMessage(message);
     loadSubscription();
   };
@@ -373,20 +283,10 @@ function DashboardContent() {
     }
   };
 
-  // Filter applications
-  const filteredApplications = applications
-    .filter((app) => {
-      if (filterStatus !== 'all' && app.status !== filterStatus) return false;
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          app.companyName.toLowerCase().includes(query) ||
-          app.positionTitle.toLowerCase().includes(query)
-        );
-      }
-      return true;
-    })
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+  // Sort applications by date
+  const recentApplications = [...applications]
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    .slice(0, 4);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -401,26 +301,30 @@ function DashboardContent() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'saved': return <Briefcase className="h-3.5 w-3.5" />;
-      case 'applied': return <Send className="h-3.5 w-3.5" />;
-      case 'interview': return <Clock className="h-3.5 w-3.5" />;
-      case 'offer': return <CheckCircle2 className="h-3.5 w-3.5" />;
-      case 'rejected': return <XCircle className="h-3.5 w-3.5" />;
-      default: return <Briefcase className="h-3.5 w-3.5" />;
+      case 'saved': return <Briefcase className="h-3 w-3" />;
+      case 'applied': return <Send className="h-3 w-3" />;
+      case 'interview': return <Clock className="h-3 w-3" />;
+      case 'offer': return <CheckCircle2 className="h-3 w-3" />;
+      case 'rejected': return <XCircle className="h-3 w-3" />;
+      default: return <Briefcase className="h-3 w-3" />;
     }
   };
 
   const getPlanDisplayName = (plan: string | null) => {
     switch (plan) {
-      case 'monthly': return 'Pro Monthly';
-      case 'yearly': return 'Pro Yearly';
-      case 'pay-per-use': return 'Pay-Per-Use';
+      case 'monthly': return 'Pro';
+      case 'yearly': return 'Pro';
+      case 'pay-per-use': return 'Credits';
       default: return 'Free';
     }
   };
 
-  const isCreditsExhausted = subscription?.isActive &&
-    subscription.monthlyUsageCount >= subscription.monthlyLimit;
+  const getUsageDisplay = () => {
+    if (!subscription?.isActive) return null;
+    const used = subscription.monthlyUsageCount || 0;
+    const limit = subscription.monthlyLimit || 0;
+    return `${used}/${limit}`;
+  };
 
   // Get greeting based on time
   const getGreeting = () => {
@@ -434,7 +338,7 @@ function DashboardContent() {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
@@ -446,13 +350,51 @@ function DashboardContent() {
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-blue-100/40 to-purple-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-100/30 to-cyan-100/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
-      <div className="relative z-10 container mx-auto px-4 max-w-7xl">
-        {/* Welcome Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">
-            {getGreeting()}, {firstName}! 👋
-          </h1>
-          <p className="text-gray-600">Here's your job search overview</p>
+      <div className="relative z-10 container mx-auto px-4 max-w-6xl">
+        {/* Header with Greeting and Subscription Badge */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+              {getGreeting()}, {firstName}! 👋
+            </h1>
+            <p className="text-gray-600">Ready to land your dream job?</p>
+          </div>
+
+          {/* Compact Subscription Badge */}
+          {!isLoadingSubscription && (
+            <div className="flex items-center gap-2">
+              {subscription?.isActive ? (
+                <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-gray-200 shadow-sm">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <Crown className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {getPlanDisplayName(subscription.plan)}
+                  </span>
+                  <span className="text-sm text-gray-500">•</span>
+                  <span className="text-sm font-medium text-blue-600">
+                    {getUsageDisplay()} used
+                  </span>
+                  {subscription.daysUntilReset && subscription.plan !== 'pay-per-use' && (
+                    <>
+                      <span className="text-sm text-gray-500">•</span>
+                      <span className="text-xs text-gray-500">
+                        Resets in {subscription.daysUntilReset}d
+                      </span>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/pricing"
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/25"
+                >
+                  <Zap className="w-4 h-4" />
+                  Upgrade
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Success/Processing Messages */}
@@ -475,281 +417,149 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Main Grid Layout */}
-        <div className="grid lg:grid-cols-3 gap-6 mb-8">
-          {/* Subscription Card - Takes 2 columns */}
-          <div className="lg:col-span-2">
-            {!isLoadingSubscription ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden h-full">
-                <div className="p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    {/* Plan Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-                          <Zap className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-bold text-gray-900">
-                              {getPlanDisplayName(subscription?.plan || null)}
-                            </h2>
-                            {subscription?.isActive && !subscription?.cancelledAt && (
-                              <span className="px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-500">
-                            {subscription?.plan === 'monthly' || subscription?.plan === 'yearly'
-                              ? `${subscription.monthlyLimit} resumes per month`
-                              : subscription?.plan === 'pay-per-use'
-                                ? `${Math.max(0, (subscription?.monthlyLimit || 0) - (subscription?.monthlyUsageCount || 0))} credits remaining`
-                                : 'Upgrade for full access'}
-                          </p>
-                        </div>
-                      </div>
+        {/* What would you like to do today? */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-amber-500" />
+            What would you like to do today?
+          </h2>
 
-                      {/* Usage Progress */}
-                      {subscription?.isActive && (subscription?.plan === 'monthly' || subscription?.plan === 'yearly') && (
-                        <div className="max-w-sm">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-gray-600">Usage this month</span>
-                            <span className="text-sm font-bold text-gray-900">
-                              {subscription.monthlyUsageCount} / {subscription.monthlyLimit}
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                isCreditsExhausted
-                                  ? 'bg-gradient-to-r from-red-500 to-red-600'
-                                  : 'bg-gradient-to-r from-blue-500 to-purple-600'
-                              }`}
-                              style={{
-                                width: `${Math.min(100, (subscription.monthlyUsageCount / subscription.monthlyLimit) * 100)}%`,
-                              }}
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            Resets in {subscription.daysUntilReset} days
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Pay-per-use progress */}
-                      {subscription?.isActive && subscription?.plan === 'pay-per-use' && (
-                        <div className="max-w-sm">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-gray-600">Credits used</span>
-                            <span className="text-sm font-bold text-gray-900">
-                              {subscription.monthlyUsageCount} / {subscription.monthlyLimit}
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                isCreditsExhausted
-                                  ? 'bg-gradient-to-r from-amber-500 to-orange-600'
-                                  : 'bg-gradient-to-r from-green-500 to-emerald-600'
-                              }`}
-                              style={{
-                                width: `${(subscription.monthlyUsageCount / subscription.monthlyLimit) * 100}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Cancellation Notice */}
-                      {subscription?.cancelledAt && subscription?.currentPeriodEnd && (
-                        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                          <p className="text-sm text-amber-800">
-                            <span className="font-semibold">Subscription cancelled.</span> Access until{' '}
-                            {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
-                              month: 'long', day: 'numeric', year: 'numeric',
-                            })}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-2">
-                      {subscription?.isActive && !subscription?.cancelledAt ? (
-                        <>
-                          <Link
-                            href="/generate"
-                            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 transition-all text-sm"
-                          >
-                            <Sparkles className="w-4 h-4" />
-                            Generate Resume
-                          </Link>
-                          <button
-                            onClick={() => setShowCancelModal(true)}
-                            className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                          >
-                            Cancel subscription
-                          </button>
-                        </>
-                      ) : subscription?.cancelledAt ? (
-                        <>
-                          <Link
-                            href="/generate"
-                            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors text-sm"
-                          >
-                            Generate Resume
-                          </Link>
-                          <Link
-                            href="/pricing"
-                            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors text-sm"
-                          >
-                            Resubscribe
-                          </Link>
-                        </>
-                      ) : (
-                        <Link
-                          href="/pricing"
-                          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25 transition-all text-sm"
-                        >
-                          <CreditCard className="w-4 h-4" />
-                          Upgrade Plan
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {/* Generate Resume - Primary */}
+            <Link
+              href="/generate"
+              className="group relative p-5 rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 hover:border-blue-400 hover:shadow-lg transition-all"
+            >
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/30">
+                <Sparkles className="w-6 h-6 text-white" />
               </div>
-            ) : (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 h-full">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                  <p className="text-gray-600">Loading subscription...</p>
-                </div>
+              <h3 className="font-bold text-gray-900 mb-1">Generate Resume</h3>
+              <p className="text-sm text-gray-600">Tailor your resume to any job with AI</p>
+              <ArrowRight className="absolute top-5 right-5 w-5 h-5 text-blue-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+            </Link>
+
+            {/* Build from Scratch */}
+            <Link
+              href="/build-resume"
+              className="group relative p-5 rounded-xl border-2 border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/50 hover:shadow-lg transition-all"
+            >
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <PenTool className="w-6 h-6 text-purple-600" />
               </div>
-            )}
+              <h3 className="font-bold text-gray-900 mb-1">Build Resume</h3>
+              <p className="text-sm text-gray-600">Create from scratch step by step</p>
+              <ArrowRight className="absolute top-5 right-5 w-5 h-5 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />
+            </Link>
+
+            {/* ATS Check - Free */}
+            <Link
+              href="/ats-checker"
+              className="group relative p-5 rounded-xl border-2 border-gray-200 bg-white hover:border-green-300 hover:bg-green-50/50 hover:shadow-lg transition-all"
+            >
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <SearchIcon className="w-6 h-6 text-green-600" />
+              </div>
+              <h3 className="font-bold text-gray-900 mb-1">ATS Check</h3>
+              <p className="text-sm text-gray-600">Free score check for your resume</p>
+              <span className="absolute top-4 right-4 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                Free
+              </span>
+            </Link>
           </div>
+        </div>
 
-          {/* Quick Actions Card */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 h-full">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Zap className="w-4 h-4 text-amber-500" />
-                Quick Actions
-              </h3>
-              <div className="space-y-2">
-                <QuickActionCard
-                  href="/generate"
-                  icon={Sparkles}
-                  title="Generate Resume"
-                  description="AI-tailored for any job"
-                  color="blue"
-                />
-                <QuickActionCard
-                  href="/ats-checker"
-                  icon={SearchIcon}
-                  title="Check ATS Score"
-                  description="Optimize for recruiters"
-                  color="green"
-                />
-                <QuickActionCard
-                  href="/interview-prep"
-                  icon={Brain}
-                  title="Interview Prep"
-                  description="Practice with AI"
-                  color="purple"
-                />
-                <QuickActionCard
-                  href="/linkedin-optimizer"
-                  icon={Linkedin}
-                  title="LinkedIn Profile"
-                  description="Optimize your profile"
-                  color="cyan"
-                />
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-500">Total</span>
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Briefcase className="w-4 h-4 text-blue-600" />
               </div>
             </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-500">Applied</span>
+              <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Send className="w-4 h-4 text-emerald-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-emerald-600">{stats.applied}</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-500">Interviews</span>
+              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Target className="w-4 h-4 text-amber-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-amber-600">{stats.interview}</p>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-500">Success Rate</span>
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-purple-600" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-purple-600">
+              {stats.total > 0 ? ((Number(stats.offer) / Number(stats.total)) * 100).toFixed(0) : 0}%
+            </p>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard
-            label="Total Applications"
-            value={stats.total}
-            icon={Briefcase}
-            color="blue"
-          />
-          <StatCard
-            label="Applied"
-            value={stats.applied}
-            icon={Send}
-            color="green"
-          />
-          <StatCard
-            label="In Progress"
-            value={stats.interview + stats.offer}
-            icon={Target}
-            color="amber"
-          />
-          <StatCard
-            label="Success Rate"
-            value={`${stats.total > 0 ? ((Number(stats.offer) / Number(stats.total)) * 100).toFixed(0) : 0}%`}
-            icon={TrendingUp}
-            color="purple"
-          />
-        </div>
-
-        {/* Two Column Layout for Recent Items */}
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
-          {/* Recent Generations */}
+        {/* Two Column: Recent Resumes & Recent Applications */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-6">
+          {/* Recent Resumes */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <FileText className="w-4.5 h-4.5 text-blue-600" />
-                  </div>
-                  <h2 className="font-bold text-gray-900">Recent Generations</h2>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-blue-600" />
                 </div>
-                <Link
-                  href="/generate"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                >
-                  New <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                <h2 className="font-bold text-gray-900">Recent Resumes</h2>
               </div>
+              <Link
+                href="/generate"
+                className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              >
+                + New
+              </Link>
             </div>
 
-            <div className="p-5">
+            <div className="p-4">
               {isLoadingGenerations ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
                 </div>
               ) : generations.length > 0 ? (
-                <div className="space-y-3">
-                  {generations.slice(0, 3).map((gen) => (
+                <div className="space-y-2">
+                  {generations.slice(0, 4).map((gen) => (
                     <div
                       key={gen.id}
-                      className="p-3 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all cursor-pointer"
+                      className="p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all cursor-pointer"
                       onClick={() => setExpandedGeneration(expandedGeneration === gen.id ? null : gen.id)}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                             <FileText className="w-4 h-4 text-blue-600" />
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900 text-sm">
-                              {gen.jobTitle || gen.company ? `Resume for ${gen.company}` : 'Tailored Resume'}
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 text-sm truncate">
+                              {gen.jobTitle || gen.company || 'Tailored Resume'}
                             </p>
                             <p className="text-xs text-gray-500">
                               {new Date(gen.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              {gen.company && ` • ${gen.company}`}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-sm font-bold text-blue-600">{gen.matchScore}%</span>
                           {expandedGeneration === gen.id ? (
                             <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -760,41 +570,35 @@ function DashboardContent() {
                       </div>
 
                       {expandedGeneration === gen.id && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDownload(gen, 'resume', 'pdf'); }}
-                              disabled={downloadingId === gen.id}
-                              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-1"
-                            >
-                              <Download className="w-3 h-3" /> Resume
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDownload(gen, 'ats', 'pdf'); }}
-                              disabled={downloadingId === gen.id}
-                              className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400 flex items-center gap-1"
-                            >
-                              <Download className="w-3 h-3" /> ATS
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDownload(gen, 'cover', 'pdf'); }}
-                              disabled={downloadingId === gen.id}
-                              className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 disabled:bg-gray-400 flex items-center gap-1"
-                            >
-                              <Download className="w-3 h-3" /> Cover
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(gen.id); }}
-                              disabled={deletingId === gen.id}
-                              className="px-3 py-1.5 text-red-600 hover:bg-red-50 text-xs font-medium rounded-lg flex items-center gap-1"
-                            >
-                              {deletingId === gen.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-3 h-3" />
-                              )}
-                            </button>
-                          </div>
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownload(gen, 'resume', 'pdf'); }}
+                            disabled={downloadingId === gen.id}
+                            className="px-2.5 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-1"
+                          >
+                            <Download className="w-3 h-3" /> PDF
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownload(gen, 'ats', 'pdf'); }}
+                            disabled={downloadingId === gen.id}
+                            className="px-2.5 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 disabled:bg-gray-400 flex items-center gap-1"
+                          >
+                            <Download className="w-3 h-3" /> ATS
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownload(gen, 'cover', 'pdf'); }}
+                            disabled={downloadingId === gen.id}
+                            className="px-2.5 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 disabled:bg-gray-400 flex items-center gap-1"
+                          >
+                            <Download className="w-3 h-3" /> Cover
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(gen.id); }}
+                            disabled={deletingId === gen.id}
+                            className="px-2.5 py-1.5 text-red-600 hover:bg-red-50 text-xs font-medium rounded-lg flex items-center gap-1"
+                          >
+                            {deletingId === gen.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                          </button>
                         </div>
                       )}
                     </div>
@@ -805,14 +609,13 @@ function DashboardContent() {
                   <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-3">
                     <FileText className="w-6 h-6 text-gray-400" />
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">No generations yet</p>
+                  <p className="text-sm text-gray-600 mb-1">No resumes yet</p>
                   <p className="text-xs text-gray-500 mb-3">Create your first AI-tailored resume</p>
                   <Link
                     href="/generate"
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Generate
+                    <Sparkles className="w-3.5 h-3.5" /> Generate
                   </Link>
                 </div>
               )}
@@ -821,39 +624,35 @@ function DashboardContent() {
 
           {/* Recent Applications */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
-                    <Briefcase className="w-4.5 h-4.5 text-emerald-600" />
-                  </div>
-                  <h2 className="font-bold text-gray-900">Recent Applications</h2>
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <Briefcase className="w-4 h-4 text-emerald-600" />
                 </div>
-                <Link
-                  href="/tracker"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                >
-                  View All <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                <h2 className="font-bold text-gray-900">Recent Applications</h2>
               </div>
+              <Link
+                href="/tracker"
+                className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              >
+                View All <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
-            <div className="p-5">
-              {filteredApplications.length > 0 ? (
-                <div className="space-y-3">
-                  {filteredApplications.slice(0, 4).map((app) => (
-                    <div key={app.id} className="p-3 rounded-xl border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
+            <div className="p-4">
+              {recentApplications.length > 0 ? (
+                <div className="space-y-2">
+                  {recentApplications.map((app) => (
+                    <div key={app.id} className="p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50 transition-all">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm">{app.companyName}</p>
-                          <p className="text-xs text-gray-500">{app.positionTitle}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">{app.companyName}</p>
+                          <p className="text-xs text-gray-500 truncate">{app.positionTitle}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
-                            {getStatusIcon(app.status)}
-                            {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                          </span>
-                        </div>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(app.status)}`}>
+                          {getStatusIcon(app.status)}
+                          {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -869,8 +668,7 @@ function DashboardContent() {
                     href="/tracker"
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Application
+                    <Plus className="w-3.5 h-3.5" /> Add Application
                   </Link>
                 </div>
               )}
@@ -878,78 +676,78 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Full Applications Table (if many applications) */}
-        {filteredApplications.length > 4 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-gray-100">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="font-bold text-gray-900">All Applications</h2>
-                <div className="flex gap-3">
-                  <div className="relative flex-1 sm:flex-initial">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full sm:w-48 pl-9 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm"
-                    />
-                  </div>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="saved">Saved</option>
-                    <option value="applied">Applied</option>
-                    <option value="interview">Interview</option>
-                    <option value="offer">Offer</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
+        {/* More Tools Section */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+            🛠️ More Tools
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Link
+              href="/tracker"
+              className="group flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+            >
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Briefcase className="w-5 h-5 text-blue-600" />
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 text-sm">Job Tracker</p>
+                <p className="text-xs text-gray-500">Track applications</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+            </Link>
+
+            <Link
+              href="/templates"
+              className="group flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-purple-200 hover:bg-purple-50/50 transition-all"
+            >
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform">
+                <FileText className="w-5 h-5 text-purple-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 text-sm">Templates</p>
+                <p className="text-xs text-gray-500">Browse designs</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-0.5 transition-all" />
+            </Link>
+
+            <div className="group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 opacity-75">
+              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Brain className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 text-sm">Interview Prep</p>
+                <p className="text-xs text-gray-500">Coming soon</p>
+              </div>
+              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-medium rounded-full">Soon</span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Company</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Position</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredApplications.slice(0, 10).map((app) => (
-                    <tr key={app.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-4 font-medium text-gray-900 text-sm">{app.companyName}</td>
-                      <td className="px-5 py-4 text-gray-600 text-sm">{app.positionTitle}</td>
-                      <td className="px-5 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
-                          {getStatusIcon(app.status)}
-                          {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-gray-500 text-sm">
-                        {app.appliedDate ? new Date(app.appliedDate).toLocaleDateString() : '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {filteredApplications.length > 10 && (
-              <div className="p-4 border-t border-gray-100 text-center">
-                <Link href="/tracker" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  View all {filteredApplications.length} applications →
-                </Link>
+            <div className="group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 opacity-75">
+              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Linkedin className="w-5 h-5 text-gray-400" />
               </div>
-            )}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 text-sm">LinkedIn</p>
+                <p className="text-xs text-gray-500">Coming soon</p>
+              </div>
+              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs font-medium rounded-full">Soon</span>
+            </div>
           </div>
-        )}
+
+          {/* Manage Subscription Link */}
+          {subscription?.isActive && !subscription?.cancelledAt && (
+            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                Need to manage your subscription?
+              </p>
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="text-sm text-gray-500 hover:text-red-600 transition-colors"
+              >
+                Cancel subscription
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Cancel Subscription Modal */}
         <CancelSubscriptionModal
