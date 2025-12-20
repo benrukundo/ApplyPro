@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { generatePDF, generateDOCX, generatePDFFromStructure, generateDOCXFromStructure, type ColorPreset, type ResumeStructure } from '@/lib/documentGenerator';
 import Link from 'next/link';
 import {
-  ArrowLeft,
   ArrowRight,
   User,
   GraduationCap,
@@ -1149,16 +1148,15 @@ const formatMonthYear = (dateStr: string): string => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Build Your Resume From Scratch</h1>
-          <p className="text-gray-600 mt-2">
+        <div className="mb-8 text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-4">
+            <Sparkles className="w-4 h-4" />
+            <span>AI-Powered Resume Builder</span>
+          </div>
+
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Build Your Resume From Scratch</h1>
+          <p className="text-gray-600 text-lg max-w-xl mx-auto">
             No resume? No problem. We'll guide you step by step.
           </p>
 
@@ -2467,16 +2465,16 @@ const formatMonthYear = (dateStr: string): string => {
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="inline-flex items-center gap-2 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-6 py-3.5 border-2 border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 rotate-180" />
               Previous
             </button>
 
             {currentStep < 7 && (
               <button
                 onClick={nextStep}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+                className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 transition-all"
               >
                 Next
                 <ArrowRight className="w-4 h-4" />
