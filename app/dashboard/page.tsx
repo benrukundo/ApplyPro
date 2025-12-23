@@ -143,10 +143,14 @@ function DashboardContent() {
 
   useEffect(() => {
     if (session?.user?.id) {
-      loadSubscription();
+      // Skip initial load if we're about to poll for payment success
+      const paymentStatus = searchParams.get('payment');
+      if (paymentStatus !== 'success') {
+        loadSubscription();
+      }
       loadGenerations();
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, searchParams]);
 
   // Handle post-payment polling
   useEffect(() => {

@@ -570,6 +570,40 @@ http://localhost:3000
 5. **Build-Resume Security**: Strict download protection, watermarks
 6. **Modern Template**: Two-column layout matching across PDF/DOCX/Preview
 
+### Recent UI/UX Fixes (December 2025):
+1. **ATS Checker Page Redesign**:
+   - Removed duplicate page footer (global layout handles this)
+   - Added gradient + mesh background for visual consistency
+   - Updated dropzone to match Generate page styling
+   - Streamlined content and removed redundant sections
+   - Improved results display with cleaner cards and better visual hierarchy
+   - Removed unused dark mode classes for cleaner code
+   - Stronger upgrade CTA after results with feature highlights
+   - Fixed overall page structure and spacing
+
+2. **Pricing Page Improvements**:
+   - Redesigned with gradient + mesh background for consistency
+   - Enhanced Pro Monthly card with stronger visual emphasis (scale, shadows, ring)
+   - Added 'BEST VALUE' badge to yearly plan
+   - Added trust signals (money-back guarantee, secure payment, cancel anytime)
+   - Added free tools notice banner highlighting ATS Checker, Resume Builder, Job Tracker
+   - Converted FAQ to accordion style with smooth animations
+   - Improved card hover states and shadows throughout
+   - Added color-coded checkmarks per plan (blue, purple, green themes)
+   - Better button styling with gradients and improved CTAs
+
+3. **Navigation Cleanup**:
+   - Removed redundant 'Back to Home' links from all pages (navbar handles this)
+   - Cleaned up unused ArrowLeft imports
+   - Improved professional appearance with cleaner layouts
+   - Consistent navigation experience across the application
+
+4. **Code Quality Improvements**:
+   - Removed duplicate footer code and unused imports
+   - Improved TypeScript compilation and error handling
+   - Better responsive design and mobile optimization
+   - Enhanced accessibility and user experience
+
 ---
 
 ## 🤝 How to Contribute
@@ -608,7 +642,7 @@ http://localhost:3000
 
 ---
 
-**Last Updated**: December 18, 2025
+**Last Updated**: December 20, 2025
 **Version**: 1.0.0
 **Status**: Active Development
 

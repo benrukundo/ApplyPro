@@ -1,0 +1,543 @@
+Create these new files:
+app/
+├── api/
+│   ├── dodo-checkout/
+│   │   └── route.ts          # Checkout handler
+│   ├── dodo-webhook/
+│   │   └── route.ts          # Webhook handler
+│   └── dodo-portal/
+│       └── route.ts          # Customer portal
+components/
+└── DodoCheckout.tsx          # Checkout button component
+
+📝 Implementation
+Step 1: Checkout Route Handler
+Create app/api/dodo-checkout/route.ts:
+typescriptimport { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
+
+const DODO_API_URL = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
+  ? 'https://api.dodopayments.com'
+  : 'https://test.dodopayments.com';
+
+export async function POST(request: NextRequest) {
+  try {
+    // Verify authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { productId, planType } = body;
+
+    if (!productId) {
+      return NextResponse.json({ error: 'Product ID required' }, { status: 400 });
+    }
+
+    // Create checkout session with Dodo
+    const response = await fetch(`${DODO_API_URL}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.DODO_PAYMENTS_API_KEY}`,
+      },
+      body: JSON.stringify({
+        customer: {
+          email: session.user.email,
+          name: session.user.name || session.user.email,
+        },
+        product_cart: [
+          {
+            product_id: productId,
+            quantity: 1,
+          },
+        ],
+        payment_link: true,
+        return_url: `${process.env.DODO_PAYMENTS_RETURN_URL}?user_id=${session.user.id}&plan=${planType}`,
+        metadata: {
+          user_id: session.user.id,
+          plan_type: planType,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Dodo checkout error:', error);
+      return NextResponse.json({ error: 'Failed to create checkout' }, { status: 500 });
+    }
+
+    const data = await response.json();
+    
+    return NextResponse.json({ 
+      checkoutUrl: data.payment_link,
+      paymentId: data.payment_id,
+    });
+
+  } catch (error) {
+    console.error('Checkout error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+Step 2: Webhook Handler
+Create app/api/dodo-webhook/route.ts:
+typescriptimport { NextRequest, NextResponse } from 'next/server';
+import { Webhook } from 'standardwebhooks';
+import { prisma } from '@/lib/prisma';
+import {
+  sendSubscriptionConfirmationEmail,
+  sendSubscriptionCancelledEmail,
+  sendPaymentFailedEmail,
+} from '@/lib/emailTemplates';
+
+// Webhook signature verification
+const webhook = new Webhook(process.env.DODO_PAYMENTS_WEBHOOK_KEY!);
+
+// Dodo webhook event types
+type DodoEventType =
+  | 'payment.succeeded'
+  | 'payment.failed'
+  | 'subscription.active'
+  | 'subscription.cancelled'
+  | 'subscription.paused'
+  | 'subscription.renewed'
+  | 'subscription.past_due'
+  | 'subscription.on_hold'
+  | 'refund.succeeded'
+  | 'dispute.opened';
+
+interface DodoWebhookPayload {
+  type: DodoEventType;
+  business_id: string;
+  data: {
+    payment_id?: string;
+    subscription_id?: string;
+    customer?: {
+      customer_id: string;
+      email: string;
+      name?: string;
+    };
+    product_id?: string;
+    status?: string;
+    metadata?: {
+      user_id?: string;
+      plan_type?: string;
+    };
+    billing?: {
+      current_period_start?: string;
+      current_period_end?: string;
+    };
+  };
+  created_at: string;
+}
+
+// Map Dodo product ID to plan type
+function getPlanFromProductId(productId: string): 'monthly' | 'yearly' | 'pay-per-use' | null {
+  const productMap: Record<string, 'monthly' | 'yearly' | 'pay-per-use'> = {
+    [process.env.NEXT_PUBLIC_DODO_PRICE_MONTHLY!]: 'monthly',
+    [process.env.NEXT_PUBLIC_DODO_PRICE_YEARLY!]: 'yearly',
+    [process.env.NEXT_PUBLIC_DODO_PRICE_PAY_PER_USE!]: 'pay-per-use',
+  };
+  return productMap[productId] || null;
+}
+
+export async function POST(request: NextRequest) {
+  console.log('=== DODO WEBHOOK RECEIVED ===');
+
+  try {
+    const rawBody = await request.text();
+    
+    // Verify webhook signature
+    const webhookHeaders = {
+      'webhook-id': request.headers.get('webhook-id') || '',
+      'webhook-signature': request.headers.get('webhook-signature') || '',
+      'webhook-timestamp': request.headers.get('webhook-timestamp') || '',
+    };
+
+    try {
+      webhook.verify(rawBody, webhookHeaders);
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err);
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    const payload: DodoWebhookPayload = JSON.parse(rawBody);
+    
+    console.log('Event Type:', payload.type);
+    console.log('Data:', JSON.stringify(payload.data, null, 2));
+
+    const { type, data } = payload;
+
+    // Get user ID from metadata
+    const userId = data.metadata?.user_id;
+    if (!userId) {
+      console.warn('No user_id in metadata');
+      return NextResponse.json({ received: true, warning: 'No user_id' });
+    }
+
+    // Get plan type
+    const plan = data.product_id ? getPlanFromProductId(data.product_id) : 
+                 data.metadata?.plan_type as 'monthly' | 'yearly' | 'pay-per-use' | null;
+
+    switch (type) {
+      // ============================================
+      // ONE-TIME PAYMENT SUCCESS
+      // ============================================
+      case 'payment.succeeded': {
+        // Handle pay-per-use purchase
+        if (plan === 'pay-per-use') {
+          await prisma.subscription.create({
+            data: {
+              userId,
+              paddleId: data.payment_id, // Using paddleId field for Dodo payment ID
+              plan: 'pay-per-use',
+              status: 'active',
+              monthlyUsageCount: 0,
+              monthlyLimit: 3,
+              lastResetDate: new Date(),
+              currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+            },
+          });
+
+          // Send confirmation email
+          const user = await prisma.user.findUnique({ where: { id: userId } });
+          if (user?.email) {
+            await sendSubscriptionConfirmationEmail(user.email, user.name || '', 'pay-per-use', '$4.99');
+          }
+
+          console.log(`Pay-per-use pack created for user ${userId}`);
+        }
+        break;
+      }
+
+      // ============================================
+      // SUBSCRIPTION ACTIVE (New or Renewed)
+      // ============================================
+      case 'subscription.active':
+      case 'subscription.renewed': {
+        if (!plan || plan === 'pay-per-use') break;
+
+        const monthlyLimit = 100;
+        const currentPeriodEnd = data.billing?.current_period_end
+          ? new Date(data.billing.current_period_end)
+          : new Date(Date.now() + (plan === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000);
+
+        // Upsert subscription
+        await prisma.subscription.upsert({
+          where: { paddleId: data.subscription_id },
+          create: {
+            userId,
+            paddleId: data.subscription_id,
+            plan,
+            status: 'active',
+            monthlyUsageCount: 0,
+            monthlyLimit,
+            lastResetDate: new Date(),
+            currentPeriodEnd,
+          },
+          update: {
+            status: 'active',
+            plan,
+            monthlyLimit,
+            currentPeriodEnd,
+            // Reset usage on renewal
+            ...(type === 'subscription.renewed' && {
+              monthlyUsageCount: 0,
+              lastResetDate: new Date(),
+            }),
+          },
+        });
+
+        // Send confirmation email for new subscriptions
+        if (type === 'subscription.active') {
+          const user = await prisma.user.findUnique({ where: { id: userId } });
+          if (user?.email) {
+            const amount = plan === 'monthly' ? '$19' : '$149';
+            await sendSubscriptionConfirmationEmail(user.email, user.name || '', plan, amount);
+          }
+        }
+
+        console.log(`Subscription ${type} for user ${userId}, plan: ${plan}`);
+        break;
+      }
+
+      // ============================================
+      // SUBSCRIPTION CANCELLED
+      // ============================================
+      case 'subscription.cancelled': {
+        await prisma.subscription.updateMany({
+          where: { paddleId: data.subscription_id },
+          data: {
+            status: 'cancelled',
+            cancelledAt: new Date(),
+          },
+        });
+
+        // Send cancellation email
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (user?.email) {
+          const endDate = data.billing?.current_period_end
+            ? new Date(data.billing.current_period_end).toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : 'immediately';
+          await sendSubscriptionCancelledEmail(user.email, user.name || '', endDate);
+        }
+
+        console.log(`Subscription cancelled for user ${userId}`);
+        break;
+      }
+
+      // ============================================
+      // SUBSCRIPTION PAUSED
+      // ============================================
+      case 'subscription.paused':
+      case 'subscription.on_hold': {
+        await prisma.subscription.updateMany({
+          where: { paddleId: data.subscription_id },
+          data: { status: 'paused' },
+        });
+
+        console.log(`Subscription paused for user ${userId}`);
+        break;
+      }
+
+      // ============================================
+      // PAYMENT FAILED
+      // ============================================
+      case 'payment.failed':
+      case 'subscription.past_due': {
+        await prisma.subscription.updateMany({
+          where: { paddleId: data.subscription_id || data.payment_id },
+          data: { status: type === 'subscription.past_due' ? 'past_due' : 'failed' },
+        });
+
+        // Send payment failed email
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (user?.email) {
+          await sendPaymentFailedEmail(user.email, user.name || '');
+        }
+
+        console.log(`Payment failed for user ${userId}`);
+        break;
+      }
+
+      // ============================================
+      // REFUND
+      // ============================================
+      case 'refund.succeeded': {
+        // Deactivate subscription on refund
+        await prisma.subscription.updateMany({
+          where: { paddleId: data.payment_id },
+          data: { status: 'cancelled' },
+        });
+
+        console.log(`Refund processed for user ${userId}`);
+        break;
+      }
+
+      default:
+        console.log(`Unhandled event type: ${type}`);
+    }
+
+    return NextResponse.json({ received: true });
+
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
+  }
+}
+
+// Health check
+export async function GET() {
+  return NextResponse.json({ status: 'Dodo webhook endpoint active' });
+}
+Step 3: Customer Portal Route
+Create app/api/dodo-portal/route.ts:
+typescriptimport { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
+import { prisma } from '@/lib/prisma';
+
+const DODO_API_URL = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
+  ? 'https://api.dodopayments.com'
+  : 'https://test.dodopayments.com';
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user's subscription to find Dodo customer ID
+    const subscription = await prisma.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+        status: 'active',
+      },
+    });
+
+    if (!subscription?.paddleId) {
+      return NextResponse.json({ error: 'No active subscription found' }, { status: 404 });
+    }
+
+    // Create customer portal session
+    const response = await fetch(`${DODO_API_URL}/customer-portal`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.DODO_PAYMENTS_API_KEY}`,
+      },
+      body: JSON.stringify({
+        customer_id: subscription.paddleId,
+        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to create portal session');
+      return NextResponse.json({ error: 'Failed to create portal' }, { status: 500 });
+    }
+
+    const data = await response.json();
+    return NextResponse.json({ portalUrl: data.url });
+
+  } catch (error) {
+    console.error('Portal error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+Step 4: Checkout Button Component
+Create components/DodoCheckout.tsx:
+typescript'use client';
+
+import { useState } from 'react';
+import { trackEvent } from '@/components/PostHogProvider';
+
+interface DodoCheckoutProps {
+  productId: string;
+  planType: 'monthly' | 'yearly' | 'pay-per-use';
+  planName: string;
+  onSuccess?: () => void;
+  children: React.ReactNode;
+  className?: string;
+  disabled?: boolean;
+}
+
+export default function DodoCheckout({
+  productId,
+  planType,
+  planName,
+  onSuccess,
+  children,
+  className,
+  disabled = false,
+}: DodoCheckoutProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleCheckout = async () => {
+    if (disabled || isLoading) return;
+
+    setIsLoading(true);
+
+    // Track checkout started
+    trackEvent('checkout_started', {
+      plan: planName,
+      product_id: productId,
+      provider: 'dodo',
+    });
+
+    try {
+      const response = await fetch('/api/dodo-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, planType }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout');
+      }
+
+      const { checkoutUrl } = await response.json();
+
+      // Redirect to Dodo checkout
+      window.location.href = checkoutUrl;
+
+    } catch (error) {
+      console.error('Checkout error:', error);
+      trackEvent('checkout_error', {
+        plan: planName,
+        product_id: productId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      alert('Failed to start checkout. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCheckout}
+      disabled={disabled || isLoading}
+      className={className}
+    >
+      {isLoading ? 'Loading...' : children}
+    </button>
+  );
+}
+Step 5: Update Pricing Page
+Update app/pricing/page.tsx to use Dodo instead of Paddle:
+typescript// Replace the import
+import DodoCheckout from '@/components/DodoCheckout';
+
+// Update the plans array
+const plans = [
+  {
+    id: 'pay-per-use',
+    name: 'Resume Pack',
+    description: 'Perfect for trying ApplyPro',
+    price: 4.99,
+    productId: process.env.NEXT_PUBLIC_DODO_PRICE_PAY_PER_USE!,
+    period: 'one-time',
+    // ... rest of plan config
+  },
+  {
+    id: 'monthly',
+    name: 'Pro Monthly',
+    description: 'For active job seekers',
+    price: 19,
+    productId: process.env.NEXT_PUBLIC_DODO_PRICE_MONTHLY!,
+    period: '/month',
+    // ... rest of plan config
+  },
+  {
+    id: 'yearly',
+    name: 'Pro Yearly',
+    description: 'Best value for serious seekers',
+    price: 149,
+    productId: process.env.NEXT_PUBLIC_DODO_PRICE_YEARLY!,
+    period: '/year',
+    // ... rest of plan config
+  },
+];
+
+// Replace PaddleCheckout with DodoCheckout in the JSX
+{session?.user ? (
+  <DodoCheckout
+    productId={plan.productId}
+    planType={plan.id as 'monthly' | 'yearly' | 'pay-per-use'}
+    planName={plan.name}
+    onSuccess={handleSuccess}
+    className={`w-full py-3.5 px-6 rounded-xl font-semibold...`}
+  >
+    {plan.buttonText}
+  </DodoCheckout>
+) : (
+  // ... login link
+)}

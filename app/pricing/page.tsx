@@ -1,347 +1,288 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Check,
-  Sparkles,
+  Star,
   Zap,
   Crown,
+  ArrowRight,
   Loader2,
   Shield,
   CreditCard,
-  RefreshCw,
-  ChevronDown,
-  Gift,
+  Users,
+  FileText,
+  Brain,
+  Sparkles,
 } from 'lucide-react';
-import PaddleCheckout from '@/components/PaddleCheckout';
-
-const plans = [
-  {
-    id: 'pay-per-use',
-    name: 'Resume Pack',
-    description: 'Perfect for trying ApplyPro',
-    price: 4.99,
-    priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_PAY_PER_USE!,
-    period: 'one-time',
-    features: [
-      '3 AI-tailored resumes',
-      'All templates included',
-      'ATS-optimized versions',
-      'Cover letters included',
-      'PDF & DOCX downloads',
-      'Never expires',
-    ],
-    icon: Zap,
-    color: 'amber',
-    popular: false,
-    buttonText: 'Buy Resume Pack',
-  },
-  {
-    id: 'monthly',
-    name: 'Pro Monthly',
-    description: 'For active job seekers',
-    price: 19,
-    priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_MONTHLY!,
-    period: '/month',
-    features: [
-      '100 resumes per month',
-      'All templates included',
-      'ATS-optimized versions',
-      'Cover letters included',
-      'PDF & DOCX downloads',
-      'Priority support',
-      'Cancel anytime',
-    ],
-    icon: Sparkles,
-    color: 'blue',
-    popular: true,
-    buttonText: 'Start Monthly',
-  },
-  {
-    id: 'yearly',
-    name: 'Pro Yearly',
-    description: 'Best value for serious seekers',
-    price: 149,
-    priceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_YEARLY!,
-    period: '/year',
-    originalPrice: 228,
-    features: [
-      '100 resumes per month',
-      'All templates included',
-      'ATS-optimized versions',
-      'Cover letters included',
-      'PDF & DOCX downloads',
-      'Priority support',
-      'Save 35% vs monthly',
-    ],
-    icon: Crown,
-    color: 'purple',
-    popular: false,
-    buttonText: 'Start Yearly',
-    badge: 'BEST VALUE',
-  },
-];
-
-const faqs = [
-  {
-    question: "What's included in all plans?",
-    answer: "All plans include AI-powered resume tailoring, multiple professional templates, ATS optimization, custom cover letters, and downloads in both PDF and DOCX formats."
-  },
-  {
-    question: "Can I cancel my subscription?",
-    answer: "Yes! Monthly and yearly subscriptions can be cancelled anytime from your dashboard. You'll retain access until the end of your billing period."
-  },
-  {
-    question: "What happens when I reach my monthly limit?",
-    answer: "Your limit resets at the start of each billing cycle. If you need more resumes before then, you can upgrade to a higher plan or purchase a Resume Pack."
-  },
-  {
-    question: "Is my payment information secure?",
-    answer: "Absolutely! All payments are processed securely through Paddle, a trusted payment processor. We never store your payment information on our servers."
-  },
-  {
-    question: "What if I'm not satisfied?",
-    answer: "We offer a 14-day money-back guarantee on unused purchases. If you haven't used any generations, contact us for a full refund."
-  },
-];
+import DodoCheckout from '@/components/DodoCheckout';
 
 export default function PricingPage() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
-  const [successMessage, setSuccessMessage] = useState('');
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSuccess = () => {
-    setSuccessMessage('Payment successful! Redirecting to dashboard...');
-    setTimeout(() => {
-      router.push('/dashboard?payment=success');
-    }, 2000);
+    setIsLoading(false);
+    router.push('/dashboard');
   };
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+  const plans = [
+    {
+      id: 'pay-per-use',
+      name: 'Resume Pack',
+      description: 'Perfect for trying ApplyPro',
+      price: 4.99,
+      productId: process.env.NEXT_PUBLIC_DODO_PRICE_PAY_PER_USE!,
+      period: 'one-time',
+      buttonText: 'Get Resume Pack',
+      features: [
+        '3 AI-tailored resume generations',
+        'ATS-optimized versions included',
+        'Professional cover letters',
+        'PDF & DOCX downloads',
+        'Valid for 1 year',
+      ],
+      popular: false,
+      icon: <FileText className="w-6 h-6 text-blue-600" />,
+    },
+    {
+      id: 'monthly',
+      name: 'Pro Monthly',
+      description: 'For active job seekers',
+      price: 19,
+      originalPrice: 29,
+      productId: process.env.NEXT_PUBLIC_DODO_PRICE_MONTHLY!,
+      period: '/month',
+      buttonText: 'Start Pro Monthly',
+      features: [
+        '100 resume generations/month',
+        'Advanced ATS optimization',
+        'Custom cover letters',
+        'Job application tracker',
+        'Interview prep tools',
+        'LinkedIn optimizer',
+        'Priority support',
+        'Cancel anytime',
+      ],
+      popular: true,
+      icon: <Crown className="w-6 h-6 text-purple-600" />,
+    },
+    {
+      id: 'yearly',
+      name: 'Pro Yearly',
+      description: 'Best value for serious seekers',
+      price: 149,
+      originalPrice: 348,
+      productId: process.env.NEXT_PUBLIC_DODO_PRICE_YEARLY!,
+      period: '/year',
+      buttonText: 'Start Pro Yearly',
+      features: [
+        'Everything in Pro Monthly',
+        '2 months free (35% savings)',
+        'Advanced analytics',
+        'Bulk resume generation',
+        'Custom templates',
+        'API access',
+        'Dedicated support',
+        'Cancel anytime',
+      ],
+      popular: false,
+      icon: <Star className="w-6 h-6 text-amber-600" />,
+    },
+  ];
+
+  const freeFeatures = [
+    'ATS resume checker',
+    'Resume builder (from scratch)',
+    'Job application tracker (25 applications)',
+    'Basic resume templates',
+    'Community support',
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-20 pb-16 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 pt-20 pb-12 relative overflow-hidden">
       {/* Background Decoration */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-blue-100/50 to-purple-100/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-100/40 to-cyan-100/40 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-blue-100/50 to-indigo-100/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-purple-100/40 to-pink-100/40 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
-      <div className="container mx-auto px-4 max-w-6xl relative z-10">
+      <div className="relative z-10 container mx-auto px-4 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-4">
+            <CreditCard className="w-4 h-4" />
+            <span>Pricing</span>
+          </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Simple, Transparent Pricing
+            Choose Your Plan
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
-            Choose the plan that fits your job search. All plans include our AI-powered
-            resume tailoring and all premium templates.
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Start with a free trial or jump straight into our premium features.
+            Upgrade or downgrade anytime.
           </p>
-
-          {/* Free Tools Notice */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-            <Gift className="w-4 h-4" />
-            <span>Free tools available: ATS Checker, Resume Builder, Job Tracker</span>
-          </div>
         </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl text-center animate-fadeIn">
-            <p className="text-green-800 font-medium flex items-center justify-center gap-2">
-              <Check className="w-5 h-5" />
-              {successMessage}
-            </p>
+        {/* Free Plan Banner */}
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 mb-8 text-white text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Zap className="w-5 h-5" />
+            <span className="font-semibold">Free Forever</span>
           </div>
-        )}
-
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-16">
-          {plans.map((plan) => {
-            const Icon = plan.icon;
-            const isPopular = plan.popular;
-
-            return (
-              <div
-                key={plan.id}
-                className={`relative bg-white rounded-2xl overflow-hidden transition-all duration-300 ${
-                  isPopular
-                    ? 'shadow-2xl shadow-blue-500/20 ring-2 ring-blue-600 scale-105 z-10'
-                    : 'shadow-lg hover:shadow-xl hover:scale-[1.02]'
-                }`}
-              >
-                {/* Popular Badge */}
-                {isPopular && (
-                  <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2 text-center text-sm font-semibold">
-                    ⭐ MOST POPULAR
-                  </div>
-                )}
-
-                {/* Best Value Badge */}
-                {plan.badge && !isPopular && (
-                  <div className="absolute top-4 right-4">
-                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
-
-                <div className={`p-8 ${isPopular ? 'pt-14' : ''}`}>
-                  {/* Icon */}
-                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
-                    plan.color === 'blue' ? 'bg-blue-100' :
-                    plan.color === 'purple' ? 'bg-purple-100' :
-                    'bg-amber-100'
-                  }`}>
-                    <Icon className={`w-7 h-7 ${
-                      plan.color === 'blue' ? 'text-blue-600' :
-                      plan.color === 'purple' ? 'text-purple-600' :
-                      'text-amber-600'
-                    }`} />
-                  </div>
-
-                  {/* Plan Name */}
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">{plan.name}</h3>
-                  <p className="text-gray-500 mb-6">{plan.description}</p>
-
-                  {/* Price */}
-                  <div className="mb-6">
-                    {plan.originalPrice && (
-                      <span className="text-lg text-gray-400 line-through mr-2">
-                        ${plan.originalPrice}
-                      </span>
-                    )}
-                    <span className="text-5xl font-bold text-gray-900">${plan.price}</span>
-                    <span className="text-gray-500 text-lg">{plan.period}</span>
-                  </div>
-
-                  {/* Features */}
-                  <ul className="space-y-3 mb-8">
-                    {plan.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-3">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          plan.color === 'blue' ? 'bg-blue-100' :
-                          plan.color === 'purple' ? 'bg-purple-100' :
-                          'bg-green-100'
-                        }`}>
-                          <Check className={`w-3 h-3 ${
-                            plan.color === 'blue' ? 'text-blue-600' :
-                            plan.color === 'purple' ? 'text-purple-600' :
-                            'text-green-600'
-                          }`} />
-                        </div>
-                        <span className="text-gray-700">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* CTA Button */}
-                  {session?.user ? (
-                    <PaddleCheckout
-                      priceId={plan.priceId}
-                      userId={session.user.id}
-                      userEmail={session.user.email || ''}
-                      onSuccess={handleSuccess}
-                      className={`w-full py-3.5 px-6 rounded-xl font-semibold transition-all duration-200 ${
-                        isPopular
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/25'
-                          : plan.color === 'purple'
-                            ? 'bg-purple-600 text-white hover:bg-purple-700'
-                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                      }`}
-                    >
-                      {plan.buttonText}
-                    </PaddleCheckout>
-                  ) : (
-                    <Link
-                      href={`/login?callbackUrl=/pricing`}
-                      className={`block w-full py-3.5 px-6 rounded-xl font-semibold text-center transition-all duration-200 ${
-                        isPopular
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/25'
-                          : plan.color === 'purple'
-                            ? 'bg-purple-600 text-white hover:bg-purple-700'
-                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                      }`}
-                    >
-                      Sign in to Purchase
-                    </Link>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Trust Signals */}
-        <div className="flex flex-wrap items-center justify-center gap-8 mb-16">
-          <div className="flex items-center gap-2 text-gray-600">
-            <Shield className="w-5 h-5 text-green-600" />
-            <span className="text-sm font-medium">14-day money-back guarantee</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <CreditCard className="w-5 h-5 text-blue-600" />
-            <span className="text-sm font-medium">Secure payment via Paddle</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600">
-            <RefreshCw className="w-5 h-5 text-purple-600" />
-            <span className="text-sm font-medium">Cancel anytime</span>
-          </div>
-        </div>
-
-        {/* FAQ Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
-            Frequently Asked Questions
-          </h2>
-
-          <div className="space-y-3">
-            {faqs.map((faq, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-xl overflow-hidden"
-              >
-                <button
-                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
-                >
-                  <span className="font-semibold text-gray-900 pr-4">
-                    {faq.question}
-                  </span>
-                  <ChevronDown
-                    className={`w-5 h-5 text-gray-500 flex-shrink-0 transition-transform duration-200 ${
-                      openFaq === index ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-                {openFaq === index && (
-                  <div className="px-6 pb-4 text-gray-600 leading-relaxed animate-fadeIn">
-                    {faq.answer}
-                  </div>
-                )}
+          <p className="text-green-100 mb-4">
+            Try our core features completely free - no credit card required
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+            {freeFeatures.map((feature, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-green-200 flex-shrink-0" />
+                <span>{feature}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Bottom CTA */}
-        <div className="text-center mt-12">
-          <p className="text-gray-600">
-            Have questions?{' '}
-            <a
-              href="mailto:support@applypro.org"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
+        {/* Pricing Cards */}
+        <div className="grid lg:grid-cols-3 gap-8 mb-12">
+          {plans.map((plan) => (
+            <div
+              key={plan.id}
+              className={`relative bg-white rounded-2xl border-2 p-8 transition-all duration-300 hover:shadow-xl ${
+                plan.popular
+                  ? 'border-purple-500 shadow-lg shadow-purple-500/20'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
             >
-              Contact us
-            </a>
-          </p>
+              {plan.popular && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                    Most Popular
+                  </div>
+                </div>
+              )}
+
+              <div className="text-center mb-6">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  {plan.icon}
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  {plan.name}
+                </h3>
+                <p className="text-gray-600 mb-4">{plan.description}</p>
+
+                <div className="flex items-baseline justify-center gap-1 mb-2">
+                  <span className="text-4xl font-bold text-gray-900">
+                    ${plan.price}
+                  </span>
+                  <span className="text-gray-600">{plan.period}</span>
+                </div>
+
+                {plan.originalPrice && (
+                  <div className="text-sm text-gray-500 line-through">
+                    Originally ${plan.originalPrice}
+                  </div>
+                )}
+              </div>
+
+              {/* Features */}
+              <ul className="space-y-3 mb-8">
+                {plan.features.map((feature, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* CTA Button */}
+              <div className="text-center">
+                {session?.user ? (
+                  <DodoCheckout
+                    productId={plan.productId}
+                    planType={plan.id as 'monthly' | 'yearly' | 'pay-per-use'}
+                    planName={plan.name}
+                    onSuccess={handleSuccess}
+                    className={`w-full py-3.5 px-6 rounded-xl font-semibold transition-all ${
+                      plan.popular
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/25'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/25'
+                    }`}
+                  >
+                    {plan.buttonText}
+                  </DodoCheckout>
+                ) : (
+                  <Link
+                    href="/signup"
+                    className={`inline-flex items-center justify-center w-full py-3.5 px-6 rounded-xl font-semibold transition-all ${
+                      plan.popular
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/25'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/25'
+                    }`}
+                  >
+                    {plan.buttonText}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* FAQ Section */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-8">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
+            Frequently Asked Questions
+          </h2>
+
+          <div className="grid gap-6 max-w-3xl mx-auto">
+            {[
+              {
+                q: 'Can I change plans anytime?',
+                a: 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately for upgrades, and at the end of your current billing period for downgrades.',
+              },
+              {
+                q: 'What happens to my data if I cancel?',
+                a: 'Your account and data remain accessible for 30 days after cancellation. During this period, you can reactivate your subscription. After 30 days, your data is permanently deleted.',
+              },
+              {
+                q: 'Do you offer refunds?',
+                a: 'We offer a 14-day money-back guarantee for yearly subscriptions and 30-day guarantee for monthly subscriptions. Pay-per-use purchases are non-refundable once used.',
+              },
+              {
+                q: 'Is there a free trial?',
+                a: 'Yes! You can use our ATS checker, resume builder, and job tracker completely free. No credit card required.',
+              },
+              {
+                q: 'What payment methods do you accept?',
+                a: 'We accept all major credit cards, PayPal, and bank transfers through our secure payment processor.',
+              },
+            ].map((faq, i) => (
+              <div key={i} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
+                <h3 className="font-semibold text-gray-900 mb-2">{faq.q}</h3>
+                <p className="text-gray-600">{faq.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Trust Indicators */}
+        <div className="mt-12 text-center">
+          <div className="inline-flex items-center gap-6 px-6 py-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Shield className="w-4 h-4 text-green-600" />
+              <span>Secure Payments</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Users className="w-4 h-4 text-blue-600" />
+              <span>1000+ Users</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <CreditCard className="w-4 h-4 text-purple-600" />
+              <span>Money-Back Guarantee</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

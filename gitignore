@@ -1,0 +1,120 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# ===================
+# Dependencies
+# ===================
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ===================
+# Build & Testing
+# ===================
+/coverage
+/.next/
+/out/
+/build
+*.tsbuildinfo
+next-env.d.ts
+
+# ===================
+# Environment Files
+# ===================
+.env
+.env.local
+.env.development
+.env.test
+.env.staging
+!.env.local.example
+!.env.production
+
+# ===================
+# Debug & Log Files
+# ===================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ===================
+# IDE & Editor
+# ===================
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ===================
+# Vercel & Deployment
+# ===================
+.vercel
+
+# ===================
+# Sentry
+# ===================
+.env.sentry-build-plugin
+
+# ===================
+# Security
+# ===================
+*.pem
+*.key
+*.crt
+
+# ===================
+# Temporary & Debug Files (IMPORTANT - ADD THESE)
+# ===================
+# Instruction files (development notes)
+instruction*.txt
+fix*.txt
+feature*.txt
+error*.txt
+
+# Debug folders and files
+/debug-files/
+*.backup
+*.bak
+
+# Temporary Word document lock files
+~$*.docx
+~$*.doc
+
+# Project scratch files
+project_overview.txt
+*.log
+
+# Backup files
+*.ts.backup
+*.tsx.backup
+*.js.backup
+
+# Test/scratch HTML files in root
+/index.html
+
+# Corrupted/strange filenames
+hboardpage.tsx*
+
+# Request files (temporary)
+request*.docx
+
+# ===================
+# Database
+# ===================
+*.db
+*.sqlite
+*.sqlite3
+prisma/migrations/*_backup
+
+# ===================
+# Claude AI Files (if you use Claude Code)
+# ===================
+# Keep .claude folder but ignore local settings if sensitive
+# .claude/
+
