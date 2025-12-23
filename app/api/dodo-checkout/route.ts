@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 
-// IMPORTANT: Correct API URLs
+// Correct API URLs
 const DODO_API_URL = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
-  ? 'https://live.dodopayments.com'  // Changed from api.dodopayments.com
+  ? 'https://live.dodopayments.com'
   : 'https://test.dodopayments.com';
 
 export async function POST(request: NextRequest) {
@@ -45,15 +45,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid plan type required' }, { status: 400 });
     }
 
-    // Build the request payload according to Dodo's API spec
+    // Build the request payload for /checkouts endpoint
     const payload = {
-      billing: {
-        city: 'N/A',
-        country: 'US',
-        state: 'N/A',
-        street: 'N/A',
-        zipcode: 0,  // Must be integer
-      },
       customer: {
         email: session.user.email,
         name: session.user.name || session.user.email?.split('@')[0] || 'Customer',
@@ -64,7 +57,6 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      payment_link: true,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.applypro.org'}/dashboard?payment=success&plan=${planType}`,
       metadata: {
         user_id: session.user.id,
@@ -73,10 +65,10 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    console.log('Sending to Dodo:', JSON.stringify(payload, null, 2));
+    console.log('Sending to Dodo /checkouts:', JSON.stringify(payload, null, 2));
 
-    // Create payment with Dodo
-    const response = await fetch(`${DODO_API_URL}/payments`, {
+    // Use /checkouts endpoint (works for both subscriptions and one-time payments)
+    const response = await fetch(`${DODO_API_URL}/checkouts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -106,13 +98,14 @@ export async function POST(request: NextRequest) {
     const data = JSON.parse(responseText);
     
     console.log('Checkout created successfully:', {
-      paymentId: data.payment_id,
-      hasPaymentLink: !!data.payment_link,
+      sessionId: data.session_id,
+      hasCheckoutUrl: !!data.checkout_url,
     });
 
+    // /checkouts returns checkout_url
     return NextResponse.json({ 
-      checkoutUrl: data.payment_link,
-      paymentId: data.payment_id,
+      checkoutUrl: data.checkout_url,
+      sessionId: data.session_id,
     });
 
   } catch (error) {
@@ -124,7 +117,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Add GET for testing
+// Health check endpoint
 export async function GET() {
   const apiUrl = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
     ? 'https://live.dodopayments.com'
@@ -134,6 +127,7 @@ export async function GET() {
     status: 'Dodo checkout endpoint active',
     environment: process.env.DODO_PAYMENTS_ENVIRONMENT,
     apiUrl: apiUrl,
+    endpoint: '/checkouts',
     apiKeySet: !!process.env.DODO_PAYMENTS_API_KEY,
     monthlyProductId: process.env.NEXT_PUBLIC_DODO_PRICE_MONTHLY || 'NOT SET',
     yearlyProductId: process.env.NEXT_PUBLIC_DODO_PRICE_YEARLY || 'NOT SET',
