@@ -29,9 +29,9 @@ export default function DodoCheckout({
 
     setIsLoading(true);
 
-    // Track checkout started
     trackEvent('checkout_started', {
       plan: planName,
+      plan_type: planType,
       product_id: productId,
       provider: 'dodo',
     });
@@ -44,10 +44,17 @@ export default function DodoCheckout({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create checkout');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create checkout');
       }
 
       const { checkoutUrl } = await response.json();
+
+      trackEvent('checkout_redirect', {
+        plan: planName,
+        plan_type: planType,
+        provider: 'dodo',
+      });
 
       // Redirect to Dodo checkout
       window.location.href = checkoutUrl;
@@ -56,11 +63,12 @@ export default function DodoCheckout({
       console.error('Checkout error:', error);
       trackEvent('checkout_error', {
         plan: planName,
+        plan_type: planType,
         product_id: productId,
         error: error instanceof Error ? error.message : 'Unknown error',
+        provider: 'dodo',
       });
       alert('Failed to start checkout. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -71,7 +79,29 @@ export default function DodoCheckout({
       disabled={disabled || isLoading}
       className={className}
     >
-      {isLoading ? 'Loading...' : children}
+      {isLoading ? (
+        <span className="flex items-center justify-center gap-2">
+          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          Processing...
+        </span>
+      ) : (
+        children
+      )}
     </button>
   );
 }
