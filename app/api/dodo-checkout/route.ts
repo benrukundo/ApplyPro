@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 
+// IMPORTANT: Correct API URLs
 const DODO_API_URL = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
-  ? 'https://api.dodopayments.com'
+  ? 'https://live.dodopayments.com'  // Changed from api.dodopayments.com
   : 'https://test.dodopayments.com';
 
 export async function POST(request: NextRequest) {
@@ -44,10 +45,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valid plan type required' }, { status: 400 });
     }
 
-    const isSubscription = planType !== 'pay-per-use';
-
-    // Build the request payload
-    const payload: Record<string, any> = {
+    // Build the request payload according to Dodo's API spec
+    const payload = {
+      billing: {
+        city: 'N/A',
+        country: 'US',
+        state: 'N/A',
+        street: 'N/A',
+        zipcode: 0,  // Must be integer
+      },
       customer: {
         email: session.user.email,
         name: session.user.name || session.user.email?.split('@')[0] || 'Customer',
@@ -67,20 +73,9 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Add billing information for subscriptions
-    if (isSubscription) {
-      payload.billing = {
-        city: 'Not Provided',
-        country: 'US',
-        state: 'Not Provided',
-        street: 'Not Provided',
-        zipcode: '00000',
-      };
-    }
-
     console.log('Sending to Dodo:', JSON.stringify(payload, null, 2));
 
-    // Create checkout session with Dodo
+    // Create payment with Dodo
     const response = await fetch(`${DODO_API_URL}/payments`, {
       method: 'POST',
       headers: {
@@ -131,9 +126,14 @@ export async function POST(request: NextRequest) {
 
 // Add GET for testing
 export async function GET() {
+  const apiUrl = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
+    ? 'https://live.dodopayments.com'
+    : 'https://test.dodopayments.com';
+    
   return NextResponse.json({
     status: 'Dodo checkout endpoint active',
     environment: process.env.DODO_PAYMENTS_ENVIRONMENT,
+    apiUrl: apiUrl,
     apiKeySet: !!process.env.DODO_PAYMENTS_API_KEY,
     monthlyProductId: process.env.NEXT_PUBLIC_DODO_PRICE_MONTHLY || 'NOT SET',
     yearlyProductId: process.env.NEXT_PUBLIC_DODO_PRICE_YEARLY || 'NOT SET',
