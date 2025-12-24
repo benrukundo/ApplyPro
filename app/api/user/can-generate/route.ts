@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const subscriptions = await prisma.subscription.findMany({
       where: {
         userId: session.user.id,
-        status: 'active',
+        status: { in: ['active', 'past_due'] },
       },
     });
 
@@ -23,54 +23,92 @@ export async function GET(request: NextRequest) {
         canGenerate: false,
         reason: 'no_subscription',
         message: 'No active subscription found',
+        subscription: null,
       });
     }
 
-    // Check recurring subscription (monthly/yearly)
+    // Check recurring subscription (monthly/yearly) - prioritize this
     const recurringSubscription = subscriptions.find(
-      s => s.plan === 'monthly' || s.plan === 'yearly'
+      s => (s.plan === 'monthly' || s.plan === 'yearly')
     );
 
     // Check pay-per-use packs with remaining credits
-    const payPerUseWithCredits = subscriptions.find(
+    const payPerUseWithCredits = subscriptions.filter(
       s => s.plan === 'pay-per-use' && s.monthlyUsageCount < s.monthlyLimit
     );
 
-    // Can generate if either has available credits
-    if (recurringSubscription && recurringSubscription.monthlyUsageCount < recurringSubscription.monthlyLimit) {
+    const recurringHasCredits = recurringSubscription &&
+      recurringSubscription.monthlyUsageCount < recurringSubscription.monthlyLimit;
+
+    const payPerUseCreditsTotal = payPerUseWithCredits.reduce(
+      (total, s) => total + (s.monthlyLimit - s.monthlyUsageCount),
+      0
+    );
+
+    // Can generate if recurring has available credits
+    if (recurringHasCredits) {
       return NextResponse.json({
         canGenerate: true,
-        subscription: recurringSubscription,
+        subscription: {
+          ...recurringSubscription,
+          isActive: true,
+        },
         source: 'recurring',
+        plan: recurringSubscription.plan,
         used: recurringSubscription.monthlyUsageCount,
         limit: recurringSubscription.monthlyLimit,
         remaining: recurringSubscription.monthlyLimit - recurringSubscription.monthlyUsageCount,
+        totalRemaining: (recurringSubscription.monthlyLimit - recurringSubscription.monthlyUsageCount) + payPerUseCreditsTotal,
       });
     }
 
-    if (payPerUseWithCredits) {
+    // Can generate if pay-per-use has credits
+    if (payPerUseCreditsTotal > 0) {
+      const activePack = payPerUseWithCredits[0];
       return NextResponse.json({
         canGenerate: true,
-        subscription: payPerUseWithCredits,
+        subscription: {
+          ...activePack,
+          isActive: true,
+        },
         source: 'pay-per-use',
-        used: payPerUseWithCredits.monthlyUsageCount,
-        limit: payPerUseWithCredits.monthlyLimit,
-        remaining: payPerUseWithCredits.monthlyLimit - payPerUseWithCredits.monthlyUsageCount,
+        plan: 'pay-per-use',
+        used: activePack.monthlyUsageCount,
+        limit: activePack.monthlyLimit,
+        remaining: activePack.monthlyLimit - activePack.monthlyUsageCount,
+        totalRemaining: payPerUseCreditsTotal,
+        hasRecurringPlan: !!recurringSubscription,
+        recurringSubscription: recurringSubscription ? {
+          ...recurringSubscription,
+          isActive: true,
+        } : null,
       });
     }
 
-    // Has subscriptions but all exhausted
-    const hasRecurring = !!recurringSubscription;
-    const exhaustedPayPerUse = subscriptions.filter(s => s.plan === 'pay-per-use');
+    // Has recurring but exhausted
+    if (recurringSubscription) {
+      return NextResponse.json({
+        canGenerate: false,
+        reason: 'limit_reached',
+        message: 'Monthly limit reached. Resets at the start of your next billing cycle.',
+        subscription: {
+          ...recurringSubscription,
+          isActive: true,
+        },
+        hasRecurringPlan: true,
+      });
+    }
 
+    // Has pay-per-use but all exhausted
     return NextResponse.json({
       canGenerate: false,
-      reason: hasRecurring ? 'limit_reached' : 'credits_exhausted',
-      message: hasRecurring
-        ? 'Monthly limit reached. Resets at the start of your next billing cycle.'
-        : 'All credits used. Purchase another pack or upgrade to Pro.',
-      hasRecurringPlan: hasRecurring,
-      recurringSubscription,
+      reason: 'credits_exhausted',
+      message: 'All credits used. Purchase another pack or upgrade to Pro.',
+      subscription: subscriptions[0] ? {
+        ...subscriptions[0],
+        isActive: true,
+      } : null,
+      hasRecurringPlan: false,
     });
 
   } catch (error) {

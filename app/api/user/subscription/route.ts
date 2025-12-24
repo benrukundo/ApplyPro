@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
         monthlyLimit: true,
         currentPeriodEnd: true,
         createdAt: true,
+        paddleId: true,
+        cancelledAt: true,
       },
     });
 
@@ -34,46 +36,61 @@ export async function GET(request: NextRequest) {
     );
 
     const payPerUseSubscriptions = subscriptions.filter(
-      s => s.plan === 'pay-per-use' && s.monthlyUsageCount < s.monthlyLimit
+      s => s.plan === 'pay-per-use'
+    );
+
+    // Pay-per-use with remaining credits
+    const payPerUseWithCredits = payPerUseSubscriptions.filter(
+      s => s.monthlyUsageCount < s.monthlyLimit
     );
 
     // Calculate total available credits from pay-per-use packs
-    const payPerUseCredits = payPerUseSubscriptions.reduce(
+    const payPerUseCredits = payPerUseWithCredits.reduce(
       (total, sub) => total + (sub.monthlyLimit - sub.monthlyUsageCount),
       0
     );
 
-    // Determine the "active" subscription to show
-    // Priority: Show recurring plan, but include pay-per-use info
-    const primarySubscription = recurringSubscription || payPerUseSubscriptions[0] || null;
+    // Calculate recurring credits
+    const recurringCredits = recurringSubscription
+      ? recurringSubscription.monthlyLimit - recurringSubscription.monthlyUsageCount
+      : 0;
 
-    // Calculate total available generations
-    let totalAvailable = 0;
-    let totalLimit = 0;
-    let totalUsed = 0;
+    // IMPORTANT: For backward compatibility, return the RECURRING subscription as primary
+    const primarySubscription = recurringSubscription || payPerUseWithCredits[0] || null;
 
-    if (recurringSubscription) {
-      totalAvailable += recurringSubscription.monthlyLimit - recurringSubscription.monthlyUsageCount;
-      totalLimit += recurringSubscription.monthlyLimit;
-      totalUsed += recurringSubscription.monthlyUsageCount;
+    // Calculate totals
+    const totalAvailable = recurringCredits + payPerUseCredits;
+    const totalUsed = subscriptions.reduce((sum, s) => sum + s.monthlyUsageCount, 0);
+    const totalLimit = subscriptions.reduce((sum, s) => sum + s.monthlyLimit, 0);
+
+    // Calculate days until reset for recurring subscription
+    let daysUntilReset = 0;
+    if (recurringSubscription?.currentPeriodEnd) {
+      const endDate = new Date(recurringSubscription.currentPeriodEnd);
+      const now = new Date();
+      daysUntilReset = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
     }
 
-    totalAvailable += payPerUseCredits;
-
-    // Add pay-per-use to totals
-    payPerUseSubscriptions.forEach(sub => {
-      totalLimit += sub.monthlyLimit;
-      totalUsed += sub.monthlyUsageCount;
-    });
+    // Build the subscription response with isActive for backward compatibility
+    const subscriptionResponse = primarySubscription ? {
+      ...primarySubscription,
+      isActive: primarySubscription.status === 'active' || primarySubscription.status === 'past_due',
+      daysUntilReset,
+    } : null;
 
     return NextResponse.json({
-      // Primary subscription for display
-      subscription: primarySubscription,
+      // PRIMARY subscription for backward compatibility (prefer recurring)
+      subscription: subscriptionResponse,
 
       // Detailed breakdown
-      recurringSubscription,
+      recurringSubscription: recurringSubscription ? {
+        ...recurringSubscription,
+        isActive: recurringSubscription.status === 'active' || recurringSubscription.status === 'past_due',
+        daysUntilReset,
+      } : null,
       payPerUseCredits,
       payPerUseSubscriptions,
+      payPerUseWithCredits,
 
       // Aggregated stats
       totalAvailable,
