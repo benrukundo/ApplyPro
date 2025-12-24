@@ -123,7 +123,6 @@ export async function POST(request: NextRequest) {
     const payload: DodoWebhookPayload = JSON.parse(rawBody);
     
     console.log('Event Type:', payload.type);
-    console.log('Business ID:', payload.business_id);
     console.log('Data:', JSON.stringify(payload.data, null, 2));
 
     const { type, data } = payload;
