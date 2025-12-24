@@ -233,15 +233,6 @@ export default function GeneratePage() {
     loadSubscription();
   }, [session?.user?.id]);
 
-  // Add this right after your subscription state is set (around line 68)
-  useEffect(() => {
-    console.log('=== SUBSCRIPTION DEBUG ===');
-    console.log('subscription:', subscription);
-    console.log('hasAvailableCredits:', subscription?.isActive && (subscription?.monthlyUsageCount < subscription?.monthlyLimit));
-    console.log('monthlyUsageCount:', subscription?.monthlyUsageCount);
-    console.log('monthlyLimit:', subscription?.monthlyLimit);
-  }, [subscription]);
-
   // Handle file drop
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setError('');
