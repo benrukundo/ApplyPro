@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ArrowLeft,
   Crown,
   Package,
   CreditCard,
@@ -18,6 +17,7 @@ import {
   Receipt,
   ArrowUpRight,
 } from 'lucide-react';
+import DodoCheckout from '@/components/DodoCheckout';
 
 interface SubscriptionData {
   subscription: {
@@ -57,6 +57,7 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [changingPlan, setChangingPlan] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -83,6 +84,43 @@ export default function SubscriptionPage() {
     }
   };
 
+  // Handle upgrade to yearly (direct, no redirect)
+  const handleUpgradeToYearly = async () => {
+    if (changingPlan) return;
+
+    const confirmMessage = `Upgrade to Pro Yearly?\n\nYou'll be charged the prorated difference ($149 - credit for unused days on monthly plan).\n\nYour yearly subscription starts immediately.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setChangingPlan(true);
+
+    try {
+      const response = await fetch('/api/subscription/schedule-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPlan: 'yearly' }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upgrade plan');
+      }
+
+      alert('Successfully upgraded to Pro Yearly!');
+      fetchSubscriptionData();
+      router.refresh();
+
+    } catch (error) {
+      console.error('Upgrade error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to upgrade. Please try again.');
+    } finally {
+      setChangingPlan(false);
+    }
+  };
+
   const handleCancelSubscription = async () => {
     setCancelling(true);
     try {
@@ -102,25 +140,6 @@ export default function SubscriptionPage() {
     } finally {
       setCancelling(false);
       setShowCancelConfirm(false);
-    }
-  };
-
-  const handleManageBilling = async () => {
-    try {
-      const response = await fetch('/api/dodo-portal', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.portalUrl) {
-          window.open(data.portalUrl, '_blank');
-        }
-      } else {
-        alert('Unable to open billing portal. Please try again.');
-      }
-    } catch (error) {
-      alert('Failed to open billing portal.');
     }
   };
 
@@ -156,21 +175,16 @@ export default function SubscriptionPage() {
     (acc, sub) => acc + (sub.monthlyLimit - sub.monthlyUsageCount),
     0
   ) || 0;
+  const payPerUseTotal = subscriptionData?.payPerUseSubscriptions?.reduce(
+    (acc, sub) => acc + sub.monthlyLimit,
+    0
+  ) || 0;
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
       <div className="container mx-auto px-4 max-w-4xl">
-        {/* Back Link */}
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
-
-        {/* Header */}
-        <div className="mb-8">
+        {/* Header - No back link, less spacing */}
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Subscription & Billing
           </h1>
@@ -214,14 +228,25 @@ export default function SubscriptionPage() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Direct upgrade button - no redirect */}
                     {recurringPlan?.plan === 'monthly' && (
-                      <Link
-                        href="/pricing"
-                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all text-center flex items-center justify-center gap-2"
+                      <button
+                        onClick={handleUpgradeToYearly}
+                        disabled={changingPlan}
+                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all text-center flex items-center justify-center gap-2 disabled:opacity-50"
                       >
-                        <ArrowUpRight className="w-4 h-4" />
-                        Upgrade to Yearly
-                      </Link>
+                        {changingPlan ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Upgrading...
+                          </>
+                        ) : (
+                          <>
+                            <ArrowUpRight className="w-4 h-4" />
+                            Upgrade to Yearly
+                          </>
+                        )}
+                      </button>
                     )}
                     <button
                       onClick={() => setShowCancelConfirm(true)}
@@ -272,14 +297,14 @@ export default function SubscriptionPage() {
                       <span className="font-medium text-gray-900">Resume Pack Credits</span>
                     </div>
                     <span className="font-semibold text-amber-700">
-                      {payPerUseCreditsRemaining} remaining
+                      {payPerUseCreditsRemaining} of {payPerUseTotal} remaining
                     </span>
                   </div>
                   <div className="w-full bg-amber-100 rounded-full h-3">
                     <div
                       className="bg-amber-500 h-3 rounded-full transition-all"
                       style={{
-                        width: `${(payPerUseCreditsRemaining / (subscriptionData?.payPerUseSubscriptions?.reduce((a, s) => a + s.monthlyLimit, 0) || 3)) * 100}%`,
+                        width: `${(payPerUseCreditsRemaining / payPerUseTotal) * 100}%`,
                       }}
                     />
                   </div>
@@ -326,23 +351,29 @@ export default function SubscriptionPage() {
                 </div>
               )}
 
-              {/* Buy more */}
+              {/* Buy more - Direct checkout, no redirect */}
               <div className="pt-4 border-t border-gray-100">
-                <Link
-                  href="/pricing"
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Package className="w-5 h-5 text-blue-600" />
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Package className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Need more credits?</p>
+                        <p className="text-sm text-gray-500">Get 3 resume generations for $4.99</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Need more credits?</p>
-                      <p className="text-sm text-gray-500">Purchase a Resume Pack for $4.99</p>
-                    </div>
+                    <DodoCheckout
+                      productId={process.env.NEXT_PUBLIC_DODO_PRICE_PAY_PER_USE!}
+                      planType="pay-per-use"
+                      planName="Resume Pack"
+                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    >
+                      Buy Pack
+                    </DodoCheckout>
                   </div>
-                  <ArrowUpRight className="w-5 h-5 text-gray-400" />
-                </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -360,27 +391,26 @@ export default function SubscriptionPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center">
-                      <CreditCard className="w-5 h-5 text-gray-500" />
+                    <div className="w-12 h-8 bg-gradient-to-r from-blue-600 to-blue-800 rounded flex items-center justify-center">
+                      <CreditCard className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">Payment on file</p>
-                      <p className="text-sm text-gray-500">Managed by Dodo Payments</p>
+                      <p className="font-medium text-gray-900">Card on file</p>
+                      <p className="text-sm text-gray-500">Managed securely by Dodo Payments</p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleManageBilling}
-                    className="px-4 py-2 text-blue-600 font-medium hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-2"
-                  >
-                    Update
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
+                  <p className="text-sm text-gray-500">
+                    To update, contact{' '}
+                    <a href="mailto:support@applypro.org" className="text-blue-600 hover:underline">
+                      support
+                    </a>
+                  </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Billing History Placeholder */}
+          {/* Billing History Card */}
           {hasRecurring && (
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
               <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
@@ -391,13 +421,17 @@ export default function SubscriptionPage() {
               </div>
 
               <div className="p-6">
-                <button
-                  onClick={handleManageBilling}
-                  className="w-full flex items-center justify-center gap-2 py-3 text-blue-600 font-medium hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                  View invoices in billing portal
-                  <ExternalLink className="w-4 h-4" />
-                </button>
+                <div className="text-center py-4">
+                  <p className="text-gray-600 mb-2">
+                    For invoices and billing history, please contact support.
+                  </p>
+                  <a
+                    href="mailto:support@applypro.org?subject=Invoice Request"
+                    className="text-blue-600 font-medium hover:underline"
+                  >
+                    Request invoices via email
+                  </a>
+                </div>
               </div>
             </div>
           )}
@@ -420,7 +454,7 @@ export default function SubscriptionPage() {
                     ? new Date(recurringPlan.currentPeriodEnd).toLocaleDateString()
                     : 'the end of your billing period'}
                 </strong>
-                . After that, you'll lose access to AI resume generation.
+                . After that, you won't be able to generate new resumes.
               </p>
               <div className="flex gap-3">
                 <button
@@ -436,7 +470,7 @@ export default function SubscriptionPage() {
                 >
                   {cancelling ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       Cancelling...
                     </>
                   ) : (
