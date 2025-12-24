@@ -72,8 +72,9 @@ interface PreviewData {
 }
 
 interface SubscriptionInfo {
+  id: string;
   plan: 'free' | 'monthly' | 'yearly' | 'pay-per-use' | null;
-  status: 'active' | 'cancelled' | 'failed' | null;
+  status: 'active' | 'cancelled' | 'failed' | 'past_due' | null;
   monthlyUsageCount: number;
   monthlyLimit: number;
   daysUntilReset: number;
@@ -203,7 +204,21 @@ export default function GeneratePage() {
         const data = await response.json();
 
         if (response.ok) {
-          setSubscription(data.subscription);
+          // Use the main subscription object which now includes isActive
+          if (data.subscription) {
+            setSubscription({
+              id: data.subscription.id,
+              plan: data.subscription.plan,
+              status: data.subscription.status,
+              monthlyUsageCount: data.subscription.monthlyUsageCount,
+              monthlyLimit: data.subscription.monthlyLimit,
+              daysUntilReset: data.subscription.daysUntilReset || 0,
+              isActive: data.subscription.isActive || data.subscription.status === 'active',
+              currentPeriodEnd: data.subscription.currentPeriodEnd,
+            });
+          } else {
+            setSubscription(null);
+          }
         } else {
           setSubscriptionError(data.error || 'Failed to load subscription');
         }
@@ -440,7 +455,14 @@ export default function GeneratePage() {
       const checkData = await checkResponse.json();
 
       if (!checkData.canGenerate) {
-        setError(checkData.message || 'You cannot generate a resume at this time.');
+        // Show appropriate message based on reason
+        if (checkData.reason === 'limit_reached') {
+          setError(`Monthly limit reached. Your limit resets on ${subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'the start of next month'}.`);
+        } else if (checkData.reason === 'credits_exhausted') {
+          setError('All credits used. Please purchase another pack or upgrade to Pro.');
+        } else {
+          setError(checkData.message || 'You cannot generate a resume at this time.');
+        }
         setIsLoading(false);
         setGenerationStep(0);
         return;
@@ -488,6 +510,22 @@ export default function GeneratePage() {
       setGeneratedResume(generateData);
       setShowResults(true);
       setGenerationStep(0);
+
+      // Refresh subscription to get updated usage count
+      const refreshResponse = await fetch('/api/user/subscription');
+      const refreshData = await refreshResponse.json();
+      if (refreshResponse.ok && refreshData.subscription) {
+        setSubscription({
+          id: refreshData.subscription.id,
+          plan: refreshData.subscription.plan,
+          status: refreshData.subscription.status,
+          monthlyUsageCount: refreshData.subscription.monthlyUsageCount,
+          monthlyLimit: refreshData.subscription.monthlyLimit,
+          daysUntilReset: refreshData.subscription.daysUntilReset || 0,
+          isActive: refreshData.subscription.isActive || refreshData.subscription.status === 'active',
+          currentPeriodEnd: refreshData.subscription.currentPeriodEnd,
+        });
+      }
 
       setTimeout(() => {
         const resultsSection = document.getElementById('results-section');
@@ -779,13 +817,13 @@ export default function GeneratePage() {
               </div>
             )}
 
-            {/* When user has exhausted credits */}
-            {!canGenerate && session?.user && subscription?.isActive && error && (
+            {/* When user has exhausted credits - only show if canGenerate is false */}
+            {session?.user && subscription?.isActive && subscription.monthlyUsageCount >= subscription.monthlyLimit && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                 <p className="text-amber-800 text-sm">
                   {subscription.plan === 'pay-per-use' ? (
                     <>
-                      All credits used.{' '}
+                      All {subscription.monthlyLimit} credits used.{' '}
                       <Link href="/pricing" className="text-amber-700 font-semibold underline hover:text-amber-900">
                         Purchase another pack
                       </Link>
@@ -793,11 +831,11 @@ export default function GeneratePage() {
                       <Link href="/pricing" className="text-amber-700 font-semibold underline hover:text-amber-900">
                         upgrade to Pro
                       </Link>
-                      {' '}for unlimited monthly generations.
+                      {' '}for 100 monthly generations.
                     </>
                   ) : (
                     <>
-                      Monthly limit reached. Your limit resets on{' '}
+                      Monthly limit reached ({subscription.monthlyUsageCount}/{subscription.monthlyLimit}). Your limit resets on{' '}
                       <span className="font-semibold">
                         {subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'the start of next month'}
                       </span>
@@ -853,7 +891,7 @@ export default function GeneratePage() {
                 <button
                   onClick={handleGenerate}
                   disabled={!isReadyToGenerate || isLoading}
-                  className="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/25 disabled:shadow-none flex items-center justify-center gap-2"
+                  className="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <>
@@ -1023,10 +1061,7 @@ export default function GeneratePage() {
               </h2>
               <div className="inline-block bg-white rounded-2xl shadow-lg p-6">
                 <p className="text-sm text-gray-500 mb-2">Match Score</p>
-                <p className={`text-5xl font-bold ${
-                  generatedResume.matchScore >= 80 ? 'text-green-600' :
-                  generatedResume.matchScore >= 60 ? 'text-yellow-600' : 'text-red-600'
-                }`}>
+                <p className={`text-5xl font-bold ${generatedResume.matchScore >= 80 ? 'text-green-600' : generatedResume.matchScore >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
                   {generatedResume.matchScore}%
                 </p>
               </div>
