@@ -70,19 +70,9 @@ export default function Home() {
         "Absolutely! Our AI is specifically trained to optimize resumes for Applicant Tracking Systems (ATS). We incorporate relevant keywords, use ATS-friendly formatting, and ensure your resume gets past automated screening to reach human recruiters.",
     },
     {
-      question: "Can I use it multiple times?",
-      answer:
-        "Yes! With Pro plans, you get up to 100 resume generations per month. Pay-per-use gives you 3 resumes for $4.99. This flexibility lets you tailor your resume for each job application.",
-    },
-    {
-      question: "What file formats do you support?",
-      answer:
-        "You can upload your resume as PDF or DOCX. After generation, you can download your tailored resume in both PDF and DOCX formats, ready to submit to any employer.",
-    },
-    {
       question: "Is my data secure?",
       answer:
-        "Yes! We take data security and privacy seriously. Your data is stored securely in encrypted databases and is used only to provide our services to you. We comply with GDPR regulations, which means you have the right to access, modify, or delete your personal data at any time. We never sell your information to third parties. For full details, please read our Privacy Policy.",
+        "Yes! Your data is stored securely in encrypted databases. We comply with GDPR regulations and never sell your information to third parties. Your data is never deleted even if you cancel - you keep access to your saved resumes forever.",
     },
     {
       question: "What if I don't have a resume yet?",
@@ -650,6 +640,17 @@ export default function Home() {
                 )}
               </div>
             ))}
+          </div>
+
+          {/* Link to full FAQ */}
+          <div className="text-center mt-8">
+            <Link
+              href="/faq"
+              className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+            >
+              View all FAQs
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </section>

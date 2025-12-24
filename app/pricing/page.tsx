@@ -467,6 +467,17 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
+
+          {/* Link to full FAQ */}
+          <div className="text-center mt-8">
+            <Link
+              href="/faq"
+              className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+            >
+              View all FAQs
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
 
         {/* Trust Indicators */}
