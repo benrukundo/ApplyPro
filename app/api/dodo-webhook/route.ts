@@ -56,14 +56,23 @@ export async function POST(request: NextRequest) {
     }
 
     const payload: DodoWebhookPayload = JSON.parse(body);
-    console.log('Webhook type:', payload.type);
-    console.log('Webhook data:', JSON.stringify(payload.data, null, 2));
+
+    console.log('=== WEBHOOK PAYLOAD ===');
+    console.log('Type:', payload.type);
+    console.log('Full payload:', JSON.stringify(payload, null, 2));
 
     const eventType = payload.type;
     const data = payload.data;
 
-    // Extract customer ID from various places in the payload
-    const customerId = data.customer_id || data.customer?.customer_id;
+    // Extract customer ID - it's inside the customer object
+    const customerId = data.customer?.customer_id;
+    const customerEmail = data.customer?.email;
+
+    console.log('=== EXTRACTED DATA ===');
+    console.log('Customer ID:', customerId);
+    console.log('Customer Email:', customerEmail);
+    console.log('Subscription ID:', data.subscription_id);
+    console.log('Metadata:', JSON.stringify(data.metadata));
 
     switch (eventType) {
       case 'subscription.active':
