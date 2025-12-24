@@ -57,16 +57,22 @@ export async function POST(request: NextRequest) {
 
     const isUpgrade = currentSubscription.plan === 'monthly' && newPlan === 'yearly';
 
-    // Call Dodo's Change Plan API with immediate proration
     // For upgrades: use prorated_immediately (charges difference)
     // For downgrades: use difference_immediately (credits unused amount)
     const prorationMode = isUpgrade ? 'prorated_immediately' : 'difference_immediately';
+
+    const requestBody = {
+      product_id: newProductId,
+      proration_billing_mode: prorationMode,
+      quantity: 1,  // Required field
+    };
 
     console.log('Changing plan:', {
       subscriptionId: currentSubscription.paddleId,
       from: currentSubscription.plan,
       to: newPlan,
       prorationMode,
+      requestBody,
     });
 
     const response = await fetch(
@@ -77,10 +83,7 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${process.env.DODO_PAYMENTS_API_KEY}`,
         },
-        body: JSON.stringify({
-          product_id: newProductId,
-          proration_billing_mode: prorationMode,
-        }),
+        body: JSON.stringify(requestBody),
       }
     );
 
