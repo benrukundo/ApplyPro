@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 import {
   CheckCircle2,
   Upload,
@@ -21,11 +23,40 @@ import {
   Brain,
   Linkedin,
   BarChart3,
+  CheckCircle,
 } from "lucide-react";
-import { useState } from "react";
+
+interface Subscription {
+  plan: string;
+  status: string;
+}
 
 export default function Home() {
+  const { data: session } = useSession();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+
+  // Fetch subscription status for logged-in users
+  useEffect(() => {
+    async function fetchSubscription() {
+      if (!session?.user) return;
+      
+      try {
+        const response = await fetch('/api/user/subscription');
+        if (response.ok) {
+          const data = await response.json();
+          setSubscription(data.subscription);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subscription:', error);
+      }
+    }
+
+    fetchSubscription();
+  }, [session?.user]);
+
+  const isSubscribed = subscription?.status === 'active';
+  const currentPlan = subscription?.plan;
 
   const faqs = [
     {
@@ -60,7 +91,15 @@ export default function Home() {
     },
   ];
 
-
+  // Helper function to get plan display name
+  const getPlanDisplayName = (plan: string) => {
+    switch (plan) {
+      case 'monthly': return 'Pro Monthly';
+      case 'yearly': return 'Pro Yearly';
+      case 'pay-per-use': return 'Resume Pack';
+      default: return plan;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -94,22 +133,45 @@ export default function Home() {
               Upload your resume, paste a job description, and get a perfectly tailored resume that beats ATS systems and impresses recruiters.
             </p>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons - Different for logged in vs logged out users */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-              <Link
-                href="/generate"
-                className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-lg font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all duration-300 inline-flex items-center gap-2"
-              >
-                Start Free Analysis
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                href="/ats-checker"
-                className="px-8 py-4 bg-white text-gray-700 text-lg font-semibold rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300 inline-flex items-center gap-2"
-              >
-                <Target className="w-5 h-5 text-green-600" />
-                Free ATS Check
-              </Link>
+              {session?.user ? (
+                // Logged in user CTAs
+                <>
+                  <Link
+                    href="/generate"
+                    className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-lg font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all duration-300 inline-flex items-center gap-2"
+                  >
+                    Generate Resume
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className="px-8 py-4 bg-white text-gray-700 text-lg font-semibold rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300 inline-flex items-center gap-2"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                </>
+              ) : (
+                // Logged out user CTAs
+                <>
+                  <Link
+                    href="/generate"
+                    className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-lg font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all duration-300 inline-flex items-center gap-2"
+                  >
+                    Start Free Analysis
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                  <Link
+                    href="/ats-checker"
+                    className="px-8 py-4 bg-white text-gray-700 text-lg font-semibold rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-300 inline-flex items-center gap-2"
+                  >
+                    <Target className="w-5 h-5 text-green-600" />
+                    Free ATS Check
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Trust Indicators */}
@@ -148,8 +210,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-
 
       {/* Features Section */}
       <section className="py-20 bg-white">
@@ -336,8 +396,6 @@ export default function Home() {
         </div>
       </section>
 
-
-
       {/* Pricing Section */}
       <section id="pricing" className="py-20 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">
@@ -349,6 +407,26 @@ export default function Home() {
               Start free, upgrade when you need more. No hidden fees.
             </p>
           </div>
+
+          {/* Current Plan Banner for subscribed users */}
+          {isSubscribed && (
+            <div className="max-w-5xl mx-auto mb-8">
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-4 text-white text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-semibold">
+                    You're currently subscribed to {getPlanDisplayName(currentPlan || '')}
+                  </span>
+                  <Link 
+                    href="/dashboard" 
+                    className="ml-2 underline hover:no-underline"
+                  >
+                    Manage subscription →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="max-w-5xl mx-auto">
             <div className="grid md:grid-cols-3 gap-8">
@@ -382,20 +460,27 @@ export default function Home() {
                 </ul>
 
                 <Link
-                  href="/signup"
+                  href={session?.user ? "/dashboard" : "/signup"}
                   className="block w-full text-center py-3 px-6 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
                 >
-                  Get Started Free
+                  {session?.user ? "Go to Dashboard" : "Get Started Free"}
                 </Link>
               </div>
 
               {/* Pro Plan - Highlighted */}
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 shadow-xl relative scale-105">
-                {/* Popular Badge */}
+              <div className={`bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 shadow-xl relative scale-105 ${currentPlan === 'monthly' ? 'ring-4 ring-green-400' : ''}`}>
+                {/* Badge */}
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="px-4 py-1 bg-yellow-400 text-yellow-900 text-sm font-bold rounded-full shadow-lg">
-                    MOST POPULAR
-                  </span>
+                  {currentPlan === 'monthly' ? (
+                    <span className="px-4 py-1 bg-green-500 text-white text-sm font-bold rounded-full shadow-lg flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      CURRENT PLAN
+                    </span>
+                  ) : (
+                    <span className="px-4 py-1 bg-yellow-400 text-yellow-900 text-sm font-bold rounded-full shadow-lg">
+                      MOST POPULAR
+                    </span>
+                  )}
                 </div>
 
                 <div className="text-center mb-8 text-white">
@@ -434,21 +519,37 @@ export default function Home() {
                   </li>
                 </ul>
 
-                <Link
-                  href="/pricing"
-                  className="block w-full text-center py-3 px-6 bg-white text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-colors"
-                >
-                  Get Started
-                </Link>
+                {currentPlan === 'monthly' ? (
+                  <Link
+                    href="/dashboard"
+                    className="block w-full text-center py-3 px-6 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition-colors"
+                  >
+                    Manage Subscription
+                  </Link>
+                ) : (
+                  <Link
+                    href="/pricing"
+                    className="block w-full text-center py-3 px-6 bg-white text-blue-600 font-semibold rounded-xl hover:bg-blue-50 transition-colors"
+                  >
+                    {currentPlan === 'yearly' ? 'Current: Yearly' : 'Get Started'}
+                  </Link>
+                )}
               </div>
 
               {/* Pro Yearly Plan */}
-              <div className="bg-white rounded-2xl p-8 border-2 border-purple-200 hover:border-purple-300 transition-all relative">
-                {/* Best Value Badge */}
+              <div className={`bg-white rounded-2xl p-8 border-2 ${currentPlan === 'yearly' ? 'border-green-500 ring-4 ring-green-200' : 'border-purple-200 hover:border-purple-300'} transition-all relative`}>
+                {/* Badge */}
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="px-4 py-1 bg-green-500 text-white text-sm font-bold rounded-full shadow-lg">
-                    SAVE 35%
-                  </span>
+                  {currentPlan === 'yearly' ? (
+                    <span className="px-4 py-1 bg-green-500 text-white text-sm font-bold rounded-full shadow-lg flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      CURRENT PLAN
+                    </span>
+                  ) : (
+                    <span className="px-4 py-1 bg-green-500 text-white text-sm font-bold rounded-full shadow-lg">
+                      SAVE 35%
+                    </span>
+                  )}
                 </div>
 
                 <div className="text-center mb-8">
@@ -480,12 +581,21 @@ export default function Home() {
                   </li>
                 </ul>
 
-                <Link
-                  href="/pricing"
-                  className="block w-full text-center py-3 px-6 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors"
-                >
-                  Get Yearly
-                </Link>
+                {currentPlan === 'yearly' ? (
+                  <Link
+                    href="/dashboard"
+                    className="block w-full text-center py-3 px-6 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition-colors"
+                  >
+                    Manage Subscription
+                  </Link>
+                ) : (
+                  <Link
+                    href="/pricing"
+                    className="block w-full text-center py-3 px-6 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors"
+                  >
+                    {currentPlan === 'monthly' ? 'Upgrade to Yearly' : 'Get Yearly'}
+                  </Link>
+                )}
               </div>
             </div>
 
@@ -494,7 +604,7 @@ export default function Home() {
               <p className="text-gray-600">
                 Just need a few resumes?{" "}
                 <Link href="/pricing" className="text-blue-600 font-semibold hover:text-blue-700">
-                  Get 3 resumes for $4.99 →
+                  Get 3 resumes for $4.99 
                 </Link>
               </p>
             </div>
@@ -553,30 +663,55 @@ export default function Home() {
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-              Ready to Land More Interviews?
+              {isSubscribed ? "Ready to Generate Your Next Resume?" : "Ready to Land More Interviews?"}
             </h2>
             <p className="text-xl text-blue-100 mb-8">
-              Join thousands of job seekers who've transformed their job search with AI-tailored resumes.
+              {isSubscribed 
+                ? "You have an active subscription. Start generating tailored resumes now!"
+                : "Join thousands of job seekers who've transformed their job search with AI-tailored resumes."
+              }
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                href="/generate"
-                className="group px-8 py-4 bg-white text-blue-600 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 inline-flex items-center gap-2"
-              >
-                Start Free Analysis
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                href="/build-resume"
-                className="px-8 py-4 bg-transparent text-white text-lg font-semibold rounded-xl border-2 border-white/50 hover:bg-white/10 hover:border-white transition-all duration-300 inline-flex items-center gap-2"
-              >
-                <PenTool className="w-5 h-5" />
-                Build From Scratch
-              </Link>
+              {isSubscribed ? (
+                <>
+                  <Link
+                    href="/generate"
+                    className="group px-8 py-4 bg-white text-blue-600 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 inline-flex items-center gap-2"
+                  >
+                    Generate Resume
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className="px-8 py-4 bg-transparent text-white text-lg font-semibold rounded-xl border-2 border-white/50 hover:bg-white/10 hover:border-white transition-all duration-300 inline-flex items-center gap-2"
+                  >
+                    View Dashboard
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/generate"
+                    className="group px-8 py-4 bg-white text-blue-600 text-lg font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 inline-flex items-center gap-2"
+                  >
+                    Start Free Analysis
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                  <Link
+                    href="/build-resume"
+                    className="px-8 py-4 bg-transparent text-white text-lg font-semibold rounded-xl border-2 border-white/50 hover:bg-white/10 hover:border-white transition-all duration-300 inline-flex items-center gap-2"
+                  >
+                    <PenTool className="w-5 h-5" />
+                    Build From Scratch
+                  </Link>
+                </>
+              )}
             </div>
-            <p className="mt-6 text-blue-200 text-sm">
-              No credit card required • Free analysis • Results in 60 seconds
-            </p>
+            {!isSubscribed && (
+              <p className="mt-6 text-blue-200 text-sm">
+                No credit card required • Free analysis • Results in 60 seconds
+              </p>
+            )}
           </div>
         </div>
       </section>
