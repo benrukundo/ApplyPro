@@ -15,12 +15,9 @@ import {
   CreditCard,
   Users,
   FileText,
-  Brain,
-  Sparkles,
   CheckCircle,
-  Calendar,
   ArrowUp,
-  X,
+  ArrowDown,
 } from 'lucide-react';
 import DodoCheckout from '@/components/DodoCheckout';
 
@@ -28,18 +25,15 @@ interface Subscription {
   plan: string;
   status: string;
   currentPeriodEnd?: string;
-  scheduledPlanChange?: string;
-  scheduledChangeDate?: string;
 }
 
 export default function PricingPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
-  const [schedulingChange, setSchedulingChange] = useState(false);
-  const [cancellingChange, setCancellingChange] = useState(false);
+  const [changingPlan, setChangingPlan] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Fetch user's subscription status
   useEffect(() => {
@@ -66,78 +60,54 @@ export default function PricingPage() {
   }, [session?.user?.id]);
 
   const handleSuccess = () => {
-    setIsLoading(false);
     router.push('/dashboard');
   };
 
-  // Schedule upgrade to yearly
-  const handleScheduleUpgrade = async () => {
-    if (schedulingChange) return;
+  // Handle immediate plan change (upgrade/downgrade)
+  const handleChangePlan = async (newPlan: 'monthly' | 'yearly') => {
+    if (changingPlan) return;
 
-    setSchedulingChange(true);
+    const isUpgrade = subscription?.plan === 'monthly' && newPlan === 'yearly';
+
+    // Show confirmation
+    const confirmMessage = isUpgrade
+      ? `Upgrade to Pro Yearly?\n\nYou'll be charged the prorated difference ($149 - credit for unused days on monthly plan).\n\nYour yearly subscription starts immediately.`
+      : `Switch to Pro Monthly?\n\nYour unused credit from the yearly plan will be applied to future charges.\n\nYour monthly subscription starts immediately.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setChangingPlan(true);
 
     try {
       const response = await fetch('/api/subscription/schedule-change', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPlan: 'yearly' }),
+        body: JSON.stringify({ newPlan }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to schedule upgrade');
+        throw new Error(data.error || 'Failed to change plan');
       }
 
-      alert(`Success! Your plan will upgrade to Yearly on ${new Date(data.effectiveDate).toLocaleDateString()}`);
+      alert(data.message);
 
       // Refresh subscription data
       setSubscription({
         ...subscription!,
-        scheduledPlanChange: 'yearly',
-        scheduledChangeDate: data.effectiveDate,
+        plan: newPlan,
       });
+
+      router.refresh();
 
     } catch (error) {
-      console.error('Schedule upgrade error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to schedule upgrade');
+      console.error('Change plan error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to change plan. Please try again.');
     } finally {
-      setSchedulingChange(false);
-    }
-  };
-
-  // Cancel scheduled change
-  const handleCancelScheduledChange = async () => {
-    if (cancellingChange) return;
-
-    if (!confirm('Are you sure you want to cancel the scheduled plan change?')) {
-      return;
-    }
-
-    setCancellingChange(true);
-
-    try {
-      const response = await fetch('/api/subscription/schedule-change', {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to cancel scheduled change');
-      }
-
-      alert('Scheduled plan change cancelled');
-
-      setSubscription({
-        ...subscription!,
-        scheduledPlanChange: undefined,
-        scheduledChangeDate: undefined,
-      });
-
-    } catch (error) {
-      console.error('Cancel scheduled change error:', error);
-      alert('Failed to cancel scheduled change');
-    } finally {
-      setCancellingChange(false);
+      setChangingPlan(false);
     }
   };
 
@@ -149,7 +119,7 @@ export default function PricingPage() {
 
   // Check if user has any active subscription
   const hasActiveSubscription = (): boolean => {
-    return subscription?.status === 'active' && 
+    return subscription?.status === 'active' &&
            (subscription.plan === 'monthly' || subscription.plan === 'yearly');
   };
 
@@ -172,7 +142,7 @@ export default function PricingPage() {
       ],
       popular: false,
       icon: <FileText className="w-6 h-6 text-blue-600" />,
-      allowRepurchase: true, // Pay-per-use can be purchased multiple times
+      allowRepurchase: true,
     },
     {
       id: 'monthly',
@@ -237,32 +207,6 @@ export default function PricingPage() {
     const isCurrentPlan = isSubscribedTo(plan.id);
     const hasOtherSubscription = hasActiveSubscription() && !isCurrentPlan;
 
-    // User has scheduled an upgrade to this plan
-    if (subscription?.scheduledPlanChange === plan.id) {
-      return (
-        <div className="space-y-2">
-          <div className="w-full py-3.5 px-6 rounded-xl font-semibold bg-amber-100 text-amber-700 flex items-center justify-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Scheduled for {new Date(subscription?.scheduledChangeDate || '').toLocaleDateString()}
-          </div>
-          <button
-            onClick={handleCancelScheduledChange}
-            disabled={cancellingChange}
-            className="w-full py-2 px-4 rounded-lg text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-1"
-          >
-            {cancellingChange ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <X className="w-4 h-4" />
-                Cancel scheduled change
-              </>
-            )}
-          </button>
-        </div>
-      );
-    }
-
     // User is subscribed to this exact plan
     if (isCurrentPlan && !plan.allowRepurchase) {
       return (
@@ -273,45 +217,53 @@ export default function PricingPage() {
       );
     }
 
-    // User has a different subscription (monthly/yearly) - show upgrade/downgrade option
-    if (hasOtherSubscription && !plan.allowRepurchase) {
-      const currentPlan = subscription?.plan;
-      const isUpgrade =
-        (currentPlan === 'monthly' && plan.id === 'yearly');
-
-      if (isUpgrade) {
-        return (
-          <button
-            onClick={handleScheduleUpgrade}
-            disabled={schedulingChange}
-            className="w-full py-3.5 px-6 rounded-xl font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
-          >
-            {schedulingChange ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Scheduling...
-              </>
-            ) : (
-              <>
-                <ArrowUp className="w-5 h-5" />
-                Upgrade at Renewal
-              </>
-            )}
-          </button>
-        );
-      }
-
+    // User has monthly and this is yearly - show upgrade option
+    if (hasOtherSubscription && plan.id === 'yearly' && subscription?.plan === 'monthly') {
       return (
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center justify-center w-full py-3.5 px-6 rounded-xl font-semibold bg-gray-200 text-gray-600 hover:bg-gray-300 transition-all"
+        <button
+          onClick={() => handleChangePlan('yearly')}
+          disabled={changingPlan}
+          className="w-full py-3.5 px-6 rounded-xl font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          Manage Subscription
-        </Link>
+          {changingPlan ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Upgrading...
+            </>
+          ) : (
+            <>
+              <ArrowUp className="w-5 h-5" />
+              Upgrade Now
+            </>
+          )}
+        </button>
       );
     }
 
-    // User is logged in but not subscribed (or it's pay-per-use which can be repurchased)
+    // User has yearly and this is monthly - show downgrade option
+    if (hasOtherSubscription && plan.id === 'monthly' && subscription?.plan === 'yearly') {
+      return (
+        <button
+          onClick={() => handleChangePlan('monthly')}
+          disabled={changingPlan}
+          className="w-full py-3.5 px-6 rounded-xl font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {changingPlan ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Changing...
+            </>
+          ) : (
+            <>
+              <ArrowDown className="w-5 h-5" />
+              Switch to Monthly
+            </>
+          )}
+        </button>
+      );
+    }
+
+    // User is logged in but not subscribed (or it's pay-per-use)
     if (session?.user) {
       return (
         <DodoCheckout
@@ -368,19 +320,22 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* Current Subscription Banner (if subscribed) */}
+        {/* Current Subscription Banner */}
         {subscription?.status === 'active' && (
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-4 mb-8 text-white text-center">
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
               <CheckCircle className="w-5 h-5" />
               <span className="font-semibold">
                 You're subscribed to {subscription.plan === 'monthly' ? 'Pro Monthly' : subscription.plan === 'yearly' ? 'Pro Yearly' : 'Resume Pack'}
               </span>
               {subscription.currentPeriodEnd && (
-                <span className="text-green-100 ml-2">
+                <span className="text-green-100">
                   · Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
                 </span>
               )}
+              <Link href="/dashboard" className="ml-2 underline hover:no-underline text-green-100">
+                Manage →
+              </Link>
             </div>
           </div>
         )}
@@ -490,8 +445,12 @@ export default function PricingPage() {
           <div className="grid gap-6 max-w-3xl mx-auto">
             {[
               {
-                q: 'Can I change plans anytime?',
-                a: 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately for upgrades, and at the end of your current billing period for downgrades.',
+                q: 'Can I upgrade or downgrade anytime?',
+                a: 'Yes! You can switch between Monthly and Yearly plans anytime. When upgrading, you\'ll be charged the prorated difference. When downgrading, any unused credit is applied to future charges.',
+              },
+              {
+                q: 'How does prorated billing work?',
+                a: 'When you upgrade from Monthly ($19) to Yearly ($149), we calculate how many days are left in your current billing period and credit that amount toward your new plan. You only pay the difference.',
               },
               {
                 q: 'What happens to my data if I cancel?',
@@ -499,15 +458,11 @@ export default function PricingPage() {
               },
               {
                 q: 'Do you offer refunds?',
-                a: 'We offer a 14-day money-back guarantee for yearly subscriptions and 30-day guarantee for monthly subscriptions. Pay-per-use purchases are non-refundable once used.',
-              },
-              {
-                q: 'Is there a free trial?',
-                a: 'Yes! You can use our ATS checker, resume builder, and job tracker completely free. No credit card required.',
+                a: 'We offer a 14-day money-back guarantee for yearly subscriptions and 7-day guarantee for monthly subscriptions. Pay-per-use purchases are non-refundable once used.',
               },
               {
                 q: 'What payment methods do you accept?',
-                a: 'We accept all major credit cards, PayPal, and bank transfers through our secure payment processor.',
+                a: 'We accept all major credit cards, PayPal, and bank transfers through our secure payment processor (Dodo Payments).',
               },
             ].map((faq, i) => (
               <div key={i} className="border-b border-gray-100 pb-6 last:border-b-0 last:pb-0">
