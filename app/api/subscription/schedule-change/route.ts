@@ -88,15 +88,18 @@ export async function POST(request: NextRequest) {
     );
 
     const responseText = await response.text();
-    console.log('Dodo change plan response:', response.status, responseText);
+    console.log('Dodo change plan response status:', response.status);
+    console.log('Dodo change plan response body:', responseText || '(empty)');
 
     if (!response.ok) {
       console.error('Dodo change plan error:', response.status, responseText);
 
       let errorMessage = 'Failed to change plan';
       try {
-        const errorJson = JSON.parse(responseText);
-        errorMessage = errorJson.message || errorMessage;
+        if (responseText) {
+          const errorJson = JSON.parse(responseText);
+          errorMessage = errorJson.message || errorMessage;
+        }
       } catch {
         // Use default error
       }
@@ -104,7 +107,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 
-    const data = JSON.parse(responseText);
+    // Parse response only if there's content
+    let data = null;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        // Response might be empty or not JSON - that's okay for success
+        console.log('Response is not JSON, but request succeeded');
+      }
+    }
 
     // Update local database
     await prisma.subscription.update({
@@ -116,14 +128,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log('Plan changed successfully:', {
+      userId: session.user.id,
+      from: currentSubscription.plan,
+      to: newPlan,
+    });
+
     return NextResponse.json({
       success: true,
       message: isUpgrade
-        ? `Successfully upgraded to ${newPlan}! You've been charged the prorated difference.`
-        : `Successfully changed to ${newPlan}. Any unused credit will be applied to future charges.`,
+        ? `Successfully upgraded to Pro Yearly! You've been charged the prorated difference.`
+        : `Successfully switched to Pro Monthly. Any unused credit will be applied to future charges.`,
       previousPlan: currentSubscription.plan,
       newPlan: newPlan,
       isUpgrade,
+      dodoResponse: data,
     });
 
   } catch (error) {
