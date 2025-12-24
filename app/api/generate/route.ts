@@ -130,7 +130,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user can generate (has active subscription/credits)
-    const subscription = await prisma.subscription.findFirst({
+    // Get ALL active subscriptions for the user
+    const subscriptions = await prisma.subscription.findMany({
       where: {
         userId: session.user.id,
         status: 'active',
@@ -138,47 +139,87 @@ export async function POST(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    if (!subscription) {
+    if (subscriptions.length === 0) {
       return NextResponse.json(
         { error: "No active subscription. Please purchase a plan to generate resumes." },
         { status: 403 }
       );
     }
 
-    // Check usage limits for subscription plans
-    if (subscription.plan === 'monthly' || subscription.plan === 'yearly') {
-      const MONTHLY_LIMIT = 100;
-      
-      // Reset monthly count if needed
-      const now = new Date();
-      const lastReset = new Date(subscription.lastResetDate);
-      if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
-        await prisma.subscription.update({
-          where: { id: subscription.id },
-          data: { monthlyUsageCount: 0, lastResetDate: now },
-        });
-        subscription.monthlyUsageCount = 0;
-        
-        // Clear usage alerts tracking for this user's new billing period
-        usageAlertsSent.delete(session.user.id);
-      }
+    // Find a subscription with available credits
+    // Priority: 1) pay-per-use with remaining credits, 2) recurring plans with remaining credits
+    let subscription = null;
+    const MONTHLY_LIMIT = 100;
+    const PAY_PER_USE_LIMIT = 3;
 
-      if (subscription.monthlyUsageCount >= MONTHLY_LIMIT) {
+    // First, check for pay-per-use with remaining credits
+    for (const sub of subscriptions) {
+      if (sub.plan === 'pay-per-use' && sub.monthlyUsageCount < PAY_PER_USE_LIMIT) {
+        subscription = sub;
+        break;
+      }
+    }
+
+    // If no pay-per-use credits available, check recurring plans
+    if (!subscription) {
+      for (const sub of subscriptions) {
+        if (sub.plan === 'monthly' || sub.plan === 'yearly') {
+          // Reset monthly count if needed
+          const now = new Date();
+          const lastReset = new Date(sub.lastResetDate);
+
+          if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
+            await prisma.subscription.update({
+              where: { id: sub.id },
+              data: { monthlyUsageCount: 0, lastResetDate: now },
+            });
+            sub.monthlyUsageCount = 0;
+
+            // Clear usage alerts tracking for this user's new billing period
+            usageAlertsSent.delete(session.user.id);
+          }
+
+          if (sub.monthlyUsageCount < MONTHLY_LIMIT) {
+            subscription = sub;
+            break;
+          }
+        }
+      }
+    }
+
+    // If still no subscription found, determine the appropriate error message
+    if (!subscription) {
+      // Check what subscriptions exist to give better error message
+      const hasExhaustedPayPerUse = subscriptions.some(
+        (sub) => sub.plan === 'pay-per-use' && sub.monthlyUsageCount >= PAY_PER_USE_LIMIT
+      );
+      const hasExhaustedRecurring = subscriptions.some(
+        (sub) => (sub.plan === 'monthly' || sub.plan === 'yearly') && sub.monthlyUsageCount >= MONTHLY_LIMIT
+      );
+      const hasRecurringPlan = subscriptions.some(
+        (sub) => sub.plan === 'monthly' || sub.plan === 'yearly'
+      );
+
+      if (hasExhaustedRecurring) {
         return NextResponse.json(
-          { error: `Monthly limit of ${MONTHLY_LIMIT} resumes reached. Resets on the 1st of next month.` },
+          { error: `Monthly limit of ${MONTHLY_LIMIT} resumes reached. Your limit resets at the start of your next billing period.` },
+          { status: 403 }
+        );
+      } else if (hasExhaustedPayPerUse && !hasRecurringPlan) {
+        return NextResponse.json(
+          { error: "All 3 resume credits used. Please purchase another pack or upgrade to Pro for 100 monthly generations." },
+          { status: 403 }
+        );
+      } else {
+        return NextResponse.json(
+          { error: "No available credits. Please check your subscription." },
           { status: 403 }
         );
       }
     }
 
-    if (subscription.plan === 'pay-per-use') {
-      if (subscription.monthlyUsageCount >= 3) {
-        return NextResponse.json(
-          { error: "All 3 resume credits used. Please purchase another pack." },
-          { status: 403 }
-        );
-      }
-    }
+    // Now 'subscription' contains the plan to use for this generation
+    console.log(`Using subscription: ${subscription.plan} (${subscription.monthlyUsageCount}/${subscription.plan === 'pay-per-use' ? PAY_PER_USE_LIMIT : MONTHLY_LIMIT} used)`);
 
     // Parse request body
     const body: GenerateRequest = await request.json();
