@@ -78,6 +78,7 @@ interface SubscriptionInfo {
   monthlyLimit: number;
   daysUntilReset: number;
   isActive: boolean;
+  currentPeriodEnd?: string;
 }
 
 interface GeneratedResume {
@@ -438,8 +439,8 @@ export default function GeneratePage() {
       const checkResponse = await fetch('/api/user/can-generate');
       const checkData = await checkResponse.json();
 
-      if (!checkData.allowed) {
-        setError(checkData.reason || 'You cannot generate a resume at this time.');
+      if (!checkData.canGenerate) {
+        setError(checkData.message || 'You cannot generate a resume at this time.');
         setIsLoading(false);
         setGenerationStep(0);
         return;
@@ -775,6 +776,38 @@ export default function GeneratePage() {
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                 <p className="text-amber-800 text-sm">{subscriptionError}</p>
+              </div>
+            )}
+
+            {/* When user has exhausted credits */}
+            {!canGenerate && session?.user && subscription?.isActive && error && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p className="text-amber-800 text-sm">
+                  {subscription.plan === 'pay-per-use' ? (
+                    <>
+                      All credits used.{' '}
+                      <Link href="/pricing" className="text-amber-700 font-semibold underline hover:text-amber-900">
+                        Purchase another pack
+                      </Link>
+                      {' '}or{' '}
+                      <Link href="/pricing" className="text-amber-700 font-semibold underline hover:text-amber-900">
+                        upgrade to Pro
+                      </Link>
+                      {' '}for unlimited monthly generations.
+                    </>
+                  ) : (
+                    <>
+                      Monthly limit reached. Your limit resets on{' '}
+                      <span className="font-semibold">
+                        {subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'the start of next month'}
+                      </span>
+                      . Need more?{' '}
+                      <Link href="/pricing" className="text-amber-700 font-semibold underline hover:text-amber-900">
+                        Purchase a Resume Pack
+                      </Link>
+                    </>
+                  )}
+                </p>
               </div>
             )}
           </div>
