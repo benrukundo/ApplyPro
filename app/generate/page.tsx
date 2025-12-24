@@ -233,6 +233,15 @@ export default function GeneratePage() {
     loadSubscription();
   }, [session?.user?.id]);
 
+  // Add this right after your subscription state is set (around line 68)
+  useEffect(() => {
+    console.log('=== SUBSCRIPTION DEBUG ===');
+    console.log('subscription:', subscription);
+    console.log('hasAvailableCredits:', subscription?.isActive && (subscription?.monthlyUsageCount < subscription?.monthlyLimit));
+    console.log('monthlyUsageCount:', subscription?.monthlyUsageCount);
+    console.log('monthlyLimit:', subscription?.monthlyLimit);
+  }, [subscription]);
+
   // Handle file drop
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     setError('');
@@ -567,9 +576,10 @@ export default function GeneratePage() {
     }
   };
 
-const hasAvailableCredits = subscription?.isActive &&
-  (subscription.monthlyUsageCount < subscription.monthlyLimit);
-const canGenerate = session?.user?.id && hasAvailableCredits;
+const hasSubscription = subscription?.isActive === true;
+const hasCreditsAvailable = subscription ?
+  (subscription.monthlyUsageCount < subscription.monthlyLimit) : false;
+const canGenerate = session?.user?.id && hasSubscription && hasCreditsAvailable;
 const isReadyToGenerate = resumeText && jobDescription.length >= MIN_JOB_DESC_LENGTH;
 
   if (sessionStatus === 'loading') {
