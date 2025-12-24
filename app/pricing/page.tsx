@@ -93,22 +93,18 @@ export default function PricingPage() {
         throw new Error(data.error || 'Failed to change plan');
       }
 
+      // Show success message
       alert(data.message);
 
-      // Refresh subscription data
-      setSubscription({
-        ...subscription!,
-        plan: newPlan,
-      });
-
-      router.refresh();
+      // Redirect to dashboard
+      router.push('/dashboard?plan_changed=true');
 
     } catch (error) {
       console.error('Change plan error:', error);
       alert(error instanceof Error ? error.message : 'Failed to change plan. Please try again.');
-    } finally {
       setChangingPlan(false);
     }
+    // Note: Don't set setChangingPlan(false) on success since we're redirecting
   };
 
   // Check if user is subscribed to a specific plan

@@ -81,6 +81,7 @@ function DashboardContent() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelMessage, setCancelMessage] = useState('');
   const [isPolling, setIsPolling] = useState(false);
+  const [showPlanChangeSuccess, setShowPlanChangeSuccess] = useState(false);
 
   // Generation history state
   const [generations, setGenerations] = useState<GenerationHistory[]>([]);
@@ -151,6 +152,16 @@ function DashboardContent() {
       loadGenerations();
     }
   }, [session?.user?.id, searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get('plan_changed') === 'true') {
+      setShowPlanChangeSuccess(true);
+      // Remove the query param from URL without refresh
+      window.history.replaceState({}, '', '/dashboard');
+      // Hide after 5 seconds
+      setTimeout(() => setShowPlanChangeSuccess(false), 5000);
+    }
+  }, [searchParams]);
 
   // Handle post-payment polling
   useEffect(() => {
@@ -418,6 +429,13 @@ function DashboardContent() {
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
             <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
             <p className="text-blue-800 font-medium">Processing your payment... Please wait.</p>
+          </div>
+        )}
+
+        {showPlanChangeSuccess && (
+          <div className="mb-6 p-4 bg-green-100 border border-green-300 rounded-xl text-green-800 flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" />
+            <span>Your plan has been successfully updated!</span>
           </div>
         )}
 
