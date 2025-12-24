@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, HelpCircle, CreditCard, Shield, Zap, ArrowLeft } from "lucide-react";
+import { ChevronDown, HelpCircle, CreditCard, Shield, Zap, ArrowLeft, Send, CheckCircle, Loader2 } from "lucide-react";
 
 export default function FAQPage() {
   const [openFaq, setOpenFaq] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [formStatus, setFormStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const faqCategories = [
     {
@@ -163,6 +170,31 @@ export default function FAQPage() {
     setOpenFaq(openFaq === key ? null : key);
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormStatus("loading");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to send message");
+      }
+
+      setFormStatus("success");
+      setFormData({ email: "", subject: "", message: "" });
+    } catch (error) {
+      setFormStatus("error");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to send message. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pt-20 pb-16">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -236,20 +268,116 @@ export default function FAQPage() {
           ))}
         </div>
 
-        {/* Contact Support */}
-        <div className="mt-12 text-center bg-blue-50 rounded-2xl p-8 border border-blue-100">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Still have questions?
-          </h3>
-          <p className="text-gray-600 mb-4">
-            Can't find what you're looking for? We're here to help.
-          </p>
-          <Link
-            href="mailto:support@applypro.org"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
-          >
-            Contact Support
-          </Link>
+        {/* Contact Form Section */}
+        <div className="mt-12 bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Still have questions?
+            </h3>
+            <p className="text-gray-600">
+              Can't find what you're looking for? Send us a message and we'll get back to you.
+            </p>
+          </div>
+
+          {formStatus === "success" ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <h4 className="text-xl font-semibold text-gray-900 mb-2">Message Sent!</h4>
+              <p className="text-gray-600 mb-4">
+                Thanks for reaching out. We'll get back to you within 24-48 hours.
+              </p>
+              <button
+                onClick={() => setFormStatus("idle")}
+                className="text-blue-600 font-medium hover:text-blue-700"
+              >
+                Send another message
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6 max-w-xl mx-auto">
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              {/* Subject */}
+              <div>
+                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
+                  Subject
+                </label>
+                <select
+                  id="subject"
+                  required
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                >
+                  <option value="">Select a topic</option>
+                  <option value="general">General Question</option>
+                  <option value="billing">Billing & Subscription</option>
+                  <option value="technical">Technical Issue</option>
+                  <option value="feature">Feature Request</option>
+                  <option value="refund">Refund Request</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {/* Message */}
+              <div>
+                <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                  Message
+                </label>
+                <textarea
+                  id="message"
+                  required
+                  rows={5}
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                  placeholder="How can we help you?"
+                />
+              </div>
+
+              {/* Error Message */}
+              {formStatus === "error" && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                  {errorMessage}
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={formStatus === "loading"}
+                className="w-full py-3 px-6 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {formStatus === "loading" ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5" />
+                    Send Message
+                  </>
+                )}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>
