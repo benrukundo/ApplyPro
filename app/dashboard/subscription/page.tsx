@@ -16,6 +16,7 @@ import {
   Zap,
   Receipt,
   ArrowUpRight,
+  RefreshCw,
 } from 'lucide-react';
 import DodoCheckout from '@/components/DodoCheckout';
 
@@ -29,6 +30,7 @@ interface SubscriptionData {
     currentPeriodEnd?: string;
     createdAt: string;
     paddleId?: string;
+    customerId?: string;
   } | null;
   recurringSubscription: {
     id: string;
@@ -38,6 +40,7 @@ interface SubscriptionData {
     monthlyLimit: number;
     currentPeriodEnd?: string;
     createdAt: string;
+    customerId?: string;
   } | null;
   payPerUseCredits: number;
   payPerUseSubscriptions: Array<{
@@ -58,6 +61,9 @@ export default function SubscriptionPage() {
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [syncingCustomer, setSyncingCustomer] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -76,6 +82,11 @@ export default function SubscriptionPage() {
       if (response.ok) {
         const data = await response.json();
         setSubscriptionData(data);
+        
+        // Auto-sync customer ID if missing but has active subscription
+        if (data.recurringSubscription && !data.recurringSubscription.customerId) {
+          console.log('Customer ID missing, will show sync button');
+        }
       }
     } catch (error) {
       console.error('Failed to fetch subscription:', error);
@@ -84,15 +95,64 @@ export default function SubscriptionPage() {
     }
   };
 
-  // Handle upgrade to yearly (direct, no redirect)
+  // Sync customer ID from Dodo
+  const syncCustomerId = async () => {
+    setSyncingCustomer(true);
+    setSyncError(null);
+    
+    try {
+      const response = await fetch('/api/admin/sync-customer');
+      const data = await response.json();
+      
+      if (response.ok && data.customerId) {
+        console.log('Customer ID synced:', data.customerId);
+        // Refresh subscription data
+        await fetchSubscriptionData();
+        alert('Billing synced successfully! You can now manage your payment method and view invoices.');
+      } else {
+        console.error('Sync failed:', data.error);
+        setSyncError(data.error || 'Failed to sync billing information');
+      }
+    } catch (error) {
+      console.error('Failed to sync customer ID:', error);
+      setSyncError('Failed to connect to billing service');
+    } finally {
+      setSyncingCustomer(false);
+    }
+  };
+
+  // Open Dodo Customer Portal
+  const handleOpenPortal = async () => {
+    setPortalLoading(true);
+    
+    try {
+      const response = await fetch('/api/dodo-portal', { method: 'POST' });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to open billing portal');
+      }
+
+      if (data.portalUrl) {
+        window.open(data.portalUrl, '_blank');
+      } else {
+        throw new Error('No portal URL returned');
+      }
+    } catch (error) {
+      console.error('Portal error:', error);
+      alert(error instanceof Error ? error.message : 'Unable to open billing portal. Please try again.');
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  // Handle upgrade to yearly
   const handleUpgradeToYearly = async () => {
     if (changingPlan) return;
 
     const confirmMessage = `Upgrade to Pro Yearly?\n\nYou'll be charged the prorated difference ($149 - credit for unused days on monthly plan).\n\nYour yearly subscription starts immediately.`;
 
-    if (!confirm(confirmMessage)) {
-      return;
-    }
+    if (!confirm(confirmMessage)) return;
 
     setChangingPlan(true);
 
@@ -112,7 +172,6 @@ export default function SubscriptionPage() {
       alert('Successfully upgraded to Pro Yearly!');
       fetchSubscriptionData();
       router.refresh();
-
     } catch (error) {
       console.error('Upgrade error:', error);
       alert(error instanceof Error ? error.message : 'Failed to upgrade. Please try again.');
@@ -124,9 +183,7 @@ export default function SubscriptionPage() {
   const handleCancelSubscription = async () => {
     setCancelling(true);
     try {
-      const response = await fetch('/api/subscription/cancel', {
-        method: 'POST',
-      });
+      const response = await fetch('/api/subscription/cancel', { method: 'POST' });
 
       if (response.ok) {
         alert('Subscription cancelled. You will retain access until the end of your billing period.');
@@ -171,6 +228,8 @@ export default function SubscriptionPage() {
 
   const hasRecurring = subscriptionData?.recurringSubscription?.status === 'active';
   const recurringPlan = subscriptionData?.recurringSubscription;
+  const hasCustomerId = !!(recurringPlan as any)?.customerId;
+  
   const payPerUseCreditsRemaining = subscriptionData?.payPerUseSubscriptions?.reduce(
     (acc, sub) => acc + (sub.monthlyLimit - sub.monthlyUsageCount),
     0
@@ -183,7 +242,7 @@ export default function SubscriptionPage() {
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-12">
       <div className="container mx-auto px-4 max-w-4xl">
-        {/* Header - No back link, less spacing */}
+        {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Subscription & Billing
@@ -216,9 +275,7 @@ export default function SubscriptionPage() {
                         Active
                       </span>
                     </div>
-                    <p className="text-gray-600">
-                      {getPlanPrice(recurringPlan!.plan)}
-                    </p>
+                    <p className="text-gray-600">{getPlanPrice(recurringPlan!.plan)}</p>
                     {recurringPlan?.currentPeriodEnd && (
                       <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
@@ -228,12 +285,11 @@ export default function SubscriptionPage() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3">
-                    {/* Direct upgrade button - no redirect */}
                     {recurringPlan?.plan === 'monthly' && (
                       <button
                         onClick={handleUpgradeToYearly}
                         disabled={changingPlan}
-                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all text-center flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         {changingPlan ? (
                           <>
@@ -261,12 +317,8 @@ export default function SubscriptionPage() {
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Crown className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    No Active Subscription
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Subscribe to a plan to unlock AI-powered resume generation
-                  </p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Subscription</h3>
+                  <p className="text-gray-600 mb-4">Subscribe to unlock AI-powered resume generation</p>
                   <Link
                     href="/pricing"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
@@ -288,7 +340,6 @@ export default function SubscriptionPage() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Pay-Per-Use Credits */}
               {payPerUseCreditsRemaining > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -303,26 +354,19 @@ export default function SubscriptionPage() {
                   <div className="w-full bg-amber-100 rounded-full h-3">
                     <div
                       className="bg-amber-500 h-3 rounded-full transition-all"
-                      style={{
-                        width: `${(payPerUseCreditsRemaining / payPerUseTotal) * 100}%`,
-                      }}
+                      style={{ width: `${(payPerUseCreditsRemaining / payPerUseTotal) * 100}%` }}
                     />
                   </div>
-                  <p className="text-sm text-amber-700 mt-1">
-                    These credits are used first before your subscription credits
-                  </p>
+                  <p className="text-sm text-amber-700 mt-1">Used first before subscription credits</p>
                 </div>
               )}
 
-              {/* Recurring Usage */}
               {hasRecurring && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Crown className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-gray-900">
-                        {getPlanName(recurringPlan!.plan)} Usage
-                      </span>
+                      <span className="font-medium text-gray-900">{getPlanName(recurringPlan!.plan)} Usage</span>
                     </div>
                     <span className="font-semibold text-blue-700">
                       {recurringPlan!.monthlyUsageCount} of {recurringPlan!.monthlyLimit} used
@@ -331,9 +375,7 @@ export default function SubscriptionPage() {
                   <div className="w-full bg-blue-100 rounded-full h-3">
                     <div
                       className="bg-blue-500 h-3 rounded-full transition-all"
-                      style={{
-                        width: `${(recurringPlan!.monthlyUsageCount / recurringPlan!.monthlyLimit) * 100}%`,
-                      }}
+                      style={{ width: `${(recurringPlan!.monthlyUsageCount / recurringPlan!.monthlyLimit) * 100}%` }}
                     />
                   </div>
                   {recurringPlan?.currentPeriodEnd && (
@@ -344,14 +386,13 @@ export default function SubscriptionPage() {
                 </div>
               )}
 
-              {/* No credits state */}
               {!hasRecurring && payPerUseCreditsRemaining === 0 && (
                 <div className="text-center py-4">
                   <p className="text-gray-600">No active credits</p>
                 </div>
               )}
 
-              {/* Buy more - Direct checkout, no redirect */}
+              {/* Buy more pack */}
               <div className="pt-4 border-t border-gray-100">
                 <div className="p-4 bg-gray-50 rounded-xl">
                   <div className="flex items-center justify-between">
@@ -368,7 +409,7 @@ export default function SubscriptionPage() {
                       productId={process.env.NEXT_PUBLIC_DODO_PRICE_PAY_PER_USE!}
                       planType="pay-per-use"
                       planName="Resume Pack"
-                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       Buy Pack
                     </DodoCheckout>
@@ -399,13 +440,56 @@ export default function SubscriptionPage() {
                       <p className="text-sm text-gray-500">Managed securely by Dodo Payments</p>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-500">
-                    To update, contact{' '}
-                    <a href="mailto:support@applypro.org" className="text-blue-600 hover:underline">
-                      support
-                    </a>
-                  </p>
+                  
+                  {hasCustomerId ? (
+                    <button
+                      onClick={handleOpenPortal}
+                      disabled={portalLoading}
+                      className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {portalLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Opening...
+                        </>
+                      ) : (
+                        <>
+                          Update Payment
+                          <ExternalLink className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={syncCustomerId}
+                      disabled={syncingCustomer}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {syncingCustomer ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4" />
+                          Sync Billing
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
+                
+                {!hasCustomerId && (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">
+                      <strong>Setup required:</strong> Click "Sync Billing" to enable payment management and invoice access.
+                    </p>
+                    {syncError && (
+                      <p className="text-sm text-red-600 mt-2">{syncError}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -421,17 +505,40 @@ export default function SubscriptionPage() {
               </div>
 
               <div className="p-6">
-                <div className="text-center py-4">
-                  <p className="text-gray-600 mb-2">
-                    For invoices and billing history, please contact support.
-                  </p>
-                  <a
-                    href="mailto:support@applypro.org?subject=Invoice Request"
-                    className="text-blue-600 font-medium hover:underline"
+                {hasCustomerId ? (
+                  <button
+                    onClick={handleOpenPortal}
+                    disabled={portalLoading}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-gray-50 text-blue-600 font-medium hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
                   >
-                    Request invoices via email
-                  </a>
-                </div>
+                    {portalLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Opening portal...
+                      </>
+                    ) : (
+                      <>
+                        View Invoices & Billing History
+                        <ExternalLink className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-gray-600 mb-2">
+                      Sync your billing above to access invoices
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Or{' '}
+                      <a 
+                        href="mailto:support@applypro.org?subject=Invoice Request" 
+                        className="text-blue-600 hover:underline"
+                      >
+                        request invoices via email
+                      </a>
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -444,29 +551,27 @@ export default function SubscriptionPage() {
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
-                Cancel Subscription?
-              </h3>
+              <h3 className="text-xl font-bold text-gray-900 text-center mb-2">Cancel Subscription?</h3>
               <p className="text-gray-600 text-center mb-6">
-                You'll keep access to all features until{' '}
+                You'll keep access until{' '}
                 <strong>
                   {recurringPlan?.currentPeriodEnd
                     ? new Date(recurringPlan.currentPeriodEnd).toLocaleDateString()
                     : 'the end of your billing period'}
                 </strong>
-                . After that, you won't be able to generate new resumes.
+                .
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowCancelConfirm(false)}
-                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50"
                 >
                   Keep Subscription
                 </button>
                 <button
                   onClick={handleCancelSubscription}
                   disabled={cancelling}
-                  className="flex-1 px-4 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {cancelling ? (
                     <>
