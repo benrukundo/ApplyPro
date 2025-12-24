@@ -79,6 +79,11 @@ model Subscription {
   lastResetDate     DateTime  @default(now())
   currentPeriodEnd  DateTime?
   cancelledAt       DateTime?
+
+  // New fields for scheduled plan changes
+  scheduledPlanChange  String?   // 'monthly' or 'yearly'
+  scheduledChangeDate  DateTime?
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

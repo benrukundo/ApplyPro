@@ -18,6 +18,9 @@ import {
   Brain,
   Sparkles,
   CheckCircle,
+  Calendar,
+  ArrowUp,
+  X,
 } from 'lucide-react';
 import DodoCheckout from '@/components/DodoCheckout';
 
@@ -25,6 +28,8 @@ interface Subscription {
   plan: string;
   status: string;
   currentPeriodEnd?: string;
+  scheduledPlanChange?: string;
+  scheduledChangeDate?: string;
 }
 
 export default function PricingPage() {
@@ -33,6 +38,8 @@ export default function PricingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(true);
+  const [schedulingChange, setSchedulingChange] = useState(false);
+  const [cancellingChange, setCancellingChange] = useState(false);
 
   // Fetch user's subscription status
   useEffect(() => {
@@ -61,6 +68,77 @@ export default function PricingPage() {
   const handleSuccess = () => {
     setIsLoading(false);
     router.push('/dashboard');
+  };
+
+  // Schedule upgrade to yearly
+  const handleScheduleUpgrade = async () => {
+    if (schedulingChange) return;
+
+    setSchedulingChange(true);
+
+    try {
+      const response = await fetch('/api/subscription/schedule-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPlan: 'yearly' }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to schedule upgrade');
+      }
+
+      alert(`Success! Your plan will upgrade to Yearly on ${new Date(data.effectiveDate).toLocaleDateString()}`);
+
+      // Refresh subscription data
+      setSubscription({
+        ...subscription!,
+        scheduledPlanChange: 'yearly',
+        scheduledChangeDate: data.effectiveDate,
+      });
+
+    } catch (error) {
+      console.error('Schedule upgrade error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to schedule upgrade');
+    } finally {
+      setSchedulingChange(false);
+    }
+  };
+
+  // Cancel scheduled change
+  const handleCancelScheduledChange = async () => {
+    if (cancellingChange) return;
+
+    if (!confirm('Are you sure you want to cancel the scheduled plan change?')) {
+      return;
+    }
+
+    setCancellingChange(true);
+
+    try {
+      const response = await fetch('/api/subscription/schedule-change', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel scheduled change');
+      }
+
+      alert('Scheduled plan change cancelled');
+
+      setSubscription({
+        ...subscription!,
+        scheduledPlanChange: undefined,
+        scheduledChangeDate: undefined,
+      });
+
+    } catch (error) {
+      console.error('Cancel scheduled change error:', error);
+      alert('Failed to cancel scheduled change');
+    } finally {
+      setCancellingChange(false);
+    }
   };
 
   // Check if user is subscribed to a specific plan
@@ -159,6 +237,32 @@ export default function PricingPage() {
     const isCurrentPlan = isSubscribedTo(plan.id);
     const hasOtherSubscription = hasActiveSubscription() && !isCurrentPlan;
 
+    // User has scheduled an upgrade to this plan
+    if (subscription?.scheduledPlanChange === plan.id) {
+      return (
+        <div className="space-y-2">
+          <div className="w-full py-3.5 px-6 rounded-xl font-semibold bg-amber-100 text-amber-700 flex items-center justify-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Scheduled for {new Date(subscription?.scheduledChangeDate || '').toLocaleDateString()}
+          </div>
+          <button
+            onClick={handleCancelScheduledChange}
+            disabled={cancellingChange}
+            className="w-full py-2 px-4 rounded-lg text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-1"
+          >
+            {cancellingChange ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <X className="w-4 h-4" />
+                Cancel scheduled change
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
     // User is subscribed to this exact plan
     if (isCurrentPlan && !plan.allowRepurchase) {
       return (
@@ -172,19 +276,37 @@ export default function PricingPage() {
     // User has a different subscription (monthly/yearly) - show upgrade/downgrade option
     if (hasOtherSubscription && !plan.allowRepurchase) {
       const currentPlan = subscription?.plan;
-      const isUpgrade = 
+      const isUpgrade =
         (currentPlan === 'monthly' && plan.id === 'yearly');
-      
+
+      if (isUpgrade) {
+        return (
+          <button
+            onClick={handleScheduleUpgrade}
+            disabled={schedulingChange}
+            className="w-full py-3.5 px-6 rounded-xl font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+          >
+            {schedulingChange ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Scheduling...
+              </>
+            ) : (
+              <>
+                <ArrowUp className="w-5 h-5" />
+                Upgrade at Renewal
+              </>
+            )}
+          </button>
+        );
+      }
+
       return (
         <Link
           href="/dashboard"
-          className={`inline-flex items-center justify-center w-full py-3.5 px-6 rounded-xl font-semibold transition-all ${
-            isUpgrade
-              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
-              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-          }`}
+          className="inline-flex items-center justify-center w-full py-3.5 px-6 rounded-xl font-semibold bg-gray-200 text-gray-600 hover:bg-gray-300 transition-all"
         >
-          {isUpgrade ? 'Upgrade Plan' : 'Manage Subscription'}
+          Manage Subscription
         </Link>
       );
     }
