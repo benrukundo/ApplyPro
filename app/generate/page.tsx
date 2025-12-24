@@ -567,8 +567,10 @@ export default function GeneratePage() {
     }
   };
 
-  const canGenerate = session?.user?.id && subscription?.isActive;
-  const isReadyToGenerate = resumeText && jobDescription.length >= MIN_JOB_DESC_LENGTH;
+const hasAvailableCredits = subscription?.isActive &&
+  (subscription.monthlyUsageCount < subscription.monthlyLimit);
+const canGenerate = session?.user?.id && hasAvailableCredits;
+const isReadyToGenerate = resumeText && jobDescription.length >= MIN_JOB_DESC_LENGTH;
 
   if (sessionStatus === 'loading') {
     return (
@@ -817,8 +819,9 @@ export default function GeneratePage() {
               </div>
             )}
 
-            {/* When user has exhausted credits - only show if canGenerate is false */}
-            {session?.user && subscription?.isActive && subscription.monthlyUsageCount >= subscription.monthlyLimit && (
+            {/* Show limit message only when subscription limit is actually reached */}
+            {session?.user && subscription?.isActive &&
+             subscription.monthlyUsageCount >= subscription.monthlyLimit && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                 <p className="text-amber-800 text-sm">
                   {subscription.plan === 'pay-per-use' ? (
@@ -839,9 +842,9 @@ export default function GeneratePage() {
                       <span className="font-semibold">
                         {subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'the start of next month'}
                       </span>
-                      . Need more?{' '}
+                      .{' '}
                       <Link href="/pricing" className="text-amber-700 font-semibold underline hover:text-amber-900">
-                        Purchase a Resume Pack
+                        Purchase a Resume Pack for extra credits
                       </Link>
                     </>
                   )}
