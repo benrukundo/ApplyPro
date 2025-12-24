@@ -17,7 +17,6 @@ import {
   FileText,
   CheckCircle,
   ArrowUp,
-  ArrowDown,
 } from 'lucide-react';
 import DodoCheckout from '@/components/DodoCheckout';
 
@@ -201,7 +200,7 @@ export default function PricingPage() {
   // Render the appropriate button based on subscription status
   const renderPlanButton = (plan: typeof plans[0]) => {
     const isCurrentPlan = isSubscribedTo(plan.id);
-    const hasOtherSubscription = hasActiveSubscription() && !isCurrentPlan;
+    const hasSubscription = hasActiveSubscription();
 
     // User is subscribed to this exact plan
     if (isCurrentPlan && !plan.allowRepurchase) {
@@ -214,7 +213,7 @@ export default function PricingPage() {
     }
 
     // User has monthly and this is yearly - show upgrade option
-    if (hasOtherSubscription && plan.id === 'yearly' && subscription?.plan === 'monthly') {
+    if (hasSubscription && plan.id === 'yearly' && subscription?.plan === 'monthly') {
       return (
         <button
           onClick={() => handleChangePlan('yearly')}
@@ -236,30 +235,31 @@ export default function PricingPage() {
       );
     }
 
-    // User has yearly and this is monthly - show downgrade option
-    if (hasOtherSubscription && plan.id === 'monthly' && subscription?.plan === 'yearly') {
+    // User has yearly and this is monthly - NO downgrade, show disabled message
+    if (hasSubscription && plan.id === 'monthly' && subscription?.plan === 'yearly') {
       return (
-        <button
-          onClick={() => handleChangePlan('monthly')}
-          disabled={changingPlan}
-          className="w-full py-3.5 px-6 rounded-xl font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {changingPlan ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Changing...
-            </>
-          ) : (
-            <>
-              <ArrowDown className="w-5 h-5" />
-              Switch to Monthly
-            </>
-          )}
-        </button>
+        <div className="w-full py-3.5 px-6 rounded-xl font-semibold bg-gray-100 text-gray-500 text-center text-sm">
+          Available after your yearly plan ends
+          <div className="text-xs mt-1 text-gray-400">
+            {subscription?.currentPeriodEnd &&
+              `(${new Date(subscription.currentPeriodEnd).toLocaleDateString()})`
+            }
+          </div>
+        </div>
       );
     }
 
-    // User is logged in but not subscribed (or it's pay-per-use)
+    // User has yearly and looking at yearly - already subscribed
+    if (hasSubscription && plan.id === 'yearly' && subscription?.plan === 'yearly') {
+      return (
+        <div className="w-full py-3.5 px-6 rounded-xl font-semibold bg-green-100 text-green-700 flex items-center justify-center gap-2">
+          <CheckCircle className="w-5 h-5" />
+          Current Plan
+        </div>
+      );
+    }
+
+    // User is logged in but not subscribed (or it's pay-per-use which allows repurchase)
     if (session?.user) {
       return (
         <DodoCheckout
@@ -442,7 +442,7 @@ export default function PricingPage() {
             {[
               {
                 q: 'Can I upgrade or downgrade anytime?',
-                a: 'Yes! You can switch between Monthly and Yearly plans anytime. When upgrading, you\'ll be charged the prorated difference. When downgrading, any unused credit is applied to future charges.',
+                a: 'You can upgrade from Monthly to Yearly anytime - you\'ll only pay the prorated difference. However, you cannot downgrade from Yearly to Monthly during your subscription period. You must cancel your yearly plan first, then you can subscribe to monthly after it expires.',
               },
               {
                 q: 'How does prorated billing work?',
