@@ -450,7 +450,7 @@ export default function PricingPage() {
               },
               {
                 q: 'What happens to my data if I cancel?',
-                a: 'Your account and data remain accessible for 30 days after cancellation. During this period, you can reactivate your subscription. After 30 days, your data is permanently deleted.',
+                a: 'Your data is never deleted! After your subscription expires, you\'ll keep full access to your account, saved resumes, and generation history. You just won\'t be able to generate new AI-tailored resumes until you resubscribe. You can still use free features like the ATS checker and resume builder.',
               },
               {
                 q: 'Do you offer refunds?',
