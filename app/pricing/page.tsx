@@ -17,17 +17,62 @@ import {
   FileText,
   Brain,
   Sparkles,
+  CheckCircle,
 } from 'lucide-react';
 import DodoCheckout from '@/components/DodoCheckout';
+
+interface Subscription {
+  plan: string;
+  status: string;
+  currentPeriodEnd?: string;
+}
 
 export default function PricingPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [loadingSubscription, setLoadingSubscription] = useState(true);
+
+  // Fetch user's subscription status
+  useEffect(() => {
+    async function fetchSubscription() {
+      if (!session?.user?.id) {
+        setLoadingSubscription(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/user/subscription');
+        if (response.ok) {
+          const data = await response.json();
+          setSubscription(data.subscription);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subscription:', error);
+      } finally {
+        setLoadingSubscription(false);
+      }
+    }
+
+    fetchSubscription();
+  }, [session?.user?.id]);
 
   const handleSuccess = () => {
     setIsLoading(false);
     router.push('/dashboard');
+  };
+
+  // Check if user is subscribed to a specific plan
+  const isSubscribedTo = (planId: string): boolean => {
+    if (!subscription || subscription.status !== 'active') return false;
+    return subscription.plan === planId;
+  };
+
+  // Check if user has any active subscription
+  const hasActiveSubscription = (): boolean => {
+    return subscription?.status === 'active' && 
+           (subscription.plan === 'monthly' || subscription.plan === 'yearly');
   };
 
   const plans = [
@@ -39,6 +84,7 @@ export default function PricingPage() {
       productId: process.env.NEXT_PUBLIC_DODO_PRICE_PAY_PER_USE!,
       period: 'one-time',
       buttonText: 'Get Resume Pack',
+      subscribedText: 'Purchase Again',
       features: [
         '3 AI-tailored resume generations',
         'ATS-optimized versions included',
@@ -48,6 +94,7 @@ export default function PricingPage() {
       ],
       popular: false,
       icon: <FileText className="w-6 h-6 text-blue-600" />,
+      allowRepurchase: true, // Pay-per-use can be purchased multiple times
     },
     {
       id: 'monthly',
@@ -58,6 +105,7 @@ export default function PricingPage() {
       productId: process.env.NEXT_PUBLIC_DODO_PRICE_MONTHLY!,
       period: '/month',
       buttonText: 'Start Pro Monthly',
+      subscribedText: 'Current Plan',
       features: [
         '100 resume generations/month',
         'Advanced ATS optimization',
@@ -70,6 +118,7 @@ export default function PricingPage() {
       ],
       popular: true,
       icon: <Crown className="w-6 h-6 text-purple-600" />,
+      allowRepurchase: false,
     },
     {
       id: 'yearly',
@@ -80,6 +129,7 @@ export default function PricingPage() {
       productId: process.env.NEXT_PUBLIC_DODO_PRICE_YEARLY!,
       period: '/year',
       buttonText: 'Start Pro Yearly',
+      subscribedText: 'Current Plan',
       features: [
         'Everything in Pro Monthly',
         '2 months free (35% savings)',
@@ -92,6 +142,7 @@ export default function PricingPage() {
       ],
       popular: false,
       icon: <Star className="w-6 h-6 text-amber-600" />,
+      allowRepurchase: false,
     },
   ];
 
@@ -102,6 +153,76 @@ export default function PricingPage() {
     'Basic resume templates',
     'Community support',
   ];
+
+  // Render the appropriate button based on subscription status
+  const renderPlanButton = (plan: typeof plans[0]) => {
+    const isCurrentPlan = isSubscribedTo(plan.id);
+    const hasOtherSubscription = hasActiveSubscription() && !isCurrentPlan;
+
+    // User is subscribed to this exact plan
+    if (isCurrentPlan && !plan.allowRepurchase) {
+      return (
+        <div className="w-full py-3.5 px-6 rounded-xl font-semibold bg-green-100 text-green-700 flex items-center justify-center gap-2">
+          <CheckCircle className="w-5 h-5" />
+          {plan.subscribedText}
+        </div>
+      );
+    }
+
+    // User has a different subscription (monthly/yearly) - show upgrade/downgrade option
+    if (hasOtherSubscription && !plan.allowRepurchase) {
+      const currentPlan = subscription?.plan;
+      const isUpgrade = 
+        (currentPlan === 'monthly' && plan.id === 'yearly');
+      
+      return (
+        <Link
+          href="/dashboard"
+          className={`inline-flex items-center justify-center w-full py-3.5 px-6 rounded-xl font-semibold transition-all ${
+            isUpgrade
+              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600'
+              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+          }`}
+        >
+          {isUpgrade ? 'Upgrade Plan' : 'Manage Subscription'}
+        </Link>
+      );
+    }
+
+    // User is logged in but not subscribed (or it's pay-per-use which can be repurchased)
+    if (session?.user) {
+      return (
+        <DodoCheckout
+          productId={plan.productId}
+          planType={plan.id as 'monthly' | 'yearly' | 'pay-per-use'}
+          planName={plan.name}
+          onSuccess={handleSuccess}
+          className={`w-full py-3.5 px-6 rounded-xl font-semibold transition-all ${
+            plan.popular
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/25'
+              : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/25'
+          }`}
+        >
+          {plan.buttonText}
+        </DodoCheckout>
+      );
+    }
+
+    // User is not logged in
+    return (
+      <Link
+        href="/signup"
+        className={`inline-flex items-center justify-center w-full py-3.5 px-6 rounded-xl font-semibold transition-all ${
+          plan.popular
+            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/25'
+            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/25'
+        }`}
+      >
+        {plan.buttonText}
+        <ArrowRight className="w-4 h-4 ml-2" />
+      </Link>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pt-20 pb-12 relative overflow-hidden">
@@ -124,6 +245,23 @@ export default function PricingPage() {
             Upgrade or downgrade anytime.
           </p>
         </div>
+
+        {/* Current Subscription Banner (if subscribed) */}
+        {subscription?.status === 'active' && (
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-4 mb-8 text-white text-center">
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-semibold">
+                You're subscribed to {subscription.plan === 'monthly' ? 'Pro Monthly' : subscription.plan === 'yearly' ? 'Pro Yearly' : 'Resume Pack'}
+              </span>
+              {subscription.currentPeriodEnd && (
+                <span className="text-green-100 ml-2">
+                  · Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Free Plan Banner */}
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 mb-8 text-white text-center">
@@ -152,13 +290,24 @@ export default function PricingPage() {
               className={`relative bg-white rounded-2xl border-2 p-8 transition-all duration-300 hover:shadow-xl ${
                 plan.popular
                   ? 'border-purple-500 shadow-lg shadow-purple-500/20'
+                  : isSubscribedTo(plan.id)
+                  ? 'border-green-500 shadow-lg shadow-green-500/20'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              {plan.popular && (
+              {plan.popular && !isSubscribedTo(plan.id) && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                   <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
                     Most Popular
+                  </div>
+                </div>
+              )}
+
+              {isSubscribedTo(plan.id) && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    Current Plan
                   </div>
                 </div>
               )}
@@ -198,32 +347,12 @@ export default function PricingPage() {
 
               {/* CTA Button */}
               <div className="text-center">
-                {session?.user ? (
-                  <DodoCheckout
-                    productId={plan.productId}
-                    planType={plan.id as 'monthly' | 'yearly' | 'pay-per-use'}
-                    planName={plan.name}
-                    onSuccess={handleSuccess}
-                    className={`w-full py-3.5 px-6 rounded-xl font-semibold transition-all ${
-                      plan.popular
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/25'
-                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/25'
-                    }`}
-                  >
-                    {plan.buttonText}
-                  </DodoCheckout>
+                {loadingSubscription ? (
+                  <div className="w-full py-3.5 px-6 rounded-xl bg-gray-100 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                  </div>
                 ) : (
-                  <Link
-                    href="/signup"
-                    className={`inline-flex items-center justify-center w-full py-3.5 px-6 rounded-xl font-semibold transition-all ${
-                      plan.popular
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/25'
-                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/25'
-                    }`}
-                  >
-                    {plan.buttonText}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Link>
+                  renderPlanButton(plan)
                 )}
               </div>
             </div>
