@@ -37,11 +37,12 @@ type DodoEventType =
   | 'dispute.lost';
 
 interface DodoWebhookPayload {
-  type: DodoEventType;
-  business_id: string;
+  type: string;
   data: {
-    payment_id?: string;
+    payload_type: string;
     subscription_id?: string;
+    payment_id?: string;
+    customer_id?: string;
     customer?: {
       customer_id: string;
       email: string;
@@ -49,19 +50,18 @@ interface DodoWebhookPayload {
     };
     product_id?: string;
     status?: string;
+    billing?: {
+      interval?: string;
+    };
     metadata?: {
       user_id?: string;
       plan_type?: string;
       user_email?: string;
     };
-    billing?: {
-      current_period_start?: string;
-      current_period_end?: string;
-    };
-    amount?: number;
-    currency?: string;
+    current_period_start?: string;
+    current_period_end?: string;
+    created_at?: string;
   };
-  created_at: string;
 }
 
 // Map Dodo product ID to plan type
@@ -238,12 +238,13 @@ async function processWebhookEvent(
         ? new Date(data.billing.current_period_end)
         : new Date(Date.now() + (plan === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000);
 
-      // Upsert subscription
+        // Upsert subscription
       await prisma.subscription.upsert({
         where: { paddleId: data.subscription_id || `dodo_sub_${userId}_${plan}` },
         create: {
           userId,
           paddleId: data.subscription_id || `dodo_sub_${Date.now()}`,
+          customerId: data.customer_id, // Store customer ID
           plan,
           status: 'active',
           monthlyUsageCount: 0,
@@ -253,6 +254,7 @@ async function processWebhookEvent(
         },
         update: {
           status: 'active',
+          customerId: data.customer_id, // Update customer ID if provided
           plan,
           monthlyLimit,
           currentPeriodEnd,

@@ -71,6 +71,7 @@ model Subscription {
   id                String    @id @default(cuid())
   userId            String
   paddleId          String?   @unique
+  customerId        String?   // Dodo customer ID - NEW FIELD
   gumroadId         String?   @unique  // Keep for backward compatibility
   plan              String    // 'monthly', 'yearly', 'pay-per-use'
   status            String    @default("active") // 'active', 'cancelled', 'paused', 'past_due', 'failed'
@@ -91,6 +92,7 @@ model Subscription {
 
   @@index([userId])
   @@index([paddleId])
+  @@index([customerId])
 }
 
 model UsageLog {
