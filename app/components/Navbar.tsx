@@ -20,12 +20,12 @@ import {
   Sparkles,
   Zap,
   Crown,
-  Settings,
 } from "lucide-react";
 
 interface SubscriptionInfo {
-  plan: 'free' | 'monthly' | 'yearly' | 'pay-per-use' | null;
-  isActive: boolean;
+  plan: string | null;
+  status: string;
+  isActive?: boolean;
   monthlyUsageCount?: number;
   monthlyLimit?: number;
 }
@@ -49,8 +49,11 @@ export default function Navbar() {
         try {
           const response = await fetch('/api/user/subscription');
           const data = await response.json();
-          if (response.ok) {
-            setSubscription(data.subscription);
+          if (response.ok && data.subscription) {
+            setSubscription({
+              ...data.subscription,
+              isActive: data.subscription.status === 'active',
+            });
           }
         } catch (err) {
           console.error('Error loading subscription:', err);
@@ -88,7 +91,21 @@ export default function Navbar() {
   };
 
   // Check if user has active subscription
-  const hasActiveSubscription = subscription?.isActive === true;
+  const hasActiveSubscription = subscription?.isActive === true && 
+    (subscription?.plan === 'monthly' || subscription?.plan === 'yearly');
+
+  // Get plan display name
+  const getPlanBadge = () => {
+    if (!subscription?.isActive) return { text: 'Free', color: 'bg-gray-100 text-gray-700' };
+    switch (subscription.plan) {
+      case 'monthly': return { text: 'Pro Monthly', color: 'bg-blue-100 text-blue-700' };
+      case 'yearly': return { text: 'Pro Yearly', color: 'bg-purple-100 text-purple-700' };
+      case 'pay-per-use': return { text: 'Pack', color: 'bg-amber-100 text-amber-700' };
+      default: return { text: 'Free', color: 'bg-gray-100 text-gray-700' };
+    }
+  };
+
+  const planBadge = getPlanBadge();
 
   const NavLink = ({ 
     href, 
@@ -206,56 +223,62 @@ export default function Navbar() {
 
                   {/* Dropdown Menu */}
                   {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
                       {/* User Info Header */}
                       <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
-                          {session.user?.name}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">
-                          {session.user?.email}
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              {session.user?.name}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {session.user?.email}
+                            </p>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${planBadge.color}`}>
+                            {planBadge.text}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Menu Items */}
                       <div className="py-2">
+                        {/* Dashboard Link */}
                         <Link
                           href="/dashboard"
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
                         >
                           <User className="w-4 h-4 text-gray-400" />
                           Dashboard
                         </Link>
 
-                        {/* Smart Subscription Link */}
-                        {hasActiveSubscription ? (
-                          <Link
-                            href="/dashboard"
-                            onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Crown className="w-4 h-4 text-amber-500" />
-                              <span>Manage Plan</span>
-                            </div>
+                        {/* Subscription & Billing Link - ALWAYS links to /dashboard/subscription */}
+                        <Link
+                          href="/dashboard/subscription"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <CreditCard className="w-4 h-4 text-gray-400" />
+                            <span>Subscription & Billing</span>
+                          </div>
+                          {hasActiveSubscription && (
                             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
                               Active
                             </span>
-                          </Link>
-                        ) : (
+                          )}
+                        </Link>
+
+                        {/* Upgrade prompt for free users */}
+                        {!hasActiveSubscription && (
                           <Link
                             href="/pricing"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            className="flex items-center gap-3 mx-3 my-2 px-3 py-2.5 text-sm bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 rounded-lg border border-blue-100 hover:from-blue-100 hover:to-purple-100"
                           >
-                            <div className="flex items-center gap-3">
-                              <Zap className="w-4 h-4 text-blue-500" />
-                              <span>Upgrade Plan</span>
-                            </div>
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-                              Free
-                            </span>
+                            <Zap className="w-4 h-4" />
+                            <span className="font-medium">Upgrade to Pro</span>
                           </Link>
                         )}
                       </div>
@@ -264,7 +287,7 @@ export default function Navbar() {
                       <div className="border-t border-gray-100 pt-2">
                         <button
                           onClick={handleLogout}
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full"
                         >
                           <LogOut className="w-4 h-4" />
                           Sign out
@@ -326,52 +349,55 @@ export default function Navbar() {
               {session ? (
                 <>
                   {/* User Info */}
-                  <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                      {session.user?.image ? (
-                        <img 
-                          src={session.user.image} 
-                          alt="" 
-                          className="w-10 h-10 rounded-full"
-                        />
-                      ) : (
-                        getInitials(session.user?.name)
-                      )}
+                  <div className="flex items-center justify-between px-3 py-3 mb-2 bg-gray-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        {session.user?.image ? (
+                          <img 
+                            src={session.user.image} 
+                            alt="" 
+                            className="w-10 h-10 rounded-full"
+                          />
+                        ) : (
+                          getInitials(session.user?.name)
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{session.user?.name}</p>
+                        <p className="text-xs text-gray-500">{session.user?.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{session.user?.name}</p>
-                      <p className="text-xs text-gray-500">{session.user?.email}</p>
-                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${planBadge.color}`}>
+                      {planBadge.text}
+                    </span>
                   </div>
 
-                  {/* Smart Subscription Link - Mobile */}
-                  {hasActiveSubscription ? (
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Crown className="w-5 h-5 text-amber-500" />
-                        <span>Manage Plan</span>
-                      </div>
+                  {/* Subscription & Billing Link - Mobile */}
+                  <Link
+                    href="/dashboard/subscription"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-between px-3 py-2.5 text-gray-700 hover:bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="w-5 h-5 text-gray-400" />
+                      <span>Subscription & Billing</span>
+                    </div>
+                    {hasActiveSubscription && (
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
                         Active
                       </span>
-                    </Link>
-                  ) : (
+                    )}
+                  </Link>
+
+                  {/* Upgrade prompt for free users - Mobile */}
+                  {!hasActiveSubscription && (
                     <Link
                       href="/pricing"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                      className="flex items-center gap-3 mx-1 my-2 px-3 py-2.5 text-sm bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 rounded-lg border border-blue-100"
                     >
-                      <div className="flex items-center gap-3">
-                        <Zap className="w-5 h-5 text-blue-500" />
-                        <span>Upgrade Plan</span>
-                      </div>
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-                        Free
-                      </span>
+                      <Zap className="w-5 h-5" />
+                      <span className="font-medium">Upgrade to Pro</span>
                     </Link>
                   )}
 
