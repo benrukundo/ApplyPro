@@ -305,119 +305,69 @@ enum SessionStatus {
 // JOB CATEGORIES & RESUME EXAMPLES
 // ===========================================
 
-// Main job categories (IT, Healthcare, Education, etc.)
 model JobCategory {
-  id          String   @id @default(cuid())
-  name        String   // "Information Technology"
-  slug        String   @unique // "information-technology"
-  description String?  @db.Text
-  icon        String?  // Lucide icon name: "Monitor", "Heart", "GraduationCap"
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-
-  // SEO
+  id              String          @id @default(cuid())
+  name            String          @unique
+  slug            String          @unique
+  description     String?
+  icon            String?
+  color           String?
   metaTitle       String?
-  metaDescription String? @db.Text
+  metaDescription String?
+  sortOrder       Int             @default(0)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  // Relations
-  jobExamples ResumeExample[]
-
-  // Stats
-  viewCount   Int      @default(0)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  examples        ResumeExample[]
+  skills          SkillSuggestion[]
 }
 
-// Individual job resume examples (Software Engineer, Nurse, Teacher, etc.)
 model ResumeExample {
-  id              String      @id @default(cuid())
+  id              String          @id @default(cuid())
+  title           String
+  slug            String
+  experienceLevel ExperienceLevel
+  summary         String          @db.Text
+  bulletPoints    String[]
+  skills          String[]
+  metaTitle       String?
+  metaDescription String?
+  salaryRange     String?
+  jobOutlook      String?
+  writingTips     String[]
+  commonMistakes  String[]
+  viewCount       Int             @default(0)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  // Basic Info
-  jobTitle        String      // "Software Engineer"
-  slug            String      @unique // "software-engineer"
   categoryId      String
-  category        JobCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category        JobCategory     @relation(fields: [categoryId], references: [id])
 
-  // Experience Levels (we'll create examples for each)
-  experienceLevel String      // "entry" | "mid" | "senior"
-
-  // Sample Content - What users see as examples
-  sampleSummary       String   @db.Text  // Professional summary example
-  sampleBulletPoints  Json     // Array of achievement bullet points
-  sampleSkills        Json     // { technical: [], soft: [], tools: [] }
-
-  // AI Suggestions - Used to pre-fill builder
-  suggestedSkills     Json     // Skills to suggest when user selects this job
-  suggestedKeywords   Json     // ATS keywords for this role
-  summaryTemplate     String?  @db.Text  // Template for AI to enhance
-
-  // Job Market Info
-  salaryRangeMin      Int?     // e.g., 80000
-  salaryRangeMax      Int?     // e.g., 150000
-  salaryCurrency      String   @default("USD")
-  jobOutlook          String?  // "Growing 22% by 2030"
-  demandLevel         String?  // "high" | "medium" | "low"
-
-  // Writing Guide Content
-  writingTips         Json?    // Array of tips specific to this job
-  commonMistakes      Json?    // What to avoid
-
-  // SEO
-  metaTitle           String?
-  metaDescription     String?  @db.Text
-
-  // Stats & Status
-  viewCount           Int      @default(0)
-  useCount            Int      @default(0) // How many times used in builder
-  isActive            Boolean  @default(true)
-  isFeatured          Boolean  @default(false)
-
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
+  @@unique([categoryId, slug])
   @@index([categoryId])
-  @@index([slug])
   @@index([experienceLevel])
-  @@index([isActive, isFeatured])
 }
 
-// Skills database for autocomplete and suggestions
 model SkillSuggestion {
-  id          String   @id @default(cuid())
-  name        String   @unique // "JavaScript"
-  category    String   // "technical" | "soft" | "tool" | "certification"
+  id          String       @id @default(cuid())
+  name        String
+  category    String       // e.g., "Technical", "Soft Skills", "Tools"
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
 
-  // Which jobs commonly use this skill
-  relatedJobs String[] // ["software-engineer", "web-developer", "full-stack-developer"]
-
-  // Popularity for sorting
-  popularity  Int      @default(0)
-
-  // Variations for matching
-  aliases     String[] // ["JS", "Javascript", "ECMAScript"]
-
-  isActive    Boolean  @default(true)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  categoryId  String?
+  jobCategory JobCategory? @relation(fields: [categoryId], references: [id])
 
   @@index([category])
-  @@index([popularity])
+  @@index([categoryId])
 }
 
-// Track which examples users interact with (for analytics)
-model ExampleInteraction {
-  id          String   @id @default(cuid())
-  exampleId   String
-  userId      String?  // null for anonymous users
-  action      String   // "view" | "use_in_builder" | "_skill" | "_bullet"
-
-  createdAt   DateTime @default(now())
-
-  @@index([exampleId, action])
-  @@index([userId])
-  @@index([createdAt])
+enum ExperienceLevel {
+  ENTRY
+  MID
+  SENIOR
 }
 
 // LinkedIn Profile Optimization

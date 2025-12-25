@@ -7,13 +7,14 @@ const DODO_API_URL = process.env.DODO_PAYMENTS_ENVIRONMENT === 'live_mode'
   ? 'https://live.dodopayments.com'
   : 'https://test.dodopayments.com';
 
-// GET: Fetch customer ID from Dodo by email and update subscription
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || !session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    console.log('Syncing customer for:', session.user.email);
 
     // Get user's subscription
     const subscription = await prisma.subscription.findFirst({
@@ -33,14 +34,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         message: 'Customer ID already exists',
         customerId: subscription.customerId,
-        subscriptionId: subscription.id,
       });
     }
 
-    // Try to fetch customer from Dodo by listing customers
+    // Fetch customers from Dodo
     console.log('Fetching customers from Dodo...');
-
-    const response = await fetch(`${DODO_API_URL}/customers?email=${encodeURIComponent(session.user.email)}`, {
+    
+    const response = await fetch(`${DODO_API_URL}/customers`, {
       headers: {
         'Authorization': `Bearer ${process.env.DODO_PAYMENTS_API_KEY}`,
       },
@@ -49,29 +49,36 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Dodo API error:', response.status, errorText);
-      return NextResponse.json({
-        error: 'Failed to fetch customer from Dodo',
-        details: errorText
+      return NextResponse.json({ 
+        error: 'Failed to fetch customers from billing service',
       }, { status: 500 });
     }
 
-    const customers = await response.json();
-    console.log('Dodo customers response:', JSON.stringify(customers, null, 2));
+    const customersData = await response.json();
+    console.log('Dodo response:', JSON.stringify(customersData, null, 2));
 
-    // Find customer by email
-    const customer = Array.isArray(customers)
-      ? customers.find((c: any) => c.email === session.user.email)
-      : customers.items?.find((c: any) => c.email === session.user.email);
+    // Find customer by email - handle different response formats
+    const customers = customersData.items || customersData.data || customersData;
+    
+    if (!Array.isArray(customers)) {
+      console.error('Unexpected customers format:', typeof customers);
+      return NextResponse.json({ 
+        error: 'Unexpected response from billing service',
+      }, { status: 500 });
+    }
+
+    const customer = customers.find(
+      (c: any) => c.email?.toLowerCase() === session.user?.email?.toLowerCase()
+    );
 
     if (!customer) {
-      return NextResponse.json({
-        error: 'Customer not found in Dodo',
-        email: session.user.email,
-        hint: 'The customer may not exist yet in Dodo, or email does not match'
+      return NextResponse.json({ 
+        error: 'No billing account found for your email. Please contact support.',
       }, { status: 404 });
     }
 
     const customerId = customer.customer_id || customer.id;
+    console.log('Found customer:', customerId);
 
     // Update subscription with customer ID
     await prisma.subscription.update({
@@ -81,63 +88,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Customer ID synced successfully',
+      message: 'Billing synced successfully',
       customerId,
-      subscriptionId: subscription.id,
     });
 
   } catch (error) {
     console.error('Sync customer error:', error);
     return NextResponse.json(
-      { error: 'Failed to sync customer ID' },
-      { status: 500 }
-    );
-  }
-}
-
-// POST: Manually set customer ID
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { customerId } = await request.json();
-
-    if (!customerId) {
-      return NextResponse.json({ error: 'Customer ID required' }, { status: 400 });
-    }
-
-    // Update user's active subscription
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        userId: session.user.id,
-        status: 'active',
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!subscription) {
-      return NextResponse.json({ error: 'No active subscription found' }, { status: 404 });
-    }
-
-    await prisma.subscription.update({
-      where: { id: subscription.id },
-      data: { customerId },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Customer ID updated',
-      subscriptionId: subscription.id,
-      customerId,
-    });
-
-  } catch (error) {
-    console.error('Update customer error:', error);
-    return NextResponse.json(
-      { error: 'Failed to update customer ID' },
+      { error: 'Failed to sync billing information' },
       { status: 500 }
     );
   }
