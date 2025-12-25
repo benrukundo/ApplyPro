@@ -4,13 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { 
-  Menu, 
-  X, 
-  LogOut, 
-  PenTool, 
-  Brain, 
-  Linkedin, 
+import SearchCommand from './SearchCommand';
+import {
+  Menu,
+  X,
+  LogOut,
+  PenTool,
+  Brain,
+  Linkedin,
   ChevronDown,
   User,
   CreditCard,
@@ -24,7 +25,6 @@ import {
 
 interface SubscriptionInfo {
   plan: string | null;
-  import SearchCommand from './SearchCommand';
   status: string;
   isActive?: boolean;
   monthlyUsageCount?: number;
