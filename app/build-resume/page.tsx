@@ -1,6 +1,6 @@
-'use client';
+ 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -157,7 +157,7 @@ const initialFormData: FormData = {
   summary: '',
 };
 
-export default function BuildResumePage() {
+function BuildResumeContent() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
 
@@ -1803,6 +1803,21 @@ export default function BuildResumePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Wrap content in Suspense to allow client-side search params to hydrate
+export default function BuildResumePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        </div>
+      }
+    >
+      <BuildResumeContent />
+    </Suspense>
   );
 }
 
