@@ -306,6 +306,9 @@ export default function Navbar() {
               {/* Public Navigation */}
               <nav className="hidden md:flex items-center gap-1">
                 <NavLink href="/">Home</NavLink>
+                <NavLink href="/resume-examples" icon={FileText}>
+                  Examples
+                </NavLink>
                 <NavLink href="/templates">Templates</NavLink>
                 <NavLink href="/pricing">Pricing</NavLink>
                 <NavLink href="/build-resume" icon={PenTool} activeColor="text-purple-600">
@@ -491,6 +494,13 @@ export default function Navbar() {
                     className="px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
                   >
                     Home
+                  </Link>
+                  <Link
+                    href="/resume-examples"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                  >
+                    Resume Examples
                   </Link>
                   <Link
                     href="/templates"
