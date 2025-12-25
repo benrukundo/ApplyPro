@@ -172,6 +172,9 @@ export default function Navbar() {
                   <NavLink href="/generate" icon={Sparkles}>
                     Generate
                   </NavLink>
+                  <NavLink href="/resume-examples" icon={FileText}>
+                    Examples
+                  </NavLink>
                   <NavLink href="/build-resume" icon={PenTool} activeColor="text-purple-600">
                     Build
                   </NavLink>
@@ -435,6 +438,14 @@ export default function Navbar() {
                   >
                     <PenTool className="w-5 h-5 text-purple-500" />
                     Build Resume
+                  </Link>
+                  <Link
+                    href="/resume-examples"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                  >
+                    <FileText className="w-5 h-5 text-gray-400" />
+                    Resume Examples
                   </Link>
                   <Link
                     href="/ats-checker"

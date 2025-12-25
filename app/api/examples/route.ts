@@ -1,58 +1,46 @@
 // app/api/examples/route.ts
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const includeExamples = searchParams.get('includeExamples') === 'true';
-    const limit = parseInt(searchParams.get('limit') || '5');
+    const includeExamples = searchParams.get("includeExamples") === "true";
+    const limit = parseInt(searchParams.get("limit") || "10");
 
     const categories = await prisma.jobCategory.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: 'asc' },
-      include: {
-        _count: {
-          select: { examples: true },
-        },
-        ...(includeExamples && {
-          examples: {
-            where: { isActive: true },
-            take: limit,
-            orderBy: { viewCount: 'desc' },
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              experienceLevel: true,
-              summary: true,
+      orderBy: { sortOrder: "asc" },
+      include: includeExamples
+        ? {
+            examples: {
+              take: limit,
+              orderBy: { createdAt: "desc" },
+            },
+          }
+        : {
+            _count: {
+              select: { examples: true },
             },
           },
-        }),
-      },
     });
 
-    // Transform data for frontend
+    // Transform to include example counts
     const transformedCategories = categories.map((category) => ({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      description: category.description,
-      icon: category.icon,
-      color: category.color,
-      exampleCount: category._count.examples,
-      ...(includeExamples && { examples: category.examples }),
+      ...category,
+      exampleCount: includeExamples
+        ? (category as any).examples?.length || 0
+        : (category as any)._count?.examples || 0,
     }));
 
     return NextResponse.json({
       success: true,
       data: transformedCategories,
-      total: categories.length,
+      total: transformedCategories.reduce((acc, cat) => acc + cat.exampleCount, 0),
     });
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    console.error("Error fetching categories:", error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch categories' },
+      { success: false, error: "Failed to fetch categories" },
       { status: 500 }
     );
   }
