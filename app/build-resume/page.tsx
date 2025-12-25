@@ -32,6 +32,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { trackEvent } from '@/components/PostHogProvider';
+import SkillAutocomplete from '@/components/SkillAutocomplete';
 
 export const dynamic = 'force-dynamic';
 
@@ -1372,67 +1373,107 @@ function BuildResumeContent() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Skills & Certifications</h2>
-                <p className="text-gray-600">What are you good at? Click suggestions or add your own.</p>
+                <p className="text-gray-600">What are you good at? Use the autocomplete to add your skills.</p>
               </div>
 
-              {/* Suggested Skills */}
-              <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                <p className="text-sm font-medium text-blue-800 mb-3">
-                  💡 Suggested for {formData.targetIndustry || formData.targetJobTitle || 'your role'}:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {(SUGGESTED_SKILLS[formData.targetIndustry] || SUGGESTED_SKILLS['default']).map(skill => {
-                    const isAdded = formData.skills.technical.includes(skill) || formData.skills.soft.includes(skill);
-                    return (
-                      <button
-                        key={skill}
-                        onClick={() => !isAdded && addSkill('technical', skill)}
-                        disabled={isAdded}
-                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                          isAdded
-                            ? 'bg-green-200 text-green-800'
-                            : 'bg-white text-blue-700 hover:bg-blue-100 shadow-sm'
-                        }`}
-                      >
-                        {isAdded ? <Check className="w-3 h-3 inline mr-1" /> : <Plus className="w-3 h-3 inline mr-1" />}
-                        {skill}
-                      </button>
-                    );
-                  })}
+              {/* Technical Skills */}
+              <SkillAutocomplete
+                selectedSkills={formData.skills.technical}
+                onAddSkill={(skill: string) => addSkill('technical', skill)}
+                onRemoveSkill={(skill: string) => removeSkill('technical', skill)}
+                category="technical"
+                industry={formData.targetIndustry}
+                label="Technical Skills"
+                placeholder="Search technical skills (e.g., JavaScript, Python, Excel...)"
+                maxSkills={15}
+                helperText="Add programming languages, tools, software, and technical competencies."
+              />
+
+              {/* Soft Skills */}
+              <SkillAutocomplete
+                selectedSkills={formData.skills.soft}
+                onAddSkill={(skill: string) => addSkill('soft', skill)}
+                onRemoveSkill={(skill: string) => removeSkill('soft', skill)}
+                category="soft"
+                industry={formData.targetIndustry}
+                label="Soft Skills"
+                placeholder="Search soft skills (e.g., Leadership, Communication...)"
+                maxSkills={10}
+                helperText="Add interpersonal and transferable skills."
+              />
+
+              {/* Languages */}
+              <SkillAutocomplete
+                selectedSkills={formData.skills.languages}
+                onAddSkill={(skill: string) => addSkill('languages', skill)}
+                onRemoveSkill={(skill: string) => removeSkill('languages', skill)}
+                category="languages"
+                label="Languages"
+                placeholder="Search languages (e.g., Spanish, French, Mandarin...)"
+                maxSkills={6}
+                helperText="Add languages you speak (include proficiency level if relevant)."
+              />
+
+              {/* Certifications */}
+              <SkillAutocomplete
+                selectedSkills={formData.skills.certifications}
+                onAddSkill={(skill: string) => addSkill('certifications', skill)}
+                onRemoveSkill={(skill: string) => removeSkill('certifications', skill)}
+                category="certifications"
+                label="Certifications & Licenses"
+                placeholder="Search certifications (e.g., AWS, PMP, CPA...)"
+                maxSkills={10}
+                helperText="Add professional certifications, licenses, and credentials."
+              />
+
+              {/* Skills Summary */}
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-blue-900">Skills Summary</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      {formData.skills.technical.length} technical • 
+                      {formData.skills.soft.length} soft • 
+                      {formData.skills.languages.length} languages • 
+                      {formData.skills.certifications.length} certifications
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-blue-600">
+                      {formData.skills.technical.length + 
+                       formData.skills.soft.length + 
+                       formData.skills.languages.length + 
+                       formData.skills.certifications.length}
+                    </p>
+                    <p className="text-xs text-blue-600">Total Skills</p>
+                  </div>
                 </div>
               </div>
 
-              <SkillSection
-                title="Technical Skills"
-                skills={formData.skills.technical}
-                onAdd={(skill) => addSkill('technical', skill)}
-                onRemove={(skill) => removeSkill('technical', skill)}
-                placeholder="e.g., Excel, Python, Photoshop..."
-              />
-
-              <SkillSection
-                title="Soft Skills"
-                skills={formData.skills.soft}
-                onAdd={(skill) => addSkill('soft', skill)}
-                onRemove={(skill) => removeSkill('soft', skill)}
-                placeholder="e.g., Leadership, Communication, Problem Solving..."
-              />
-
-              <SkillSection
-                title="Languages"
-                skills={formData.skills.languages}
-                onAdd={(skill) => addSkill('languages', skill)}
-                onRemove={(skill) => removeSkill('languages', skill)}
-                placeholder="e.g., English (Fluent), Spanish (Intermediate)..."
-              />
-
-              <SkillSection
-                title="Certifications"
-                skills={formData.skills.certifications}
-                onAdd={(skill) => addSkill('certifications', skill)}
-                onRemove={(skill) => removeSkill('certifications', skill)}
-                placeholder="e.g., AWS Certified, Google Analytics, PMP..."
-              />
+              {/* Quick Add Suggested Skills */}
+              {formData.targetIndustry && SUGGESTED_SKILLS[formData.targetIndustry] && (
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    Quick Add: Top {formData.targetIndustry} Skills
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {SUGGESTED_SKILLS[formData.targetIndustry]
+                      .filter((skill) => !formData.skills.technical.includes(skill))
+                      .slice(0, 8)
+                      .map((skill) => (
+                        <button
+                          key={skill}
+                          onClick={() => addSkill('technical', skill)}
+                          className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-full hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                          type="button"
+                        >
+                          + {skill}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
