@@ -1,40 +1,103 @@
-# ApplyPro - AI Resume Tailoring Service
+# ApplyPro - AI-Powered Resume Builder & Job Application Tracker
 
-ApplyPro is an AI-powered SaaS application that helps job seekers tailor their resumes to specific job descriptions. Using Claude AI, it analyzes resumes and job postings to create optimized, ATS-friendly resumes and cover letters.
+![ApplyPro](https://img.shields.io/badge/ApplyPro-AI%20Resume%20Builder-blue?style=for-the-badge&logo=nextdotjs)
+![Live](https://img.shields.io/badge/Live-applypro.org-green?style=flat&logo=vercel)
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat&logo=nextdotjs)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript)
+![Dodo Payments](https://img.shields.io/badge/Dodo%20Payments-Ready-green?style=flat)
 
-## 🚀 Features
+ApplyPro is a comprehensive AI-powered SaaS platform that helps job seekers create professional, ATS-optimized resumes and track their job applications. Using Claude AI, it provides intelligent resume tailoring, a complete resume builder, and advanced job application management tools.
 
-- **Free Preview Analysis**: Get instant feedback with match score, improvements, and missing keywords
-- **AI-Tailored Resumes**: Generate complete, professionally formatted resumes optimized for specific jobs
-- **Cover Letter Generation**: Receive personalized cover letters for each application
-- **Multiple Export Formats**: Download as PDF or DOCX
-- **ATS Optimization**: Keywords and formatting designed to pass Applicant Tracking Systems
-- **Simple Payment Flow**: One-time payment of $4.99 per resume via Gumroad
+## 🚀 Live Demo
+
+**🌐 [applypro.org](https://www.applypro.org)** - Try it now!
+
+## ✨ Core Features
+
+### 🎯 AI Resume Generation
+- **Upload & Tailor**: Upload existing resume + paste job description
+- **AI Optimization**: Claude Sonnet 4 creates job-specific resumes
+- **Three Outputs**: Tailored Resume + ATS-Optimized Resume + Cover Letter
+- **Multiple Templates**: Modern (two-column), Traditional, ATS-Optimized
+- **Export Formats**: PDF and DOCX downloads
+
+### 🏗️ Resume Builder (Build from Scratch)
+- **7-Step Wizard**: Complete guided resume creation
+- **Free AI Preview**: See results before subscribing (Claude Haiku)
+- **Smart Features**: Industry-specific skills, intelligent categorization
+- **Auto-Save**: Progress saved to database
+- **Professional Templates**: Choose design and color themes
+
+### 📊 Job Application Tracker
+- **Track Applications**: Company, position, status, follow-ups
+- **Status Workflow**: Saved → Applied → Interview → Offer → Rejected
+- **Statistics Dashboard**: Success rates and analytics
+- **Free for All**: 25 applications limit (no subscription required)
+
+### 💳 Advanced Subscription Management
+- **Three Plans**:
+  - **Resume Pack**: $4.99 (3 resume generations)
+  - **Pro Monthly**: $19/month (100 resumes)
+  - **Pro Yearly**: $149/year (100 resumes, save 35%)
+- **Payment Provider**: Dodo Payments (production-ready)
+- **Customer Portal**: Direct billing management access
+- **Cancel Auto-Renewal**: Pause/resume subscription anytime
+- **Smart Credits**: Intelligent credit priority management
+
+### 📧 Email Notifications
+- Welcome emails, verification, payment confirmations
+- Usage alerts, renewal reminders, subscription updates
+- Professional templates via Resend API
+
+### 🔐 Authentication
+- NextAuth.js with Google, GitHub, and email/password
+- Email verification required
+- Secure session management
 
 ## 🛠️ Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v4
-- **AI**: Anthropic Claude API (Haiku for preview, Sonnet 4 for full generation)
-- **Payments**: Gumroad
-- **File Processing**: react-dropzone, mammoth, pdf-parse
+### Frontend
+- **Next.js 14** (App Router, Server Components)
+- **TypeScript** (strict mode)
+- **Tailwind CSS** (responsive design)
+- **Lucide React** (icons)
+- **PostHog** (analytics)
+
+### Backend
+- **Next.js API Routes** (serverless functions)
+- **Prisma ORM** + PostgreSQL database
+- **Anthropic Claude API**:
+  - **Sonnet 4**: Paid resume generations (~$0.035 each)
+  - **Haiku 3.5**: Free previews (~$0.0001 each)
+- **Dodo Payments** (subscription & one-time payments)
+- **Resend** (transactional emails)
+
+### Document Processing
+- **File Upload**: react-dropzone, mammoth, pdf-parse
 - **Document Generation**: jsPDF, docx, file-saver
+- **Template Engine**: Custom layout system for PDFs/DOCX
+
+### Infrastructure
 - **Deployment**: Vercel (recommended)
+- **Database**: PostgreSQL (via Prisma)
+- **Monitoring**: Sentry (error tracking)
+- **Analytics**: PostHog (user analytics)
 
 ## 📋 Prerequisites
 
 - Node.js 18+
 - npm or yarn
+- PostgreSQL database (local or hosted)
 - Anthropic API key ([Get one here](https://console.anthropic.com/))
-- Gumroad account for payment processing
+- Dodo Payments account ([Get one here](https://dodopayments.com/))
+- Resend account for emails ([Get one here](https://resend.com/))
 
-## 🔧 Installation
+## 🔧 Quick Start
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/applypro.git
-   cd applypro
+   git clone https://github.com/benrukundo/ApplyPro.git
+   cd ApplyPro
    ```
 
 2. **Install dependencies:**
@@ -44,19 +107,56 @@ ApplyPro is an AI-powered SaaS application that helps job seekers tailor their r
 
 3. **Set up environment variables:**
 
-   Create `.env.local` file in the root directory:
+   Copy the example file and fill in your values:
    ```bash
-   ANTHROPIC_API_KEY=your_anthropic_api_key_here
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   NEXT_PUBLIC_GUMROAD_URL=https://laurabi.gumroad.com/l/ykchtv
+   cp .env.example .env.local
    ```
 
-4. **Run the development server:**
+   Required environment variables:
+   ```bash
+   # Database
+   DATABASE_URL="postgresql://username:password@localhost:5432/applypro"
+
+   # NextAuth
+   NEXTAUTH_SECRET="your-nextauth-secret"
+   NEXTAUTH_URL="http://localhost:3000"
+
+   # AI (Anthropic)
+   ANTHROPIC_API_KEY="sk-ant-api03-..."
+
+   # Payments (Dodo)
+   DODO_PAYMENTS_API_KEY="sk_test_..."
+   NEXT_PUBLIC_DODO_PRICE_MONTHLY="price_..."
+   NEXT_PUBLIC_DODO_PRICE_YEARLY="price_..."
+   NEXT_PUBLIC_DODO_PRICE_PAY_PER_USE="price_..."
+
+   # Email (Resend)
+   RESEND_API_KEY="re_..."
+
+   # Analytics (PostHog)
+   NEXT_PUBLIC_POSTHOG_KEY="phc_..."
+   NEXT_PUBLIC_POSTHOG_HOST="https://app.posthog.com"
+
+   # Monitoring (Sentry)
+   SENTRY_AUTH_TOKEN="..."
+   NEXT_PUBLIC_SENTRY_DSN="..."
+   ```
+
+4. **Set up the database:**
+   ```bash
+   # Generate Prisma client
+   npx prisma generate
+
+   # Push schema to database
+   npx prisma db push
+   ```
+
+5. **Run the development server:**
    ```bash
    npm run dev
    ```
 
-5. **Open your browser:**
+6. **Open your browser:**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ## 🌐 Environment Variables
@@ -65,33 +165,72 @@ ApplyPro is an AI-powered SaaS application that helps job seekers tailor their r
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key (keep secret!) | `sk-ant-...` |
-| `NEXT_PUBLIC_APP_URL` | Your application URL | `http://localhost:3000` or `https://your-domain.com` |
-| `NEXT_PUBLIC_GUMROAD_URL` | Your Gumroad product URL | `https://laurabi.gumroad.com/l/ykchtv` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/applypro` |
+| `NEXTAUTH_SECRET` | NextAuth.js secret key | `your-random-secret-string` |
+| `NEXTAUTH_URL` | Your application URL | `http://localhost:3000` |
+| `ANTHROPIC_API_KEY` | Anthropic API key (server-side only) | `sk-ant-api03-...` |
+| `DODO_PAYMENTS_API_KEY` | Dodo Payments API key | `sk_test_...` |
+| `NEXT_PUBLIC_DODO_PRICE_*` | Dodo product IDs (client-side) | `price_abc123...` |
+| `RESEND_API_KEY` | Resend email API key | `re_abc123...` |
+| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog analytics key | `phc_abc123...` |
+| `SENTRY_AUTH_TOKEN` | Sentry monitoring token | `sntrys_...` |
+| `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN (client-side) | `https://abc123@sentry.io/123` |
+
+### OAuth Providers (Optional)
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | `123456789-abc...` |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | `GOCSPX-...` |
+| `GITHUB_ID` | GitHub OAuth app ID | `Iv1.abc123...` |
+| `GITHUB_SECRET` | GitHub OAuth client secret | `ghp_...` |
 
 ### Security Notes
 
 - Never commit `.env.local` to version control
-- `ANTHROPIC_API_KEY` should never be exposed to the browser
-- Use `NEXT_PUBLIC_` prefix only for variables that need to be accessible in the browser
+- API keys should never be exposed to the browser (no `NEXT_PUBLIC_` prefix)
+- Use `NEXT_PUBLIC_` prefix only for variables that need client-side access
+- Store secrets securely and rotate them regularly
 
 ## 📁 Project Structure
 
 ```
 applypro/
-├── app/
-│   ├── api/
-│   │   ├── preview/          # Free preview analysis endpoint
-│   │   └── generate/         # Full resume generation endpoint
-│   ├── generate/             # Resume upload & preview page
-│   ├── success/              # Post-payment resume generation page
-│   ├── layout.tsx            # Root layout
-│   ├── page.tsx              # Homepage
-│   └── globals.css           # Global styles
-├── public/                   # Static assets
-├── .env.local               # Local environment variables (not committed)
-├── .env.local.example       # Environment variables template
-├── .env.production          # Production environment template
+├── app/                          # Next.js 14 App Router
+│   ├── api/                      # API Routes
+│   │   ├── admin/                # Admin utilities
+│   │   │   └── sync-customer/    # Customer ID sync for billing portal
+│   │   ├── auth/                 # NextAuth authentication
+│   │   ├── dodo-checkout/        # Dodo payment integration
+│   │   ├── dodo-portal/          # Customer billing portal access
+│   │   ├── dodo-webhook/         # Dodo payment webhooks
+│   │   ├── subscription/         # Subscription management
+│   │   │   ├── cancel-renewal/   # Pause/resume auto-renewal
+│   │   │   └── schedule-change/  # Plan upgrades
+│   │   └── user/                 # User data endpoints
+│   ├── dashboard/                # User dashboard
+│   │   └── subscription/         # Complete billing management
+│   ├── (pages)/                  # Public pages
+│   │   ├── page.tsx              # Landing page
+│   │   ├── generate/             # AI resume generation
+│   │   ├── build-resume/         # Resume builder wizard
+│   │   ├── tracker/              # Job application tracker
+│   │   ├── pricing/              # Subscription plans
+│   │   ├── login/ & signup/      # Authentication
+│   │   └── terms/ & privacy/     # Legal pages
+│   └── global-error.tsx          # Sentry error boundary
+├── components/                   # React components
+│   ├── CreditDisplay.tsx         # Smart credit management UI
+│   ├── DodoCheckout.tsx          # Dodo payment integration
+│   └── PostHogProvider.tsx       # Analytics provider
+├── lib/                          # Business logic & utilities
+│   ├── documentGenerator.ts      # PDF/DOCX generation
+│   ├── subscription-db.ts        # Subscription logic
+│   ├── emailTemplates.ts         # Email templates (Resend)
+│   └── authOptions.ts            # NextAuth configuration
+├── prisma/                       # Database
+│   └── schema.prisma             # Prisma schema
+├── public/                       # Static assets
 └── package.json
 ```
 
@@ -113,37 +252,61 @@ applypro/
    - Configure environment variables in Vercel dashboard
 
 3. **Set Environment Variables in Vercel:**
+   - `DATABASE_URL` (PostgreSQL connection string)
    - `ANTHROPIC_API_KEY`
-   - `NEXT_PUBLIC_APP_URL` (your Vercel domain)
-   - `NEXT_PUBLIC_GUMROAD_URL`
+   - `DODO_PAYMENTS_API_KEY`
+   - `NEXT_PUBLIC_DODO_PRICE_*` (product IDs)
+   - `RESEND_API_KEY`
+   - `NEXT_PUBLIC_POSTHOG_KEY`
+   - `SENTRY_AUTH_TOKEN`
+   - OAuth credentials (if using social login)
 
 4. **Deploy:**
    - Vercel will automatically build and deploy
-   - Get your production URL
+   - Set up PostgreSQL database (Vercel Postgres or external provider)
+   - Run `npx prisma db push` to deploy schema
 
-5. **Update Gumroad:**
-   - Set redirect URL to: `https://your-domain.vercel.app/success?payment=true`
+5. **Configure Dodo Payments:**
+   - Set webhook URL to: `https://your-domain.vercel.app/api/dodo-webhook`
+   - Configure product IDs in environment variables
 
 ### Alternative Hosting
 
 The app can be deployed to any platform that supports Next.js:
-- Netlify
+- Netlify (with serverless functions)
 - Railway
 - AWS Amplify
 - DigitalOcean App Platform
+- Self-hosted on VPS
 
-See [CLAUDE.md](./CLAUDE.md) for detailed deployment instructions.
+### Database Setup
+
+**PostgreSQL is required** for full functionality:
+- Vercel Postgres (recommended for Vercel deployments)
+- Supabase
+- PlanetScale
+- AWS RDS
+- Self-hosted PostgreSQL
+
+See [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) for detailed technical documentation.
 
 ## 💰 Pricing & Economics
 
-### API Costs
-- **Free Preview**: ~$0.005 per analysis (Claude Haiku)
-- **Full Resume**: ~$0.035 per generation (Claude Sonnet 4)
+### API Costs (Anthropic Claude)
+- **Free Preview**: ~$0.0001 per analysis (Claude Haiku 3.5)
+- **Full Resume Generation**: ~$0.035 per generation (Claude Sonnet 4)
+- **Builder Preview**: ~$0.0001 per preview (Claude Haiku 3.5)
 
 ### Revenue Model
-- **Price**: $4.99 per resume
-- **Profit Margin**: ~99% (after AI costs)
-- **Example**: 20 sales/month = $99.80 revenue - $1.20 costs = **$98.60 profit**
+- **Resume Pack**: $4.99 (3 generations) - $0.011/generation after costs
+- **Pro Monthly**: $19/month (100 generations) - $0.19/generation after costs
+- **Pro Yearly**: $149/year (100 generations) - $1.49/generation after costs
+
+### Profit Margins
+- **Resume Pack**: ~99.8% profit margin
+- **Pro Monthly**: ~99% profit margin
+- **Pro Yearly**: ~99% profit margin (35% discount for customers)
+- **Example**: 100 monthly subscribers = $1,900 revenue - $20 costs = **$1,880 profit**
 
 ## 🧪 Testing
 
@@ -167,53 +330,119 @@ npm run lint
 
 ### 1. Homepage (`/`)
 - Value proposition and benefits
-- How it works (3 steps)
-- Pricing information
-- CTA to generate page
+- Feature showcase (AI generation, builder, tracker)
+- Pricing information with plan comparisons
+- Social proof and testimonials
+- CTA to generate or build resume
 
-### 2. Generate Page (`/generate`)
-- Upload resume (PDF/DOCX) or paste text
-- Paste job description
+### 2. AI Resume Generation (`/generate`)
+- Upload existing resume (PDF/DOCX) or paste text
+- Paste job description or LinkedIn URL
 - Get free preview with:
   - Match score (0-100)
-  - Top 5 improvements
-  - Missing ATS keywords
-  - Preview of tailored resume
-- Payment link to Gumroad
+  - Top improvements and suggestions
+  - Missing ATS keywords analysis
+  - Preview of tailored resume (watermarked)
+- Direct checkout with Dodo Payments
 
-### 3. Success Page (`/success?payment=true`)
-- Post-payment resume generation
-- Full tailored resume
-- Personalized cover letter
+### 3. Resume Builder (`/build-resume`)
+- 7-step guided wizard:
+  1. Target job details
+  2. Personal information
+  3. Education history
+  4. Work experience
+  5. Skills (auto-categorized)
+  6. Professional summary
+  7. Template selection
+- Free AI preview at any step
+- Auto-save progress to database
+- Professional templates with color themes
+
+### 4. Job Application Tracker (`/tracker`)
+- Add/edit job applications
+- Status workflow management
+- Follow-up reminders
+- Statistics dashboard
+- Cross-device sync (localStorage)
+- Free for all users (25 application limit)
+
+### 5. Subscription Dashboard (`/dashboard/subscription`)
+- Current plan details and usage
+- Payment method management
+- Customer portal access (Dodo)
+- Cancel/resume auto-renewal
+- Billing history and invoices
+- Smart credit display and management
+
+### 6. Post-Payment Success
+- Full resume generation (paid)
+- Complete tailored resume + ATS version + cover letter
 - Download as PDF or DOCX
+- Professional formatting and templates
 
 ## 🔒 Security
 
-- API keys stored in environment variables
-- Input validation on all API routes
-- Rate limiting consideration for production
-- No sensitive data in client-side code
-- Secure payment processing via Gumroad
+### Payment Security
+- Dodo Payments handles all payment processing and PCI compliance
+- Webhook signature verification (HMAC SHA256)
+- Customer portal access with secure session tokens
+- No credit card data stored locally
+
+### API Security
+- Session-based authentication on all protected endpoints
+- Server-side subscription verification before content access
+- Rate limiting via cooldown periods and usage tracking
+- Input validation and sanitization on all API routes
+- Abuse detection and auto-suspension for excessive usage
+
+### Content Protection
+- Free previews include watermarks and selection restrictions
+- Text selection disabled (`userSelect: none`)
+- Copy/paste blocked (`onCopy` prevented)
+- Right-click disabled (`onContextMenu` prevented)
+- Downloads require active subscription + available credits
+
+### Data Security
+- API keys stored in environment variables (never in code)
+- Database encryption and secure connections
+- User data encrypted at rest
+- GDPR-compliant data handling
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
+**Database Connection Error**
+- Verify `DATABASE_URL` is correct
+- Ensure PostgreSQL is running (for local development)
+- Check database credentials and permissions
+
 **API Error: Model not found**
-- Check your Anthropic API key has access to required models
-- Verify key has sufficient credits
+- Verify Anthropic API key has access to Claude models
+- Check API key credits and billing status
+- Ensure `ANTHROPIC_API_KEY` is set correctly
 
-**Build fails**
+**Payment Integration Issues**
+- Confirm Dodo Payments API key is valid
+- Check product IDs match Dodo dashboard
+- Verify webhook URL is correctly configured
+- Test with Dodo's sandbox environment first
+
+**Build Fails**
 - Ensure Node.js version 18+
-- Delete `node_modules` and `.next`, then reinstall:
-  ```bash
-  rm -rf node_modules .next
-  npm install
-  ```
+- Clear cache: `rm -rf node_modules .next`
+- Reinstall: `npm install`
+- Check for TypeScript errors
 
-**Downloads not working**
-- Check browser console for errors
-- Ensure jsPDF and docx packages are installed
+**Webhook Not Receiving Events**
+- Confirm webhook URL is accessible from Dodo
+- Check webhook signature verification
+- Review server logs for webhook processing errors
+
+**Customer Portal Access Issues**
+- Ensure customer ID is synced (use `/api/admin/sync-customer`)
+- Check Dodo Payments dashboard for customer status
+- Verify portal session creation is working
 
 ## 📝 License
 
@@ -238,4 +467,4 @@ For issues or questions:
 ---
 
 Built with ❤️ using Next.js and Claude AI
-# Force rebuild 
+# Force rebuild
