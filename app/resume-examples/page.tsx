@@ -2,6 +2,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { Search, ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Resume Examples by Industry | ApplyPro',
@@ -60,6 +61,21 @@ export default async function ResumeExamplesPage() {
               {categories.length > 0 ? categories.length : '25+'} industries. Find inspiration and get hired
               faster.
             </p>
+
+            {/* Search Bar */}
+            <div className="mt-8 max-w-xl mx-auto">
+              <Link
+                href="/resume-examples/search"
+                className="flex items-center gap-3 px-5 py-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl transition-colors group"
+              >
+                <Search className="w-5 h-5 text-white/70" />
+                <span className="text-white/70 group-hover:text-white transition-colors">
+                  Search by job title, skill, or industry...
+                </span>
+                <ArrowRight className="w-4 h-4 text-white/50 ml-auto group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
             <div className="flex justify-center gap-4 text-sm">
               <div className="bg-white/10 rounded-full px-4 py-2">
                 ✓ ATS-Optimized

@@ -24,6 +24,7 @@ import {
 
 interface SubscriptionInfo {
   plan: string | null;
+  import SearchCommand from './SearchCommand';
   status: string;
   isActive?: boolean;
   monthlyUsageCount?: number;
