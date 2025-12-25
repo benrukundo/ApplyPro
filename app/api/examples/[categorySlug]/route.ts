@@ -1,13 +1,14 @@
 // app/api/examples/[categorySlug]/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { categorySlug: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ categorySlug: string }> }
 ) {
   try {
-    const { categorySlug } = params;
+    // Await params in Next.js 15+
+    const { categorySlug } = await params;
     const { searchParams } = new URL(request.url);
     const experienceLevel = searchParams.get('level'); // ENTRY, MID, SENIOR
     const page = parseInt(searchParams.get('page') || '1');
