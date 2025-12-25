@@ -34,7 +34,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description:
       example.metaDescription ||
       `Professional ${example.title} resume example with expert tips. See sample content, skills, and achievements to create your perfect resume.`,
-    path: `/resume-examples/${params.categorySlug}/${params.exampleSlug}`,
+    // USE THE AWAITED VARIABLES, NOT params
+    path: `/resume-examples/${categorySlug}/${exampleSlug}`,
   });
 }
 
