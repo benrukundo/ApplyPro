@@ -387,6 +387,98 @@ export default function Home() {
       </section>
 
       {/* Pricing Section */}
+      {/* Resume Examples Showcase Section */}
+      <section className="py-20 bg-gradient-to-b from-white to-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Section Header */}
+          <div className="text-center mb-12">
+            <span className="inline-block px-4 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-4">
+              Free Resource
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Browse 70+ Professional Resume Examples
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Get inspired by real resume examples across 25 industries.
+              All ATS-optimized and expert-written.
+            </p>
+          </div>
+
+          {/* Industry Cards Preview */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-12">
+            {[
+              { icon: "💻", name: "Technology", count: "8+" },
+              { icon: "🏥", name: "Healthcare", count: "5+" },
+              { icon: "💰", name: "Finance", count: "5+" },
+              { icon: "📈", name: "Sales & Marketing", count: "5+" },
+              { icon: "⚙️", name: "Engineering", count: "4+" },
+              { icon: "📚", name: "Education", count: "4+" },
+              { icon: "⚖️", name: "Legal", count: "3+" },
+              { icon: "🎨", name: "Creative & Design", count: "4+" },
+              { icon: "👥", name: "Human Resources", count: "3+" },
+              { icon: "🎓", name: "Entry Level", count: "3+" },
+            ].map((industry) => (
+              <div
+                key={industry.name}
+                className="bg-white rounded-xl p-4 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 text-center"
+              >
+                <span className="text-3xl mb-2 block">{industry.icon}</span>
+                <h3 className="font-medium text-gray-900 text-sm">{industry.name}</h3>
+                <p className="text-xs text-gray-500">{industry.count} examples</p>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="text-center flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/resume-examples"
+              className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-lg transition-colors shadow-lg shadow-blue-500/25"
+            >
+              Browse All Examples
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
+            <Link
+              href="/build-resume"
+              className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-900 font-semibold px-8 py-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors"
+            >
+              <PenTool className="w-5 h-5 text-purple-600" />
+              Start Building Yours
+            </Link>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="mt-12 flex flex-wrap justify-center gap-6 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>100% Free to Browse</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>ATS-Optimized</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>Expert-Written</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>25 Industries</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="pricing" className="py-20 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
