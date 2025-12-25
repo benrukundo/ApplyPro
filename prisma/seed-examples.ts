@@ -599,7 +599,7 @@ const resumeExamples = [
       'Highlight your certification (CMA, RMA, CCMA)',
       'Include clinical externship experience prominently',
       'List both clinical and administrative skills',
-      'Mention specific EHR systems you've used',
+      'Mention specific EHR systems you\'ve used',
     ],
     commonMistakes: [
       'Not including certification information',
@@ -3069,9 +3069,9 @@ async function main() {
   console.log('🎯 Seeding skill suggestions...');
   for (const skill of skillSuggestions) {
     let categoryId = null;
-    if (skill.industrySlug) {
+    if ((skill as any).industrySlug) {
       const category = await prisma.jobCategory.findUnique({
-        where: { slug: skill.industrySlug },
+        where: { slug: (skill as any).industrySlug },
       });
       categoryId = category?.id || null;
     }
