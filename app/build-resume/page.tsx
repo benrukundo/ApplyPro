@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { generatePDFFromStructure, generateDOCXFromStructure, type ColorPreset, type ResumeStructure } from '@/lib/documentGenerator';
@@ -175,6 +176,20 @@ export default function BuildResumePage() {
   const [selectedTemplate, setSelectedTemplate] = useState<'modern' | 'traditional' | 'ats'>('modern');
   const [selectedColor, setSelectedColor] = useState(COLOR_PRESETS[0]);
 
+  // Template prefill state (from resume examples)
+  const searchParams = useSearchParams();
+  const templateSlug = searchParams?.get('template');
+  const categorySlug = searchParams?.get('category');
+
+  const [templateInfo, setTemplateInfo] = useState<{
+    title: string;
+    industry: string;
+    summary?: string;
+    skills?: string[];
+    writingTips?: string[];
+    experienceLevel?: string;
+  } | null>(null);
+
   // Load saved progress and subscription
   useEffect(() => {
     if (session?.user?.id) {
@@ -236,6 +251,34 @@ export default function BuildResumePage() {
       setIsLoadingSubscription(false);
     }
   };
+
+  // Load template prefill when template/category are present
+  useEffect(() => {
+    const loadTemplate = async () => {
+      if (!templateSlug || !categorySlug) return;
+      try {
+        const res = await fetch(`/api/examples/prefill?template=${templateSlug}&category=${categorySlug}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.success) {
+          setTemplateInfo(data.data);
+          setFormData(prev => ({
+            ...prev,
+            targetJobTitle: data.data.title || prev.targetJobTitle,
+            targetIndustry: data.data.industry || prev.targetIndustry,
+            experienceLevel: data.data.experienceLevel === 'ENTRY' ? 'entry' : data.data.experienceLevel === 'MID' ? 'mid' : 'senior',
+            skills: {
+              ...prev.skills,
+              technical: data.data.skills?.slice(0, 6) || prev.skills.technical,
+            },
+          }));
+        }
+      } catch (err) {
+        console.error('Error loading template:', err);
+      }
+    };
+    loadTemplate();
+  }, [templateSlug, categorySlug]);
 
   const saveProgress = async (step?: number) => {
     if (!session?.user?.id) return;
@@ -740,6 +783,31 @@ export default function BuildResumePage() {
             <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm bg-blue-100 text-blue-700">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Loading subscription...</span>
+            </div>
+          )}
+
+          {/* Template Info Banner */}
+          {templateInfo && (
+            <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-blue-900">Using Template: {templateInfo.title}</h3>
+                  <p className="text-sm text-blue-700 mt-1">Industry: {templateInfo.industry}</p>
+                  {templateInfo.writingTips && templateInfo.writingTips.length > 0 && (
+                    <div className="mt-3 p-3 bg-white/60 rounded-lg">
+                      <p className="text-xs font-medium text-blue-800 mb-2">💡 Writing Tips:</p>
+                      <ul className="text-xs text-blue-700 space-y-1">
+                        {templateInfo.writingTips.slice(0, 3).map((tip, i) => (
+                          <li key={i}>• {tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

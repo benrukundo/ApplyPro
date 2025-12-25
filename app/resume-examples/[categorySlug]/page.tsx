@@ -215,7 +215,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             Use our AI-powered builder with these examples as inspiration.
           </p>
           <Link
-            href={`/builder?template=${examples[0]?.slug}&category=${category.slug}`}
+            href={examples[0]
+              ? `/build-resume?template=${examples[0].slug}&category=${category.slug}`
+              : '/build-resume'
+            }
             className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-lg transition-colors"
           >
             Start Building Now
