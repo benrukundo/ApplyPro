@@ -5,7 +5,7 @@
 ApplyPro is a SaaS platform that helps job seekers create professional, ATS-optimized resumes and track their job applications. The platform uses AI (Claude by Anthropic) to tailor resumes to specific job descriptions and enhance user-provided content.
 
 **Live Site**: https://www.applypro.org
-**Tech Stack**: Next.js 14, TypeScript, Prisma, PostgreSQL, Tailwind CSS, Paddle (payments), Resend (emails), Sentry (monitoring), PostHog (analytics)
+**Tech Stack**: Next.js 14, TypeScript, Prisma, PostgreSQL, Tailwind CSS, Dodo Payments (payments), Resend (emails), Sentry (monitoring), PostHog (analytics)
 
 ---
 
@@ -15,27 +15,34 @@ ApplyPro is a SaaS platform that helps job seekers create professional, ATS-opti
 c:\ApplyPro/
 ├── app/                          # Next.js 14 App Router
 │   ├── api/                      # API Routes
+│   │   ├── admin/                # Admin utilities
+│   │   │   └── sync-customer/    # Customer ID sync for billing portal
 │   │   ├── auth/                 # Authentication (NextAuth)
 │   │   │   ├── register/         # User registration
 │   │   │   └── [...nextauth]/    # OAuth & credentials login
+│   │   ├── dodo-checkout/        # Dodo payment integration
+│   │   ├── dodo-portal/          # Customer billing portal access
+│   │   ├── dodo-webhook/         # Dodo payment webhooks
 │   │   ├── generate/             # AI resume generation (PAID - Sonnet)
 │   │   ├── preview/              # Free resume preview (Haiku)
 │   │   ├── build-resume/         # Builder feature APIs
 │   │   │   ├── generate/         # Generate from builder (PAID)
 │   │   │   ├── preview/          # Free preview from builder (Haiku)
 │   │   │   └── progress/         # Save builder progress
-│   │   ├── paddle-webhook/       # Paddle payment webhooks
 │   │   ├── subscription/         # Subscription management
-│   │   │   └── cancel/           # Cancel subscription
+│   │   │   ├── cancel/           # Cancel subscription
+│   │   │   ├── cancel-renewal/   # Pause/resume auto-renewal
+│   │   │   └── schedule-change/  # Plan upgrades
 │   │   └── user/
 │   │       └── subscription/     # Get user subscription info
+│   ├── dashboard/                # User dashboard
+│   │   └── subscription/         # Complete billing management
 │   ├── (pages)/                  # Page routes
 │   │   ├── page.tsx              # Landing page
-│   │   ├── dashboard/            # User dashboard
 │   │   ├── generate/             # Main resume generation (upload existing)
 │   │   ├── build-resume/         # Build from scratch wizard
 │   │   ├── tracker/              # Job application tracker
-│   │   ├── pricing/              # Pricing page with Paddle checkout
+│   │   ├── pricing/              # Pricing page with Dodo checkout
 │   │   ├── login/                # Login page
 │   │   ├── register/             # Registration page
 │   │   ├── terms/                # Terms of service
@@ -43,7 +50,8 @@ c:\ApplyPro/
 │   │   └── coming-soon/          # Placeholder for future features
 │   └── global-error.tsx          # Sentry error boundary
 ├── components/                   # React components
-│   ├── PaddleCheckout.tsx        # Paddle payment integration
+│   ├── CreditDisplay.tsx         # Smart credit management UI
+│   ├── DodoCheckout.tsx          # Dodo payment integration
 │   ├── CancelSubscriptionModal.tsx # Cancel subscription UI
 │   └── PostHogProvider.tsx       # Analytics provider
 ├── lib/                          # Utility functions & business logic
@@ -108,11 +116,13 @@ c:\ApplyPro/
   - **Resume Pack** ($4.99 one-time): 3 resume generations
   - **Pro Monthly** ($19/month): 100 resumes/month
   - **Pro Yearly** ($149/year): 100 resumes/month, save 35%
-- **Payment Provider**: Paddle (sandbox mode currently)
+- **Payment Provider**: Dodo Payments (production ready)
 - **Features**:
   - Checkout overlay integration
   - Webhook handling for subscription lifecycle
-  - Cancellation flow with confirmation modal
+  - **Cancel Auto-Renewal**: Pause/resume subscriptions
+  - **Customer Portal**: Direct billing management access
+  - **Smart Credit Display**: Priority-based credit management
   - Usage tracking and limits
   - Fair use protection (cooldown, daily limits)
 
@@ -147,10 +157,10 @@ c:\ApplyPro/
 - Relationships: accounts, sessions, resumes, builderResumes, subscriptions
 
 **Subscription**
-- id, userId, paddleId, plan, status
-- monthlyUsageCount, monthlyLimit
+- id, userId, paddleId, customerId, plan, status
+- monthlyUsageCount, monthlyLimit, cancelAtPeriodEnd
 - currentPeriodEnd, cancelledAt
-- Tracks: monthly/yearly/pay-per-use plans
+- Tracks: monthly/yearly/pay-per-use plans with auto-renewal control
 
 **GeneratedResume**
 - Stores generated resumes from upload feature
@@ -200,27 +210,34 @@ c:\ApplyPro/
 
 ---
 
-## 💳 Payment Flow (Paddle)
+## 💳 Payment Flow (Dodo Payments)
 
-1. **User clicks pricing plan** → PaddleCheckout component opens overlay
-2. **User completes payment** → Paddle processes payment
-3. **Webhook received** at `/api/paddle-webhook`:
+1. **User clicks pricing plan** → DodoCheckout component opens overlay
+2. **User completes payment** → Dodo processes payment
+3. **Webhook received** at `/api/dodo-webhook`:
    - Signature verification (HMAC SHA256)
-   - Event handling: subscription.created, updated, canceled, etc.
-   - Database updated (Subscription model)
+   - Customer ID capture and storage
+   - Event handling: subscription.active, subscription.updated, subscription.cancelled, etc.
+   - Database updated (Subscription model with customerId and cancelAtPeriodEnd)
    - Emails sent (confirmation, cancellation, etc.)
 4. **User redirected to dashboard** with `?payment=success`
 5. **Dashboard polls** `/api/user/subscription` to show updated status
 
-### Paddle Events Handled:
+### Dodo Events Handled:
+- subscription.active
 - subscription.created
 - subscription.updated
-- subscription.canceled
-- subscription.paused
-- subscription.resumed
+- subscription.cancelled
+- subscription.renewed
+- subscription.on_hold
 - subscription.past_due
-- transaction.completed
-- transaction.payment_failed
+- payment.succeeded
+- payment.failed
+
+### Customer Portal Integration:
+- **Portal Access**: `/api/dodo-portal` generates secure portal sessions
+- **Customer Sync**: `/api/admin/sync-customer` syncs missing customer IDs
+- **Auto-Renewal Control**: `/api/subscription/cancel-renewal` manages subscription pause/resume
 
 ---
 
@@ -562,13 +579,40 @@ http://localhost:3000
 
 ## 📝 Recent Major Updates
 
-### Latest Changes (December 2025):
-1. **Cancel Subscription Flow**: Modal, API endpoint, Paddle integration
-2. **Free AI Preview**: Claude Haiku for non-subscribers to see quality
-3. **Improved Document Generation**: Complete rewrite with better parser
-4. **Email Notifications**: 8 automated email templates
-5. **Build-Resume Security**: Strict download protection, watermarks
-6. **Modern Template**: Two-column layout matching across PDF/DOCX/Preview
+### Major Updates (December 2025):
+1. **Dodo Payments Integration**: Complete migration from Paddle to Dodo Payments
+   - New webhook handling at `/api/dodo-webhook`
+   - Customer ID capture and storage
+   - Enhanced payment security and processing
+
+2. **Customer Portal & Billing Management**:
+   - Direct access to Dodo customer portal via `/api/dodo-portal`
+   - Customer ID synchronization with `/api/admin/sync-customer`
+   - Complete billing dashboard with payment method updates
+   - Invoice and billing history access
+
+3. **Cancel Auto-Renewal Feature**:
+   - Pause/resume subscription auto-renewal
+   - New API endpoint `/api/subscription/cancel-renewal`
+   - Database field `cancelAtPeriodEnd` for renewal control
+   - Visual indicators for cancelled vs active subscriptions
+
+4. **Smart Credit Display Component**:
+   - Intelligent credit priority management
+   - Pay-per-use credits used first
+   - Visual progress bars and usage tracking
+   - Compact mode for header/navbar integration
+
+5. **Enhanced Webhook Processing**:
+   - Better customer ID extraction from Dodo webhooks
+   - Comprehensive logging for debugging
+   - Improved error handling and data validation
+
+6. **UI/UX Improvements**:
+   - Complete subscription dashboard redesign
+   - Better credit management visualization
+   - Enhanced billing portal integration
+   - Improved error messaging and user feedback
 
 ### Recent UI/UX Fixes (December 2025):
 1. **ATS Checker Page Redesign**:
