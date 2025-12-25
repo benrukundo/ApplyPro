@@ -32,7 +32,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { trackEvent } from '@/components/PostHogProvider';
-import SkillAutocomplete from '@/components/SkillAutocomplete';
+import SkillAutocomplete from '@/app/components/SkillAutocomplete';
 
 export const dynamic = 'force-dynamic';
 
