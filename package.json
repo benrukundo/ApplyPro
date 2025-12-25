@@ -52,6 +52,6 @@
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "node prisma/seed-examples.js"
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-examples.ts"
   }
 }
