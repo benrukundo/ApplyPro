@@ -1,0 +1,44 @@
+Seed changes summary
+=====================
+
+Date: 2025-12-25
+
+Summary of work performed (by assistant):
+
+- Added/verified TypeScript Prisma seed script:
+  - `prisma/seed-examples.ts` is present and contains the full seed logic for job categories, resume examples, and skill suggestions.
+
+- Ran the seed against the provided DATABASE_URL (kept private). Results:
+  - jobCategories: 25
+  - resumeExamples: 83
+  - skillSuggestions: 35
+
+- Added a small verification script to check seeded rows:
+  - `scripts/check_seed.js` (committed and pushed)
+
+- Reduced duplication by adding a shared seed data module:
+  - `prisma/seed-data.ts` (shared `jobCategories`, `skillSuggestions`, and a representative `resumeExamples` subset)
+  - Updated `prisma/seed-examples.ts` to import shared `jobCategories` and `skillSuggestions`.
+
+- Updated admin seeding endpoint:
+  - `app/api/admin/seed/route.ts` now imports `jobCategories` from `prisma/seed-data.ts` (avoids duplicating job categories).
+
+- Updated Prisma seed configuration:
+  - `package.json` `prisma.seed` now runs the TypeScript seed via `ts-node --compiler-options {"module":"CommonJS"} prisma/seed-examples.ts` so `npx prisma db seed` works directly.
+
+- Commits and pushes:
+  - All changes (verification script, shared seed-data, seed script updates, admin route updates, package.json change) have been committed and pushed to branch `main`.
+
+Notes & recommendations:
+- If you want the admin endpoint to seed the full `resumeExamples`, move the full `resumeExamples` array into `prisma/seed-data.ts` (currently `seed-examples.ts` keeps the full list).
+- Keep secret DB credentials out of commits and environment files; use environment variables in CI or a secrets manager.
+
+Files changed/added by this work (high level):
+- prisma/seed-examples.ts (updated to import shared data)
+- prisma/seed-data.ts (new)
+- app/api/admin/seed/route.ts (updated to import shared data)
+- scripts/check_seed.js (new)
+- package.json (updated prisma.seed)
+- debug_files/seed_changes_summary.txt (this file)
+
+End of summary.
