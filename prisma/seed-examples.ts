@@ -2687,55 +2687,7 @@ const resumeExamples = [
   },
 ];
 
-// ============================================
-// SKILL SUGGESTIONS DATA
-// ============================================
-const skillSuggestions = [
-  // Technical - Software Development
-  { name: "JavaScript", category: "Technical", relatedJobs: ["software-engineer", "web-developer", "full-stack-developer", "frontend-developer"], popularity: 100 },
-  { name: "Python", category: "Technical", relatedJobs: ["software-engineer", "data-scientist", "machine-learning-engineer", "backend-developer"], popularity: 98 },
-  { name: "React", category: "Technical", relatedJobs: ["software-engineer", "web-developer", "frontend-developer", "full-stack-developer"], popularity: 95 },
-  { name: "Node.js", category: "Technical", relatedJobs: ["software-engineer", "web-developer", "backend-developer", "full-stack-developer"], popularity: 90 },
-  { name: "SQL", category: "Technical", relatedJobs: ["software-engineer", "data-scientist", "data-analyst", "database-administrator"], popularity: 92 },
-  { name: "TypeScript", category: "Technical", relatedJobs: ["software-engineer", "web-developer", "frontend-developer"], popularity: 85 },
-  { name: "AWS", category: "Technical", relatedJobs: ["software-engineer", "devops-engineer", "cloud-architect", "solutions-architect"], popularity: 88 },
-  { name: "Docker", category: "Technical", relatedJobs: ["software-engineer", "devops-engineer", "backend-developer"], popularity: 82 },
-  { name: "Kubernetes", category: "Technical", relatedJobs: ["devops-engineer", "cloud-architect", "site-reliability-engineer"], popularity: 75 },
-  { name: "Git", category: "Technical", relatedJobs: ["software-engineer", "web-developer", "devops-engineer"], popularity: 95 },
-
-  // Technical - Data
-  { name: "Machine Learning", category: "Technical", relatedJobs: ["data-scientist", "machine-learning-engineer", "ai-engineer"], popularity: 80 },
-  { name: "TensorFlow", category: "Technical", relatedJobs: ["data-scientist", "machine-learning-engineer", "ai-engineer"], popularity: 70 },
-  { name: "Pandas", category: "Technical", relatedJobs: ["data-scientist", "data-analyst"], popularity: 75 },
-  { name: "Tableau", category: "Technical", relatedJobs: ["data-analyst", "business-analyst", "data-scientist"], popularity: 65 },
-
-  // Healthcare
-  { name: "Patient Care", category: "Healthcare", relatedJobs: ["registered-nurse", "medical-assistant", "cna", "lpn"], popularity: 90 },
-  { name: "Medication Administration", category: "Healthcare", relatedJobs: ["registered-nurse", "lpn", "pharmacist"], popularity: 85 },
-  { name: "Phlebotomy", category: "Healthcare", relatedJobs: ["medical-assistant", "phlebotomist", "registered-nurse"], popularity: 70 },
-  { name: "EHR Systems", category: "Healthcare", relatedJobs: ["registered-nurse", "medical-assistant", "healthcare-administrator"], popularity: 80 },
-  { name: "BLS Certified", category: "Certification", relatedJobs: ["registered-nurse", "medical-assistant", "emt", "paramedic"], popularity: 90 },
-  { name: "ACLS Certified", category: "Certification", relatedJobs: ["registered-nurse", "icu-nurse", "emergency-nurse"], popularity: 75 },
-
-  // Soft Skills (Universal)
-  { name: "Communication", category: "Soft Skills", relatedJobs: ["*"], popularity: 100 },
-  { name: "Problem Solving", category: "Soft Skills", relatedJobs: ["*"], popularity: 98 },
-  { name: "Teamwork", category: "Soft Skills", relatedJobs: ["*"], popularity: 95 },
-  { name: "Leadership", category: "Soft Skills", relatedJobs: ["manager", "team-lead", "director", "executive"], popularity: 85 },
-  { name: "Time Management", category: "Soft Skills", relatedJobs: ["*"], popularity: 90 },
-  { name: "Critical Thinking", category: "Soft Skills", relatedJobs: ["*"], popularity: 88 },
-  { name: "Attention to Detail", category: "Soft Skills", relatedJobs: ["*"], popularity: 85 },
-  { name: "Adaptability", category: "Soft Skills", relatedJobs: ["*"], popularity: 80 },
-
-  // Tools (Universal)
-  { name: "Microsoft Office", category: "Tools", relatedJobs: ["*"], popularity: 90 },
-  { name: "Google Workspace", category: "Tools", relatedJobs: ["*"], popularity: 85 },
-  { name: "Slack", category: "Tools", relatedJobs: ["*"], popularity: 75 },
-  { name: "Zoom", category: "Tools", relatedJobs: ["*"], popularity: 70 },
-  { name: "JIRA", category: "Tools", relatedJobs: ["software-engineer", "product-manager", "project-manager"], popularity: 75 },
-  { name: "Asana", category: "Tools", relatedJobs: ["*"], popularity: 65 },
-  { name: "Trello", category: "Tools", relatedJobs: ["*"], popularity: 60 },
-];
+// `skillSuggestions` is imported from `prisma/seed-data.ts` to avoid duplication.
 
 // ============================================
 // MAIN SEED FUNCTION
