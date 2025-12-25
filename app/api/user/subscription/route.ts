@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
         createdAt: true,
         paddleId: true,
         cancelledAt: true,
-        customerId: true,  // ADD THIS LINE
+        customerId: true,
+        cancelAtPeriodEnd: true,
       },
     });
 

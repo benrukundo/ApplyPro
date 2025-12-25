@@ -85,6 +85,9 @@ model Subscription {
   scheduledPlanChange  String?   // 'monthly' or 'yearly'
   scheduledChangeDate  DateTime?
 
+  // Cancel at period end for auto-renewal control
+  cancelAtPeriodEnd Boolean @default(false)
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
