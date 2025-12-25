@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && prisma db push && next build",
+    "dev": "next dev --turbopack",
+    "build": "prisma generate && prisma db push --force-reset && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-examples.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
