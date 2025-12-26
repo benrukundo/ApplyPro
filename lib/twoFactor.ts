@@ -2,7 +2,7 @@ import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 
-const ENCRYPTION_KEY = process.env.TWO_FACTOR_ENCRYPTION_KEY;
+const ENCRYPTION_KEY = process.env.TWO_FACTOR_ENCRYPTION_KEY || '';
 
 if (!ENCRYPTION_KEY) {
   throw new Error('TWO_FACTOR_ENCRYPTION_KEY environment variable is required');
