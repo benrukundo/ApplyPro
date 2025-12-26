@@ -60,21 +60,28 @@ function AdminLoginContent() {
         return;
       }
 
-      // Verify admin status
+      // Verify admin status and check 2FA
       const adminCheck = await fetch('/api/admin/auth/check');
       const adminData = await adminCheck.json();
 
       if (!adminData.isAdmin) {
         setError('Access denied. This login is for administrators only.');
-        // Sign out the non-admin user
-        await signIn('credentials', { redirect: false });
         setIsLoading(false);
         return;
       }
 
-      // Redirect to admin dashboard
-      router.push(callbackUrl);
-    } catch {
+      // Check if 2FA is enabled
+      const userResponse = await fetch('/api/admin/auth/status');
+      const userData = await userResponse.json();
+
+      if (userData.twoFactorEnabled) {
+        // Redirect to 2FA verification
+        router.push(`/admin/verify-2fa?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      } else {
+        // Redirect directly to admin dashboard
+        router.push(callbackUrl);
+      }
+    } catch (err) {
       setError('An error occurred. Please try again.');
       setIsLoading(false);
     }
