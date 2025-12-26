@@ -492,47 +492,52 @@ function DashboardContent() {
         </div>
 
         {/* Stats Grid */}
+                {/* Stats Grid - Updated Design */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">Total</span>
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-500">Total Jobs</span>
+              <div className="p-2 bg-blue-50 rounded-lg">
                 <Briefcase className="w-4 h-4 text-blue-600" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+            <p className="text-3xl font-bold text-gray-900 tabular-nums">{stats.total}</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">Applied</span>
-              <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-500">Applications</span>
+              <div className="p-2 bg-emerald-50 rounded-lg">
                 <Send className="w-4 h-4 text-emerald-600" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-emerald-600">{stats.applied}</p>
+            <p className="text-3xl font-bold text-gray-900 tabular-nums">{stats.applied}</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">Interviews</span>
-              <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-500">Interviews</span>
+              <div className="p-2 bg-amber-50 rounded-lg">
                 <Target className="w-4 h-4 text-amber-600" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-amber-600">{stats.interview}</p>
+            <p className="text-3xl font-bold text-gray-900 tabular-nums">{stats.interview}</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-gray-300 transition-all">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">Success Rate</span>
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-500">Success Rate</span>
+              <div className="p-2 bg-purple-50 rounded-lg">
                 <TrendingUp className="w-4 h-4 text-purple-600" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-purple-600">
-              {stats.total > 0 ? ((Number(stats.offer) / Number(stats.total)) * 100).toFixed(0) : 0}%
-            </p>
+            <div className="flex items-end gap-2">
+               <p className="text-3xl font-bold text-gray-900 tabular-nums">
+                {stats.total > 0 ? ((Number(stats.offer) / Number(stats.total)) * 100).toFixed(0) : 0}%
+               </p>
+               {/* Optional: Show trend if you have data */}
+               {/* <span className="text-xs text-green-600 font-medium mb-1">+2%</span> */}
+            </div>
           </div>
         </div>
 
