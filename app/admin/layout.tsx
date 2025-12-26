@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import AdminNavigation from './components/AdminNavigation';
 
 export const metadata: Metadata = {
   title: {
@@ -19,7 +20,12 @@ export default function AdminLayout({
 }) {
   return (
     <div className="min-h-screen bg-slate-900">
-      {children}
+      <AdminNavigation />
+      <div className="lg:pl-72 pt-16">
+        <main className="min-h-[calc(100vh-4rem)]">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

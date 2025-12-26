@@ -2,25 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { signOut } from 'next-auth/react';
 import {
   BarChart3,
   Users,
   FileText,
   Settings,
-  LogOut,
-  Shield,
   TrendingUp,
   Eye,
   MousePointer,
   Download,
-  ChevronRight,
-  Menu,
-  X,
-  Home,
   Loader2,
-  Bell,
 } from 'lucide-react';
 
 interface AdminUser {
@@ -48,8 +39,6 @@ interface AnalyticsSummary {
 }
 
 export default function AdminDashboard({ admin }: AdminDashboardProps) {
-  const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -71,126 +60,8 @@ export default function AdminDashboard({ admin }: AdminDashboardProps) {
     loadAnalytics();
   }, []);
 
-  const handleLogout = async () => {
-    await signOut({ redirect: false });
-    router.push('/admin/login');
-  };
-
-  const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: Home, current: true },
-    { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, current: false },
-    { name: 'Resume Examples', href: '/admin/examples', icon: FileText, current: false, badge: 'Soon' },
-    { name: 'Admin Management', href: '/admin/users', icon: Users, current: false },
-    { name: 'Settings', href: '/admin/settings', icon: Settings, current: false, badge: 'Soon' },
-  ];
-
   return (
-    <div className="min-h-screen bg-slate-900">
-      {/* Mobile Sidebar Backdrop */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-slate-800 border-r border-slate-700 transform transition-transform duration-200 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-slate-700">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="font-semibold text-white">ApplyPro</p>
-              <p className="text-xs text-slate-400">Admin Panel</p>
-            </div>
-          </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1 text-slate-400 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="p-4 space-y-1">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${
-                item.current
-                  ? 'bg-blue-500/10 text-blue-400'
-                  : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <item.icon className="w-5 h-5" />
-                <span className="font-medium">{item.name}</span>
-              </div>
-              {item.badge && (
-                <span className="text-xs px-2 py-0.5 bg-slate-700 text-slate-400 rounded-full">
-                  {item.badge}
-                </span>
-              )}
-            </Link>
-          ))}
-        </nav>
-
-        {/* User & Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
-              {admin.name?.charAt(0) || admin.email?.charAt(0) || 'A'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{admin.name || 'Admin'}</p>
-              <p className="text-xs text-slate-400 truncate">{admin.email}</p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign out</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="lg:pl-64">
-        {/* Top Header */}
-        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 bg-slate-800/80 backdrop-blur-xl border-b border-slate-700">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 text-slate-400 hover:text-white"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          
-          <h1 className="text-lg font-semibold text-white lg:ml-0 ml-2">Dashboard</h1>
-          
-          <div className="flex items-center gap-3">
-            <button className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/50 transition-colors relative">
-              <Bell className="w-5 h-5" />
-            </button>
-            <Link
-              href="/"
-              target="_blank"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-slate-400 hover:text-white border border-slate-600 rounded-lg hover:bg-slate-700/50 transition-colors"
-            >
-              View Site
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </header>
-
-        {/* Dashboard Content */}
-        <main className="p-6">
+    <div className="p-6 max-w-7xl mx-auto">
           {/* Welcome Banner */}
           <div className="mb-8 p-6 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 rounded-2xl">
             <h2 className="text-2xl font-bold text-white mb-2">
@@ -387,8 +258,6 @@ export default function AdminDashboard({ admin }: AdminDashboardProps) {
               </Link>
             </div>
           </div>
-        </main>
-      </div>
     </div>
   );
 }

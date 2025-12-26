@@ -199,40 +199,28 @@ export default function AdminExamplesManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/admin"
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold flex items-center gap-2">
-                  <FileText className="w-6 h-6 text-blue-500" />
-                  Resume Examples
-                </h1>
-                <p className="text-gray-400 text-sm">
-                  {stats?.total || 0} total examples across {categories.length} categories
-                </p>
-              </div>
-            </div>
-            <Link
-              href="/admin/examples/new"
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Add Example
-            </Link>
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+              <FileText className="w-7 h-7 text-blue-500" />
+              Resume Examples
+            </h1>
+            <p className="text-slate-400 mt-1">
+              {stats?.total || 0} total examples across {categories.length} categories
+            </p>
           </div>
+          <Link
+            href="/admin/examples/new"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2.5 rounded-lg transition-colors font-medium"
+          >
+            <Plus className="w-5 h-5" />
+            Add Example
+          </Link>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      </div>
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -521,7 +509,6 @@ export default function AdminExamplesManagement() {
             </>
           )}
         </div>
-      </main>
     </div>
   );
 }

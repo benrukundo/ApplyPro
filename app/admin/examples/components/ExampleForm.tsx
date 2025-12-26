@@ -203,25 +203,21 @@ export default function ExampleForm({ exampleId }: ExampleFormProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/admin/examples"
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <h1 className="text-xl font-bold">
-              {isEditing ? 'Edit Resume Example' : 'Add Resume Example'}
-            </h1>
-          </div>
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-1">
+          <Link
+            href="/admin/examples"
+            className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <h1 className="text-2xl font-bold text-white">
+            {isEditing ? 'Edit Resume Example' : 'Add Resume Example'}
+          </h1>
         </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      </div>
         {/* Alerts */}
         {error && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
@@ -568,7 +564,6 @@ export default function ExampleForm({ exampleId }: ExampleFormProps) {
             </button>
           </div>
         </form>
-      </main>
     </div>
   );
 }

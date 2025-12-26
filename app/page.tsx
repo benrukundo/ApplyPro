@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import {
   CheckCircle2,
   Upload,
@@ -31,7 +33,7 @@ interface Subscription {
   status: string;
 }
 
-export default function Home() {
+function HomeContent() {
   const { data: session } = useSession();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -808,6 +810,18 @@ export default function Home() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <main className="flex-grow pt-20">
+        <HomeContent />
+      </main>
+      <Footer />
     </div>
   );
 }
