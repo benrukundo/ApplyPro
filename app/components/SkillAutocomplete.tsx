@@ -39,13 +39,29 @@ const getCategoryLabel = (category?: string): string => {
   }
 };
 
+// Category-specific placeholder text
+const getPlaceholderText = (category?: string): string => {
+  switch (category) {
+    case 'technical':
+      return 'Type a skill and press Enter (e.g., JavaScript, Excel, Figma...)';
+    case 'soft':
+      return 'Type a skill and press Enter (e.g., Leadership, Communication...)';
+    case 'languages':
+      return 'Type a language and press Enter (e.g., Kinyarwanda, Swahili...)';
+    case 'certifications':
+      return 'Type a certification and press Enter (e.g., AWS Certified, PMP...)';
+    default:
+      return 'Type and press Enter to add...';
+  }
+};
+
 export default function SkillAutocomplete({
   selectedSkills,
   onAddSkill,
   onRemoveSkill,
   category,
   industry,
-  placeholder = 'Type to search skills...',
+  placeholder,
   maxSkills = 20,
   label,
   helperText,
@@ -59,6 +75,9 @@ export default function SkillAutocomplete({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Use custom placeholder or generate based on category
+  const inputPlaceholder = placeholder || getPlaceholderText(category);
 
   // Load initial suggestions based on category
   useEffect(() => {
@@ -96,7 +115,7 @@ export default function SkillAutocomplete({
     try {
       const params = new URLSearchParams({
         q: searchQuery,
-        limit: '8',
+        limit: '6',
       });
       if (category) params.set('category', category);
 
@@ -129,36 +148,51 @@ export default function SkillAutocomplete({
     }
   }, [query, debouncedSearch]);
 
+  // Handle adding a skill
+  const handleAddSkill = (skill: string) => {
+    const trimmedSkill = skill.trim();
+    if (trimmedSkill && !selectedSkills.includes(trimmedSkill) && selectedSkills.length < maxSkills) {
+      onAddSkill(trimmedSkill);
+      setQuery('');
+      setSuggestions([]);
+      setSelectedIndex(-1);
+      inputRef.current?.focus();
+    }
+  };
+
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((prev) => 
-        Math.min(prev + 1, suggestions.length - 1)
-      );
+      const maxIndex = suggestions.length; // +1 for "Add custom" option
+      setSelectedIndex((prev) => Math.min(prev + 1, maxIndex - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex((prev) => Math.max(prev - 1, -1));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+      
+      // If a suggestion is selected, use it
+      if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
         handleAddSkill(suggestions[selectedIndex].name);
       } else if (query.trim()) {
+        // Otherwise, add the typed text as a custom entry
         handleAddSkill(query.trim());
       }
+    } else if (e.key === 'Tab' && query.trim()) {
+      // Tab also adds the current input
+      e.preventDefault();
+      handleAddSkill(query.trim());
     } else if (e.key === 'Escape') {
       setIsFocused(false);
-      inputRef.current?.blur();
-    }
-  };
-
-  const handleAddSkill = (skill: string) => {
-    if (skill && !selectedSkills.includes(skill) && selectedSkills.length < maxSkills) {
-      onAddSkill(skill);
-      setQuery('');
-      setSuggestions([]);
       setSelectedIndex(-1);
-      inputRef.current?.focus();
+      inputRef.current?.blur();
+    } else if (e.key === ',' || e.key === ';') {
+      // Comma or semicolon to add and continue
+      e.preventDefault();
+      if (query.trim()) {
+        handleAddSkill(query.trim());
+      }
     }
   };
 
@@ -172,6 +206,7 @@ export default function SkillAutocomplete({
         !inputRef.current.contains(e.target as Node)
       ) {
         setIsFocused(false);
+        setSelectedIndex(-1);
       }
     };
 
@@ -187,9 +222,16 @@ export default function SkillAutocomplete({
     (skill) => !selectedSkills.includes(skill)
   );
 
+  // Check if current query matches any suggestion exactly
+  const queryMatchesSuggestion = suggestions.some(
+    (s) => s.name.toLowerCase() === query.toLowerCase()
+  );
+
+  // Show dropdown when focused and either has suggestions or popular skills
   const showDropdown = isFocused && (
-    suggestions.length > 0 || 
-    (query.length === 0 && (availablePopularSkills.length > 0 || availableIndustrySkills.length > 0))
+    query.length > 0 || 
+    availablePopularSkills.length > 0 || 
+    availableIndustrySkills.length > 0
   );
 
   return (
@@ -230,7 +272,6 @@ export default function SkillAutocomplete({
       {/* Input */}
       <div className="relative">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             ref={inputRef}
             type="text"
@@ -241,26 +282,69 @@ export default function SkillAutocomplete({
             }}
             onFocus={() => setIsFocused(true)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
+            placeholder={inputPlaceholder}
             disabled={selectedSkills.length >= maxSkills}
-            className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full pl-4 pr-24 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
-          {isLoading && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
-          )}
+          
+          {/* Right side: Loading or Add button */}
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            {isLoading && (
+              <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+            )}
+            {query.trim() && !isLoading && selectedSkills.length < maxSkills && (
+              <button
+                onClick={() => handleAddSkill(query.trim())}
+                type="button"
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Hint text */}
+        {isFocused && query.trim() && !queryMatchesSuggestion && selectedSkills.length < maxSkills && (
+          <p className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+            <span className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-mono">Enter</span>
+            <span>to add &quot;{query.trim()}&quot;</span>
+            <span className="mx-1">•</span>
+            <span className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-mono">,</span>
+            <span>to add and continue</span>
+          </p>
+        )}
 
         {/* Dropdown */}
         {showDropdown && (
           <div
             ref={dropdownRef}
-            className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-y-auto"
+            className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-72 overflow-y-auto"
           >
-            {/* Search Results */}
+            {/* Current Input as First Option (if typing) */}
+            {query.trim() && !queryMatchesSuggestion && !selectedSkills.includes(query.trim()) && (
+              <div className="p-2 border-b border-gray-100">
+                <button
+                  onClick={() => handleAddSkill(query.trim())}
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                    selectedIndex === -1 || selectedIndex >= suggestions.length
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'hover:bg-gray-50 text-gray-700'
+                  }`}
+                  type="button"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add &quot;<strong>{query.trim()}</strong>&quot;</span>
+                </button>
+              </div>
+            )}
+
+            {/* Search Results / Suggestions */}
             {query && suggestions.length > 0 && (
               <div className="p-2">
                 <p className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Search Results
+                  Suggestions
                 </p>
                 {suggestions.map((skill, index) => (
                   <button
@@ -279,21 +363,7 @@ export default function SkillAutocomplete({
               </div>
             )}
 
-            {/* Add Custom Skill */}
-            {query && !suggestions.find((s) => s.name.toLowerCase() === query.toLowerCase()) && (
-              <div className="p-2 border-t border-gray-100">
-                <button
-                  onClick={() => handleAddSkill(query)}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  type="button"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add &quot;{query}&quot; as custom skill</span>
-                </button>
-              </div>
-            )}
-
-            {/* Industry Skills - Only show for technical skills */}
+            {/* Industry Skills - Only show for technical skills when not searching */}
             {!query && availableIndustrySkills.length > 0 && category === 'technical' && (
               <div className="p-2">
                 <p className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
@@ -334,6 +404,14 @@ export default function SkillAutocomplete({
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Empty state when searching with no results */}
+            {query && suggestions.length === 0 && !isLoading && (
+              <div className="p-4 text-center text-gray-500">
+                <p className="text-sm">No suggestions found for &quot;{query}&quot;</p>
+                <p className="text-xs mt-1">Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-mono">Enter</kbd> to add it anyway</p>
               </div>
             )}
           </div>
