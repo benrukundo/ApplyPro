@@ -358,15 +358,7 @@ function BuildResumeContent() {
         return true;
 
       case 5:
-        const totalSkills = 
-          formData.skills.technical.length + 
-          formData.skills.soft.length + 
-          formData.skills.languages.length +
-          formData.skills.certifications.length;
-        if (totalSkills < 3) {
-          setError('Please add at least 3 skills');
-          return false;
-        }
+        
         return true;
 
       case 6:

@@ -23,6 +23,22 @@ interface SkillAutocompleteProps {
   helperText?: string;
 }
 
+// Category-specific labels for the dropdown
+const getCategoryLabel = (category?: string): string => {
+  switch (category) {
+    case 'technical':
+      return 'Popular Technical Skills';
+    case 'soft':
+      return 'Popular Soft Skills';
+    case 'languages':
+      return 'Common Languages';
+    case 'certifications':
+      return 'Popular Certifications';
+    default:
+      return 'Popular Skills';
+  }
+};
+
 export default function SkillAutocomplete({
   selectedSkills,
   onAddSkill,
@@ -44,7 +60,7 @@ export default function SkillAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load initial suggestions
+  // Load initial suggestions based on category
   useEffect(() => {
     const loadInitialSkills = async () => {
       try {
@@ -55,11 +71,8 @@ export default function SkillAutocomplete({
         const response = await fetch(`/api/skills?${params}`);
         const data = await response.json();
 
-        if (data.suggestions) {
-          setSuggestions(data.suggestions);
-        }
         if (data.popular) {
-          setPopularSkills(data.popular.slice(0, 10));
+          setPopularSkills(data.popular);
         }
         if (data.industrySkills) {
           setIndustrySkills(data.industrySkills);
@@ -91,7 +104,6 @@ export default function SkillAutocomplete({
       const data = await response.json();
 
       if (data.results) {
-        // Filter out already selected skills
         const filtered = data.results.filter(
           (skill: Skill) => !selectedSkills.includes(skill.name)
         );
@@ -121,7 +133,7 @@ export default function SkillAutocomplete({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((prev) =>
+      setSelectedIndex((prev) => 
         Math.min(prev + 1, suggestions.length - 1)
       );
     } else if (e.key === 'ArrowUp') {
@@ -176,7 +188,7 @@ export default function SkillAutocomplete({
   );
 
   const showDropdown = isFocused && (
-    suggestions.length > 0 ||
+    suggestions.length > 0 || 
     (query.length === 0 && (availablePopularSkills.length > 0 || availableIndustrySkills.length > 0))
   );
 
@@ -231,7 +243,7 @@ export default function SkillAutocomplete({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={selectedSkills.length >= maxSkills}
-            className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full pl-10 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
           {isLoading && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
@@ -262,11 +274,6 @@ export default function SkillAutocomplete({
                     type="button"
                   >
                     <span className="font-medium">{skill.name}</span>
-                    {skill.category && (
-                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                        {skill.category}
-                      </span>
-                    )}
                   </button>
                 ))}
               </div>
@@ -281,16 +288,16 @@ export default function SkillAutocomplete({
                   type="button"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Add "{query}" as custom skill</span>
+                  <span>Add &quot;{query}&quot; as custom skill</span>
                 </button>
               </div>
             )}
 
-            {/* Industry Skills */}
-            {!query && availableIndustrySkills.length > 0 && (
-              <div className="p-2 border-t border-gray-100">
+            {/* Industry Skills - Only show for technical skills */}
+            {!query && availableIndustrySkills.length > 0 && category === 'technical' && (
+              <div className="p-2">
                 <p className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                   Recommended for {industry}
                 </p>
                 <div className="flex flex-wrap gap-1.5 px-2 py-2">
@@ -298,7 +305,7 @@ export default function SkillAutocomplete({
                     <button
                       key={skill}
                       onClick={() => handleAddSkill(skill)}
-                      className="px-3 py-1.5 text-sm bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors"
+                      className="px-3 py-1.5 text-sm bg-amber-50 text-amber-700 rounded-full hover:bg-amber-100 transition-colors border border-amber-200"
                       type="button"
                     >
                       + {skill}
@@ -308,15 +315,15 @@ export default function SkillAutocomplete({
               </div>
             )}
 
-            {/* Popular Skills */}
+            {/* Category-Specific Popular Skills */}
             {!query && availablePopularSkills.length > 0 && (
-              <div className="p-2 border-t border-gray-100">
+              <div className={`p-2 ${availableIndustrySkills.length > 0 && category === 'technical' ? 'border-t border-gray-100' : ''}`}>
                 <p className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5" />
-                  Popular Skills
+                  {getCategoryLabel(category)}
                 </p>
                 <div className="flex flex-wrap gap-1.5 px-2 py-2">
-                  {availablePopularSkills.slice(0, 8).map((skill) => (
+                  {availablePopularSkills.slice(0, 10).map((skill) => (
                     <button
                       key={skill}
                       onClick={() => handleAddSkill(skill)}
