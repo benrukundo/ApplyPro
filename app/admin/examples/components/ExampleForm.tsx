@@ -177,12 +177,16 @@ export default function ExampleForm({ exampleId }: ExampleFormProps) {
 
       setSuccess(data.message);
       
-      if (!isEditing) {
-        // Redirect to edit page after creating
-        setTimeout(() => {
+      // Redirect after successful save
+      setTimeout(() => {
+        if (isEditing) {
+          // After editing, go back to list
+          router.push('/admin/examples');
+        } else {
+          // After creating, go to edit page
           router.push(`/admin/examples/${data.example.id}/edit`);
-        }, 1500);
-      }
+        }
+      }, 1500);
     } catch (err: any) {
       setError(err.message);
     } finally {
