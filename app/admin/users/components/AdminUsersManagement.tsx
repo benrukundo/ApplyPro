@@ -448,8 +448,6 @@ export default function AdminUsersManagement() {
                       </>
                     )}
                   </div>
-                    )}
-                  </div>
                 </div>
               </div>
             ))}
