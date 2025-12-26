@@ -76,7 +76,7 @@ export default function Navbar() {
   }, []);
 
   // Don't show navbar on login/signup pages
-  if (pathname === "/login" || pathname === "/signup" || pathname === "/register") {
+  if (pathname === "/login" || pathname === "/signup") {
     return null;
   }
 
@@ -327,7 +327,7 @@ export default function Navbar() {
                   Sign in
                 </Link>
                 <Link
-                  href="/register"
+                  href="/signup"
                   className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 shadow-md shadow-blue-500/20 transition-all"
                 >
                   Get Started
@@ -541,7 +541,7 @@ export default function Navbar() {
                       Sign in
                     </Link>
                     <Link
-                      href="/register"
+                      href="/signup"
                       onClick={() => setMobileMenuOpen(false)}
                       className="px-4 py-2 text-center text-white bg-blue-600 rounded-lg font-semibold hover:bg-blue-700"
                     >
