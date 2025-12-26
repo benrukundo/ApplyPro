@@ -35,6 +35,7 @@ export async function getAdminUser() {
       email: true,
       image: true,
       isAdmin: true,
+      isSuperAdmin: true,  // Added this field
       twoFactorEnabled: true,
       twoFactorVerifiedAt: true,
       adminCreatedAt: true,
