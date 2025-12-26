@@ -20,6 +20,7 @@ model User {
   
   // Admin fields
   isAdmin            Boolean   @default(false)
+  isSuperAdmin       Boolean   @default(false)
   adminCreatedAt     DateTime?
   adminCreatedBy     String?
 

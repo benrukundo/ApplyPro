@@ -13,7 +13,7 @@ export async function GET() {
 
     const requester = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, isAdmin: true },
+      select: { id: true, isAdmin: true, isSuperAdmin: true },
     });
 
     if (!requester?.isAdmin) {
@@ -28,12 +28,16 @@ export async function GET() {
         email: true,
         image: true,
         isAdmin: true,
+        isSuperAdmin: true,
         adminCreatedAt: true,
         adminCreatedBy: true,
         twoFactorEnabled: true,
         createdAt: true,
       },
-      orderBy: { adminCreatedAt: 'desc' },
+      orderBy: [
+        { isSuperAdmin: 'desc' },
+        { adminCreatedAt: 'desc' },
+      ],
     });
 
     const adminsWithCreators = await Promise.all(
@@ -58,6 +62,7 @@ export async function GET() {
     return NextResponse.json({
       admins: adminsWithCreators,
       total: admins.length,
+      requesterIsSuperAdmin: requester.isSuperAdmin || false,
     });
   } catch (error) {
     console.error('Error fetching admin users:', error);

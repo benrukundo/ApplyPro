@@ -18,11 +18,18 @@ export async function POST(request: NextRequest) {
 
     const requester = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, isAdmin: true, twoFactorEnabled: true, twoFactorVerifiedAt: true },
+      select: { id: true, isAdmin: true, isSuperAdmin: true, twoFactorEnabled: true, twoFactorVerifiedAt: true },
     });
 
     if (!requester?.isAdmin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    if (!requester.isSuperAdmin) {
+      return NextResponse.json(
+        { error: 'Only Super Admins can revoke admin access' },
+        { status: 403 }
+      );
     }
 
     if (requester.twoFactorEnabled) {
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     const userToRevoke = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, isAdmin: true },
+      select: { id: true, name: true, email: true, isAdmin: true, isSuperAdmin: true },
     });
 
     if (!userToRevoke) {
@@ -58,14 +65,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const adminCount = await prisma.user.count({
-      where: { isAdmin: true },
-    });
-
-    if (adminCount <= 1) {
+    if (userToRevoke.isSuperAdmin) {
       return NextResponse.json(
-        { error: 'Cannot remove the last admin. Promote another user first.' },
-        { status: 400 }
+        { error: 'Super Admin access cannot be revoked. Contact the database administrator.' },
+        { status: 403 }
       );
     }
 
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest) {
       where: { id: userToRevoke.id },
       data: {
         isAdmin: false,
+        isSuperAdmin: false,
         adminCreatedAt: null,
         adminCreatedBy: null,
         twoFactorEnabled: false,

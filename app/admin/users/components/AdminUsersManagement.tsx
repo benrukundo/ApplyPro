@@ -18,6 +18,8 @@ import {
   Mail,
   Calendar,
   KeyRound,
+  Crown,
+  Lock,
 } from 'lucide-react';
 
 interface AdminUser {
@@ -26,6 +28,7 @@ interface AdminUser {
   email: string | null;
   image: string | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   adminCreatedAt: string | null;
   adminCreatedBy: string | null;
   createdByName: string | null;
@@ -48,6 +51,7 @@ export default function AdminUsersManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
@@ -79,6 +83,7 @@ export default function AdminUsersManagement() {
       if (!res.ok) throw new Error('Failed to fetch admins');
       const data = await res.json();
       setAdmins(data.admins);
+      setIsSuperAdmin(data.requesterIsSuperAdmin || false);
     } catch (err) {
       setError('Failed to load admin users');
     } finally {
@@ -205,22 +210,41 @@ export default function AdminUsersManagement() {
                   Admin Management
                 </h1>
                 <p className="text-gray-400 text-sm">
-                  {admins.length} administrator{admins.length !== 1 ? 's' : ''}
+                  {admins.length} administrator{admins.length !== 1 ? 's' : ''} •{' '}
+                  {isSuperAdmin ? (
+                    <span className="text-yellow-400">You are a Super Admin</span>
+                  ) : (
+                    <span className="text-gray-500">View only</span>
+                  )}
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
-            >
-              <UserPlus className="w-5 h-5" />
-              Add Admin
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+              >
+                <UserPlus className="w-5 h-5" />
+                Add Admin
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
+        {!isSuperAdmin && (
+          <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-start gap-3">
+            <Lock className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-blue-400">View Only Mode</p>
+              <p className="text-sm text-blue-400/80 mt-1">
+                Only Super Admins can add or remove administrators. Contact a Super Admin if you need to make changes.
+              </p>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3">
             <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
@@ -241,7 +265,7 @@ export default function AdminUsersManagement() {
           </div>
         )}
 
-        {showSearch && (
+        {showSearch && isSuperAdmin && (
           <div className="mb-8 p-6 bg-gray-800 rounded-xl border border-gray-700">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-blue-500" />
@@ -249,6 +273,7 @@ export default function AdminUsersManagement() {
             </h2>
             <p className="text-gray-400 text-sm mb-4">
               Search for an existing user by email or name to grant admin access.
+              New admins will have regular admin privileges (not Super Admin).
             </p>
 
             <div className="relative">
@@ -344,7 +369,15 @@ export default function AdminUsersManagement() {
                       </div>
                     )}
                     <div>
-                      <p className="font-medium text-lg">{admin.name || 'No name set'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-lg">{admin.name || 'No name set'}</p>
+                        {admin.isSuperAdmin && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded text-yellow-500 text-xs font-medium">
+                            <Crown className="w-3 h-3" />
+                            Super Admin
+                          </span>
+                        )}
+                      </div>
                       <p className="text-gray-400 flex items-center gap-1">
                         <Mail className="w-4 h-4" />
                         {admin.email}
@@ -373,36 +406,48 @@ export default function AdminUsersManagement() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {confirmRevoke === admin.id ? (
-                      <div className="flex items-center gap-2 bg-red-500/10 p-2 rounded-lg">
-                        <span className="text-sm text-red-400">Confirm?</span>
-                        <button
-                          onClick={() => revokeAdmin(admin.id)}
-                          disabled={actionLoading === admin.id}
-                          className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm"
-                        >
-                          {actionLoading === admin.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            'Yes'
-                          )}
-                        </button>
-                        <button
-                          onClick={() => setConfirmRevoke(null)}
-                          className="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm"
-                        >
-                          No
-                        </button>
+                    {admin.isSuperAdmin ? (
+                      <div className="flex items-center gap-2 text-yellow-500 text-sm px-3 py-2 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                        <Lock className="w-4 h-4" />
+                        <span className="font-medium">Protected</span>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => setConfirmRevoke(admin.id)}
-                        className="flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors text-sm"
-                        title="Revoke admin access"
-                      >
-                        <ShieldOff className="w-4 h-4" />
-                        Revoke
-                      </button>
+                      <>
+                        {confirmRevoke === admin.id ? (
+                          <div className="flex items-center gap-2 bg-red-500/10 p-2 rounded-lg">
+                            <span className="text-sm text-red-400">Confirm?</span>
+                            <button
+                              onClick={() => revokeAdmin(admin.id)}
+                              disabled={actionLoading === admin.id || !isSuperAdmin}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:opacity-50 rounded text-sm"
+                            >
+                              {actionLoading === admin.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                'Yes'
+                              )}
+                            </button>
+                            <button
+                              onClick={() => setConfirmRevoke(null)}
+                              className="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmRevoke(admin.id)}
+                            disabled={!isSuperAdmin}
+                            className="flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10 disabled:text-gray-500 disabled:cursor-not-allowed rounded-lg transition-colors text-sm"
+                            title={isSuperAdmin ? "Revoke admin access" : "Only Super Admins can revoke access"}
+                          >
+                            <ShieldOff className="w-4 h-4" />
+                            Revoke
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                     )}
                   </div>
                 </div>
@@ -416,6 +461,59 @@ export default function AdminUsersManagement() {
               <p>No administrators found</p>
             </div>
           )}
+        </div>
+
+        {/* Role Explanation Cards */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-6 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-yellow-500/10 rounded-lg">
+                <Crown className="w-6 h-6 text-yellow-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-yellow-500">Super Admin</h3>
+            </div>
+            <ul className="space-y-2 text-sm text-gray-300">
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Full admin privileges and dashboard access</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Can promote users to regular admin</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Can revoke regular admin access</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Lock className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                <span className="font-medium">Protected: Cannot be demoted</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="p-6 bg-blue-500/5 border border-blue-500/20 rounded-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Shield className="w-6 h-6 text-blue-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-blue-500">Regular Admin</h3>
+            </div>
+            <ul className="space-y-2 text-sm text-gray-300">
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>Full admin privileges and dashboard access</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <span>Cannot promote or revoke other admins</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                <span>Can be revoked by Super Admins</span>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">

@@ -18,11 +18,18 @@ export async function POST(request: NextRequest) {
 
     const requester = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, isAdmin: true, twoFactorEnabled: true, twoFactorVerifiedAt: true },
+      select: { id: true, isAdmin: true, isSuperAdmin: true, twoFactorEnabled: true, twoFactorVerifiedAt: true },
     });
 
     if (!requester?.isAdmin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
+    if (!requester.isSuperAdmin) {
+      return NextResponse.json(
+        { error: 'Only Super Admins can promote users to admin' },
+        { status: 403 }
+      );
     }
 
     if (requester.twoFactorEnabled) {
@@ -59,6 +66,7 @@ export async function POST(request: NextRequest) {
       where: { id: userToPromote.id },
       data: {
         isAdmin: true,
+        isSuperAdmin: false,
         adminCreatedAt: new Date(),
         adminCreatedBy: requester.id,
       },
