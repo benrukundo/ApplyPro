@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { Suspense, useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
@@ -12,10 +12,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-export default function Verify2FAPage() {
+function Verify2FAContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
@@ -234,5 +234,19 @@ export default function Verify2FAPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Verify2FAPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-900">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      }
+    >
+      <Verify2FAContent />
+    </Suspense>
   );
 }
