@@ -80,7 +80,7 @@ export default function AdminDashboard({ admin }: AdminDashboardProps) {
     { name: 'Dashboard', href: '/admin', icon: Home, current: true },
     { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, current: false },
     { name: 'Resume Examples', href: '/admin/examples', icon: FileText, current: false, badge: 'Soon' },
-    { name: 'Users', href: '/admin/users', icon: Users, current: false, badge: 'Soon' },
+    { name: 'Admin Management', href: '/admin/users', icon: Users, current: false },
     { name: 'Settings', href: '/admin/settings', icon: Settings, current: false, badge: 'Soon' },
   ];
 
@@ -370,6 +370,19 @@ export default function AdminDashboard({ admin }: AdminDashboardProps) {
                 <div>
                   <p className="font-medium text-white">Settings</p>
                   <p className="text-sm text-slate-400">Configure admin options</p>
+                </div>
+              </Link>
+
+              <Link
+                href="/admin/users"
+                className="flex items-center gap-4 p-4 bg-slate-800 border border-slate-700 rounded-xl hover:border-slate-600 transition-colors group"
+              >
+                <div className="p-3 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
+                  <Users className="w-6 h-6 text-amber-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-white">Admin Management</p>
+                  <p className="text-sm text-slate-400">Manage administrator accounts</p>
                 </div>
               </Link>
             </div>
