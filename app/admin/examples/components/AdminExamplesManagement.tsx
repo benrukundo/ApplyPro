@@ -269,7 +269,7 @@ export default function AdminExamplesManagement() {
         )}
 
         {/* Filters */}
-        <div className="bg-gray-800 rounded-xl border border-gray-700 p-4 mb-6">
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 mb-6">
           <div className="flex flex-wrap gap-4">
             {/* Search */}
             <div className="flex-1 min-w-[200px]">
@@ -280,7 +280,7 @@ export default function AdminExamplesManagement() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search examples..."
-                  className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -289,7 +289,7 @@ export default function AdminExamplesManagement() {
             <select
               value={selectedCategory}
               onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
             >
               <option value="">All Categories</option>
               {categories.map((cat) => (
@@ -303,7 +303,7 @@ export default function AdminExamplesManagement() {
             <select
               value={selectedLevel}
               onChange={(e) => { setSelectedLevel(e.target.value); setPage(1); }}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
             >
               <option value="">All Levels</option>
               <option value="ENTRY">Entry Level</option>
@@ -315,7 +315,7 @@ export default function AdminExamplesManagement() {
             <select
               value={selectedStatus}
               onChange={(e) => { setSelectedStatus(e.target.value); setPage(1); }}
-              className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
             >
               <option value="all">All Status</option>
               <option value="active">Active Only</option>
@@ -360,7 +360,7 @@ export default function AdminExamplesManagement() {
         )}
 
         {/* Examples Table */}
-        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
           {loading ? (
             <div className="p-12 text-center">
               <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-500" />
@@ -373,7 +373,7 @@ export default function AdminExamplesManagement() {
           ) : (
             <>
               <table className="w-full">
-                <thead className="bg-gray-700/50">
+                <thead className="bg-slate-700/50">
                   <tr>
                     <th className="px-4 py-3 text-left">
                       <button onClick={selectAll} className="p-1 hover:bg-gray-600 rounded">
@@ -392,9 +392,9 @@ export default function AdminExamplesManagement() {
                     <th className="px-4 py-3 text-right text-sm font-medium text-gray-400">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700">
+                <tbody className="divide-y divide-slate-700">
                   {examples.map((example) => (
-                    <tr key={example.id} className="hover:bg-gray-700/50">
+                    <tr key={example.id} className="hover:bg-slate-700/30">
                       <td className="px-4 py-3">
                         <button
                           onClick={() => toggleSelect(example.id)}
@@ -409,8 +409,8 @@ export default function AdminExamplesManagement() {
                       </td>
                       <td className="px-4 py-3">
                         <div>
-                          <p className="font-medium">{example.title}</p>
-                          <p className="text-sm text-gray-500">{example.slug}</p>
+                          <p className="font-medium text-white">{example.title}</p>
+                          <p className="text-sm text-slate-400">{example.slug}</p>
                         </div>
                       </td>
                       <td className="px-4 py-3">

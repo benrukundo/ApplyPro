@@ -207,7 +207,7 @@ export default function AdminUsersManagement() {
               {isSuperAdmin ? (
                 <span className="text-yellow-400">You are a Super Admin</span>
               ) : (
-                <span className="text-gray-500">View only</span>
+                <span className="text-slate-400">View only</span>
               )}
             </p>
           </div>
@@ -261,13 +261,13 @@ export default function AdminUsersManagement() {
               <UserPlus className="w-5 h-5 text-blue-500" />
               Promote User to Admin
             </h2>
-            <p className="text-gray-400 text-sm mb-4">
+            <p className="text-slate-400 text-sm mb-4">
               Search for an existing user by email or name to grant admin access.
               New admins will have regular admin privileges (not Super Admin).
             </p>
 
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
               <input
                 type="text"
                 value={searchQuery}
@@ -277,7 +277,7 @@ export default function AdminUsersManagement() {
                 autoFocus
               />
               {searching && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-gray-400" />
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-slate-400" />
               )}
             </div>
 
@@ -300,7 +300,7 @@ export default function AdminUsersManagement() {
                       )}
                       <div>
                         <p className="font-medium">{user.name || 'No name'}</p>
-                        <p className="text-sm text-gray-400">{user.email}</p>
+                        <p className="text-sm text-slate-400">{user.email}</p>
                       </div>
                     </div>
 
@@ -329,7 +329,7 @@ export default function AdminUsersManagement() {
             )}
 
             {searchQuery.length >= 2 && searchResults.length === 0 && !searching && (
-              <p className="mt-4 text-gray-400 text-center py-4">
+              <p className="mt-4 text-slate-400 text-center py-4">
                 No users found matching &quot;{searchQuery}&quot;
               </p>
             )}
@@ -368,11 +368,11 @@ export default function AdminUsersManagement() {
                           </span>
                         )}
                       </div>
-                      <p className="text-gray-400 flex items-center gap-1">
+                      <p className="text-slate-400 flex items-center gap-1">
                         <Mail className="w-4 h-4" />
                         {admin.email}
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-4 text-sm text-gray-400">
+                      <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-400">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
                           Admin since {formatDate(admin.adminCreatedAt)}
@@ -428,7 +428,7 @@ export default function AdminUsersManagement() {
                           <button
                             onClick={() => setConfirmRevoke(admin.id)}
                             disabled={!isSuperAdmin}
-                            className="flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10 disabled:text-gray-500 disabled:cursor-not-allowed rounded-lg transition-colors text-sm"
+                            className="flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10 disabled:text-slate-500 disabled:cursor-not-allowed rounded-lg transition-colors text-sm"
                             title={isSuperAdmin ? "Revoke admin access" : "Only Super Admins can revoke access"}
                           >
                             <ShieldOff className="w-4 h-4" />
@@ -444,7 +444,7 @@ export default function AdminUsersManagement() {
           </div>
 
           {admins.length === 0 && (
-            <div className="p-8 text-center text-gray-400">
+            <div className="p-8 text-center text-slate-400">
               <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No administrators found</p>
             </div>
