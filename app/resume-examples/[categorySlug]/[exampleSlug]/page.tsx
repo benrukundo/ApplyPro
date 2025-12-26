@@ -8,6 +8,7 @@ import {
   generateJobPostingSchema,
   generateBreadcrumbSchema,
 } from '@/lib/seo';
+import PreviewButtonClient from '@/app/components/PreviewButtonClient';
 
 interface Props {
   params: Promise<{ categorySlug: string; exampleSlug: string }>;
@@ -179,7 +180,23 @@ export default async function ExampleDetailPage({ params }: Props) {
             <div className="bg-blue-600 text-white rounded-xl p-6">
               <h3 className="text-xl font-bold mb-3">Use This Template</h3>
               <p className="text-blue-100 mb-4">Pre-fill your resume with this professional example.</p>
-              <Link href={`/builder?template=${example.slug}&category=${category.slug}`} className="inline-flex items-center gap-2 bg-white text-blue-600 font-semibold px-6 py-3 rounded-lg hover:bg-blue-50 transition-colors w-full justify-center">Start Building</Link>
+              <div className="flex flex-col gap-3">
+                <PreviewButtonClient
+                  example={{
+                    title: example.title,
+                    slug: example.slug,
+                    summary: example.summary,
+                    bulletPoints: example.bulletPoints || [],
+                    skills: example.skills || [],
+                    experienceLevel: example.experienceLevel,
+                    category: { name: category.name, slug: category.slug },
+                  }}
+                  variant="outline"
+                  className="w-full"
+                />
+
+                <Link href={`/builder?template=${example.slug}&category=${category.slug}`} className="inline-flex items-center gap-2 bg-white text-blue-600 font-semibold px-6 py-3 rounded-lg hover:bg-blue-50 transition-colors w-full justify-center">Start Building</Link>
+              </div>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-6">

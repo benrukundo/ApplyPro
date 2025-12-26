@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import PreviewButtonClient from '@/app/components/PreviewButtonClient';
 
 interface Props {
   params: Promise<{ categorySlug: string }>;
@@ -135,16 +136,12 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {examples.map((example) => (
-            <Link
-              key={example.id}
-              href={`/resume-examples/${category.slug}/${example.slug}`}
-              className="group"
-            >
+            <div key={example.id} className="group">
               <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all duration-200">
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+                  <Link href={`/resume-examples/${category.slug}/${example.slug}`} className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
                     {example.title}
-                  </h3>
+                  </Link>
                   <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2 ${
                     example.experienceLevel === 'ENTRY'
                       ? 'bg-green-100 text-green-700'
@@ -183,12 +180,29 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
                 <div className="flex items-center justify-between text-sm text-gray-500">
                   <span>{example.viewCount} views</span>
-                  <span className="text-blue-600 group-hover:underline">
-                    View Example →
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <Link href={`/resume-examples/${category.slug}/${example.slug}`} className="text-blue-600 group-hover:underline">
+                      View Example →
+                    </Link>
+                    <div>
+                      <PreviewButtonClient
+                        example={{
+                          title: example.title,
+                          slug: example.slug,
+                          summary: example.summary,
+                          bulletPoints: example.bulletPoints || [],
+                          skills: example.skills || [],
+                          experienceLevel: example.experienceLevel,
+                          category: { name: category.name, slug: category.slug },
+                        }}
+                        variant="secondary"
+                        size="sm"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
 
