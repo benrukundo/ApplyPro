@@ -75,10 +75,15 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Don't show navbar on login/signup pages
-  if (pathname === "/login" || pathname === "/signup") {
-    return null;
-  }
+  // Don't show navbar on login/signup pages or dashboard pages (dashboard has its own sidebar)
+if (
+  pathname === "/login" || 
+  pathname === "/signup" ||
+  pathname?.startsWith("/dashboard")
+) {
+  return null;
+}
+
 
   // Get user initials for avatar
   const getInitials = (name: string | null | undefined) => {

@@ -360,7 +360,8 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-20 pb-12 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 pb-12 relative overflow-hidden lg:pt-6 pt-4">
+
       {/* Background Decoration */}
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-blue-100/40 to-purple-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-100/30 to-cyan-100/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none" />
