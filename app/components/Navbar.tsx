@@ -75,14 +75,27 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Don't show navbar on login/signup pages or dashboard pages (dashboard has its own sidebar)
-if (
-  pathname === "/login" || 
-  pathname === "/signup" ||
-  pathname?.startsWith("/dashboard")
-) {
-  return null;
-}
+  // Don't show navbar on login/signup pages or authenticated app pages (they use sidebar navigation)
+  const appRoutes = [
+    '/dashboard',
+    '/generate',
+    '/tracker',
+    '/build-resume',
+    '/ats-checker',
+    '/interview-prep',
+    '/linkedin-optimizer',
+    '/settings',
+    '/billing',
+  ];
+  
+  const isAppRoute = appRoutes.some(route => pathname?.startsWith(route));
+  const isAdminRoute = pathname?.startsWith('/admin');
+  const isAuthRoute = pathname === '/login' || pathname === '/signup';
+  
+  // Don't render navbar on app, admin, or auth routes
+  if (isAppRoute || isAdminRoute || isAuthRoute) {
+    return null;
+  }
 
 
   // Get user initials for avatar

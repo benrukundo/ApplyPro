@@ -1,7 +1,7 @@
-import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import AppNavigation from '@/components/AppNavigation';
+import AppNavigation from '@/app/components/AppNavigation';
 
 export default async function AppLayout({
   children,
@@ -10,17 +10,21 @@ export default async function AppLayout({
 }) {
   const session = await getServerSession(authOptions);
 
-  // If not logged in, still render children (public pages)
-  // The individual pages will handle their own auth
-  if (!session?.user) {
-    return <>{children}</>;
+  if (!session) {
+    redirect('/login');
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <AppNavigation user={session.user} />
-      <div className="lg:pl-72">
-        <main className="min-h-screen">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <AppNavigation />
+      
+      {/* Main Content */}
+      <div className="lg:pl-64">
+        {/* Mobile header spacer */}
+        <div className="lg:hidden h-16" />
+        
+        {/* Page Content */}
+        <main className="p-6">
           {children}
         </main>
       </div>
