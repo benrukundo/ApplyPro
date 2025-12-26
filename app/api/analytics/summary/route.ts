@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { checkAdminAuth } from '@/lib/adminApi';
 import { getAnalyticsSummary } from '@/lib/analytics';
 
 export async function GET(request: NextRequest) {
   try {
-    // Optional: Add admin authentication
-    const session = await getServerSession(authOptions);
-    
-    // You can add admin check here if needed
-    // if (!session?.user?.isAdmin) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    const { isAdmin, error } = await checkAdminAuth();
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: error || 'Admin access required' },
+        { status: 403 }
+      );
+    }
 
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '30');

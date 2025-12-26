@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "prisma generate && prisma db push && next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "postinstall": "prisma generate",
     "db:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-examples.ts"
   },
