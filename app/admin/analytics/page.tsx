@@ -2,11 +2,12 @@ import { requireAdmin } from '@/lib/admin';
 import AdminAnalytics from './components/AdminAnalytics';
 
 export const metadata = {
-  title: 'Analytics',
+  title: 'Analytics | ApplyPro Admin',
+  description: 'View analytics and performance metrics',
 };
 
 export default async function AdminAnalyticsPage() {
-  const admin = await requireAdmin();
+  await requireAdmin();
   
-  return <AdminAnalytics admin={admin} />;
+  return <AdminAnalytics />;
 }
