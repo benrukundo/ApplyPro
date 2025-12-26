@@ -11,63 +11,76 @@ import {
 import PreviewButtonClient from '@/app/components/PreviewButtonClient';
 import AnalyticsTracker from '@/app/components/AnalyticsTracker';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface Props {
   params: Promise<{ categorySlug: string; exampleSlug: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { categorySlug, exampleSlug } = await params;
+  try {
+    const { categorySlug, exampleSlug } = await params;
 
-  const category = await prisma.jobCategory.findUnique({
-    where: { slug: categorySlug },
-  });
+    const category = await prisma.jobCategory.findUnique({
+      where: { slug: categorySlug },
+    });
 
-  if (!category) return { title: 'Not Found' };
+    if (!category) return { title: 'Not Found' };
 
-  const example = await prisma.resumeExample.findFirst({
-    where: { slug: exampleSlug, categoryId: category.id },
-  });
+    const example = await prisma.resumeExample.findFirst({
+      where: { slug: exampleSlug, categoryId: category.id },
+    });
 
-  if (!example) return { title: 'Not Found' };
+    if (!example) return { title: 'Not Found' };
 
-  return generateSEO({
-    title: example.metaTitle || `${example.title} Resume Example`,
-    description:
-      example.metaDescription ||
-      `Professional ${example.title} resume example with expert tips. See sample content, skills, and achievements to create your perfect resume.`,
-    path: `/resume-examples/${categorySlug}/${exampleSlug}`,
-  });
+    return generateSEO({
+      title: example.metaTitle || `${example.title} Resume Example`,
+      description:
+        example.metaDescription ||
+        `Professional ${example.title} resume example with expert tips. See sample content, skills, and achievements to create your perfect resume.`,
+      path: `/resume-examples/${categorySlug}/${exampleSlug}`,
+    });
+  } catch (error) {
+    console.warn('Example metadata fetch failed:', error);
+    return { title: 'Resume Example | ApplyPro' };
+  }
 }
 
 async function getExampleData(categorySlug: string, exampleSlug: string) {
-  const category = await prisma.jobCategory.findUnique({
-    where: { slug: categorySlug },
-  });
+  try {
+    const category = await prisma.jobCategory.findUnique({
+      where: { slug: categorySlug },
+    });
 
-  if (!category) return null;
+    if (!category) return null;
 
-  const example = await prisma.resumeExample.findFirst({
-    where: { slug: exampleSlug, categoryId: category.id, isActive: true },
-  });
+    const example = await prisma.resumeExample.findFirst({
+      where: { slug: exampleSlug, categoryId: category.id, isActive: true },
+    });
 
-  if (!example) return null;
+    if (!example) return null;
 
-  await prisma.resumeExample.update({
-    where: { id: example.id },
-    data: { viewCount: { increment: 1 } },
-  });
+    await prisma.resumeExample.update({
+      where: { id: example.id },
+      data: { viewCount: { increment: 1 } },
+    });
 
-  const relatedExamples = await prisma.resumeExample.findMany({
-    where: {
-      categoryId: category.id,
-      isActive: true,
-      id: { not: example.id },
-    },
-    take: 4,
-    orderBy: { viewCount: 'desc' },
-  });
+    const relatedExamples = await prisma.resumeExample.findMany({
+      where: {
+        categoryId: category.id,
+        isActive: true,
+        id: { not: example.id },
+      },
+      take: 4,
+      orderBy: { viewCount: 'desc' },
+    });
 
-  return { category, example, relatedExamples };
+    return { category, example, relatedExamples };
+  } catch (error) {
+    console.warn('Example data fetch failed:', error);
+    return null;
+  }
 }
 
 export default async function ExampleDetailPage({ params }: Props) {

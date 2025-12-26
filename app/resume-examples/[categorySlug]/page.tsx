@@ -6,54 +6,67 @@ import { prisma } from '@/lib/prisma';
 import PreviewButtonClient from '@/app/components/PreviewButtonClient';
 import AnalyticsTracker from '@/app/components/AnalyticsTracker';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface Props {
   params: Promise<{ categorySlug: string }>;
   searchParams: Promise<{ level?: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { categorySlug } = await params;
+  try {
+    const { categorySlug } = await params;
 
-  const category = await prisma.jobCategory.findUnique({
-    where: { slug: categorySlug },
-  });
+    const category = await prisma.jobCategory.findUnique({
+      where: { slug: categorySlug },
+    });
 
-  if (!category) {
-    return { title: 'Category Not Found' };
+    if (!category) {
+      return { title: 'Category Not Found' };
+    }
+
+    return {
+      title: category.metaTitle || `${category.name} Resume Examples | ApplyPro`,
+      description:
+        category.metaDescription ||
+        `Professional ${category.name.toLowerCase()} resume examples with expert tips and templates.`,
+    };
+  } catch (error) {
+    console.warn('Category metadata fetch failed:', error);
+    return { title: 'Resume Examples | ApplyPro' };
   }
-
-  return {
-    title: category.metaTitle || `${category.name} Resume Examples | ApplyPro`,
-    description:
-      category.metaDescription ||
-      `Professional ${category.name.toLowerCase()} resume examples with expert tips and templates.`,
-  };
 }
 
 async function getCategoryData(slug: string, experienceLevel?: string) {
-  const category = await prisma.jobCategory.findUnique({
-    where: { slug },
-  });
+  try {
+    const category = await prisma.jobCategory.findUnique({
+      where: { slug },
+    });
 
-  if (!category) return null;
+    if (!category) return null;
 
-  const filter: any = { categoryId: category.id, isActive: true };
-  if (experienceLevel) {
-    filter.experienceLevel = experienceLevel;
+    const filter: any = { categoryId: category.id, isActive: true };
+    if (experienceLevel) {
+      filter.experienceLevel = experienceLevel;
+    }
+
+    const examples = await prisma.resumeExample.findMany({
+      where: filter,
+      orderBy: [{ viewCount: 'desc' }, { title: 'asc' }],
+    });
+
+    const levelCounts = await prisma.resumeExample.groupBy({
+      by: ['experienceLevel'],
+      where: { categoryId: category.id, isActive: true },
+      _count: true,
+    });
+
+    return { category, examples, levelCounts };
+  } catch (error) {
+    console.warn('Category data fetch failed:', error);
+    return null;
   }
-
-  const examples = await prisma.resumeExample.findMany({
-    where: filter,
-    orderBy: [{ viewCount: 'desc' }, { title: 'asc' }],
-  });
-
-  const levelCounts = await prisma.resumeExample.groupBy({
-    by: ['experienceLevel'],
-    where: { categoryId: category.id, isActive: true },
-    _count: true,
-  });
-
-  return { category, examples, levelCounts };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
