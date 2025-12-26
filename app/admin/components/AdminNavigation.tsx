@@ -16,8 +16,6 @@ import {
   X,
   Bell,
   ExternalLink,
-  ChevronRight,
-  Home,
   ShieldCheck,
   Crown,
 } from 'lucide-react';
@@ -40,7 +38,7 @@ const navigationGroups = [
     name: 'Administration',
     items: [
       { name: 'Admin Management', href: '/admin/users', icon: ShieldCheck },
-      { name: 'Settings', href: '/admin/settings', icon: Settings, badge: 'Soon' },
+      { name: 'Settings', href: '/admin/settings', icon: Settings },
     ],
   },
 ];
@@ -90,7 +88,7 @@ export default function AdminNavigation() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto max-h-[calc(100vh-8rem)]">
+        <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto max-h-[calc(100vh-12rem)]">
           {navigationGroups.map((group) => (
             <div key={group.name}>
               <h3 className="px-3 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -98,7 +96,9 @@ export default function AdminNavigation() {
               </h3>
               <div className="space-y-1">
                 {group.items.map((item) => {
-                  const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                  const isActive = pathname === item.href || 
+                    (item.href !== '/admin' && pathname?.startsWith(item.href + '/')) ||
+                    (item.href === '/admin' && pathname === '/admin');
                   return (
                     <Link
                       key={item.name}
@@ -114,11 +114,6 @@ export default function AdminNavigation() {
                         <item.icon className={`w-5 h-5 ${isActive ? 'text-blue-400' : ''}`} />
                         <span className="font-medium">{item.name}</span>
                       </div>
-                      {item.badge && (
-                        <span className="text-[10px] px-2 py-0.5 bg-slate-700 text-slate-400 rounded-full font-medium">
-                          {item.badge}
-                        </span>
-                      )}
                     </Link>
                   );
                 })}
@@ -167,7 +162,6 @@ export default function AdminNavigation() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            {/* Page title will be injected here if needed */}
           </div>
           
           <div className="flex items-center gap-2">
@@ -176,7 +170,6 @@ export default function AdminNavigation() {
               title="Notifications"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full"></span>
             </button>
             <Link
               href="/"
