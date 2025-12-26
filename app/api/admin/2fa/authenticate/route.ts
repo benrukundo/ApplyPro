@@ -7,6 +7,7 @@ import {
   decryptSecret,
   verifyBackupCode,
 } from '@/lib/twoFactor';
+import { checkRateLimit, resetRateLimit } from '@/lib/rateLimit';
 
 type AdminUser = {
   id: string;
@@ -42,6 +43,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: '2FA is not enabled for this account' },
         { status: 400 }
+      );
+    }
+
+    const rateLimitKey = `2fa-auth:${session.user.email}`;
+    const rateLimit = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Too many failed attempts. Please try again later.',
+          resetIn: Math.ceil(rateLimit.resetIn / 1000 / 60),
+        },
+        { status: 429 }
       );
     }
 
@@ -87,6 +101,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    resetRateLimit(rateLimitKey);
 
     return NextResponse.json({
       success: true,

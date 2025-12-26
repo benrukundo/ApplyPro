@@ -2,6 +2,14 @@ import { authenticator } from 'otplib';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
 
+const ENCRYPTION_KEY = process.env.TWO_FACTOR_ENCRYPTION_KEY;
+
+if (!ENCRYPTION_KEY) {
+  throw new Error('TWO_FACTOR_ENCRYPTION_KEY environment variable is required');
+}
+
+const ENCRYPTION_SALT = process.env.TWO_FACTOR_SALT || 'applypro-2fa-salt-v1';
+
 // Configure authenticator
 authenticator.options = {
   digits: 6,
@@ -84,12 +92,9 @@ export function verifyBackupCode(inputCode: string, storedHashes: string[]): {
   return { valid: true, remainingHashes };
 }
 
-// Encrypt secret for database storage (basic encryption)
-const ENCRYPTION_KEY = process.env.TWO_FACTOR_ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET || 'default-key-change-me';
-
 export function encryptSecret(secret: string): string {
   const iv = crypto.randomBytes(16);
-  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const key = crypto.scryptSync(ENCRYPTION_KEY, ENCRYPTION_SALT, 32);
   const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
   
   let encrypted = cipher.update(secret, 'utf8', 'hex');
@@ -101,7 +106,7 @@ export function encryptSecret(secret: string): string {
 export function decryptSecret(encryptedSecret: string): string {
   const [ivHex, encrypted] = encryptedSecret.split(':');
   const iv = Buffer.from(ivHex, 'hex');
-  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const key = crypto.scryptSync(ENCRYPTION_KEY, ENCRYPTION_SALT, 32);
   const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
   
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
