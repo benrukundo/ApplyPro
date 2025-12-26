@@ -2,6 +2,9 @@
 import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 
+// Generate sitemap at request time to avoid build-time DB requirements
+export const dynamic = 'force-dynamic';
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://applypro.com';
 
@@ -39,40 +42,49 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Get all categories
-  const categories = await prisma.jobCategory.findMany({
-    where: { isActive: true },
-    select: {
-      slug: true,
-      updatedAt: true,
-    },
-  });
+  let categoryPages: MetadataRoute.Sitemap = [];
+  let examplePages: MetadataRoute.Sitemap = [];
 
-  const categoryPages: MetadataRoute.Sitemap = categories.map((category) => ({
-    url: `${baseUrl}/resume-examples/${category.slug}`,
-    lastModified: category.updatedAt,
-    changeFrequency: 'weekly' as const,
-    priority: 0.8,
-  }));
-
-  // Get all examples
-  const examples = await prisma.resumeExample.findMany({
-    where: { isActive: true },
-    select: {
-      slug: true,
-      updatedAt: true,
-      category: {
-        select: { slug: true },
+  try {
+    const categories = await prisma.jobCategory.findMany({
+      where: { isActive: true },
+      select: {
+        slug: true,
+        updatedAt: true,
       },
-    },
-  });
+    });
 
-  const examplePages: MetadataRoute.Sitemap = examples.map((example) => ({
-    url: `${baseUrl}/resume-examples/${example.category.slug}/${example.slug}`,
-    lastModified: example.updatedAt,
-    changeFrequency: 'monthly' as const,
-    priority: 0.7,
-  }));
+    categoryPages = categories.map((category) => ({
+      url: `${baseUrl}/resume-examples/${category.slug}`,
+      lastModified: category.updatedAt,
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    }));
+  } catch (error) {
+    console.warn('Sitemap categories fetch failed, returning static pages only:', error);
+  }
+
+  try {
+    const examples = await prisma.resumeExample.findMany({
+      where: { isActive: true },
+      select: {
+        slug: true,
+        updatedAt: true,
+        category: {
+          select: { slug: true },
+        },
+      },
+    });
+
+    examplePages = examples.map((example) => ({
+      url: `${baseUrl}/resume-examples/${example.category.slug}/${example.slug}`,
+      lastModified: example.updatedAt,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    }));
+  } catch (error) {
+    console.warn('Sitemap examples fetch failed, returning static pages only:', error);
+  }
 
   return [...staticPages, ...categoryPages, ...examplePages];
 }
