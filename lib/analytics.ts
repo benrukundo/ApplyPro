@@ -137,12 +137,12 @@ export async function getAnalyticsSummary(days: number = 30) {
     // Daily views for chart
     (prisma as any).$queryRaw`
       SELECT 
-        DATE(created_at) as date,
+        DATE("createdAt") as date,
         COUNT(*) as views
       FROM analytics_events
       WHERE event = 'example_view'
-        AND created_at >= ${startDate}
-      GROUP BY DATE(created_at)
+        AND "createdAt" >= ${startDate}
+      GROUP BY DATE("createdAt")
       ORDER BY date ASC
     ` as Promise<Array<{ date: Date; views: bigint }>>,
   ]);
