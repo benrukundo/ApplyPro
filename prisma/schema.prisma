@@ -401,3 +401,30 @@ model LinkedInOptimization {
 
   @@index([userId])
 }
+
+// Analytics events for resume examples and site interactions
+model AnalyticsEvent {
+  id                String   @id @default(cuid())
+  event             String   // example_view, example_preview, etc.
+  exampleId         String?
+  exampleSlug       String?
+  exampleTitle      String?
+  categoryId        String?
+  categorySlug      String?
+  categoryName      String?
+  searchQuery       String?
+  searchResultCount Int?
+  userId            String?
+  sessionId         String?
+  referrer          String?
+  userAgent         String?
+  metadata          String?  // JSON string for additional data
+  createdAt         DateTime @default(now())
+
+  @@index([event])
+  @@index([exampleSlug])
+  @@index([categorySlug])
+  @@index([createdAt])
+  @@index([event, createdAt])
+  @@map("analytics_events")
+}

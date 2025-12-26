@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ArrowRight,
 } from 'lucide-react';
+import { useAnalytics } from '@/lib/useAnalytics';
 import { debounce } from '@/lib/utils';
 
 interface SearchResult {
@@ -61,6 +62,8 @@ function SearchPageContent() {
   const [levelFilter, setLevelFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  const { track } = useAnalytics();
+
   const performSearch = useCallback(
     async (searchQuery: string, newSearch = true) => {
       if (searchQuery.length < 2) {
@@ -87,6 +90,16 @@ function SearchPageContent() {
         if (newSearch) {
           setResults(data.results);
           setOffset(20);
+          // Track search query
+          try {
+            track({
+              event: 'search_query',
+              searchQuery: searchQuery,
+              searchResultCount: data.total,
+            });
+          } catch (e) {
+            // ignore
+          }
         } else {
           setResults((prev) => [...prev, ...data.results]);
           setOffset((prev) => prev + 20);
@@ -104,7 +117,7 @@ function SearchPageContent() {
         setIsLoading(false);
       }
     },
-    [offset, levelFilter, router]
+    [offset, levelFilter, router, track]
   );
 
   const debouncedSearch = useCallback(
@@ -118,7 +131,6 @@ function SearchPageContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
   useEffect(() => {
     if (query !== initialQuery) {
       debouncedSearch(query);
@@ -273,6 +285,19 @@ function SearchPageContent() {
                 <Link
                   key={result.id}
                   href={result.url}
+                  onClick={() => {
+                    try {
+                      track({
+                        event: 'search_result_click',
+                        exampleSlug: result.slug,
+                        exampleTitle: result.title,
+                        categorySlug: result.category.slug,
+                        searchQuery: query,
+                      });
+                    } catch (e) {
+                      // ignore
+                    }
+                  }}
                   className="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all"
                 >
                   <div className="flex items-center gap-2 mb-3">

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   X, 
   Download, 
@@ -14,6 +14,7 @@ import {
   Star,
   ChevronRight
 } from 'lucide-react';
+import { useAnalytics } from '@/lib/useAnalytics';
 
 interface ResumePreviewProps {
   isOpen: boolean;
@@ -38,6 +39,19 @@ export default function ResumePreview({
   onUseTemplate 
 }: ResumePreviewProps) {
   const [zoom, setZoom] = useState(100);
+  const { track } = useAnalytics();
+
+  useEffect(() => {
+    if (isOpen && (example as any).slug) {
+      track({
+        event: 'example_preview',
+        exampleSlug: (example as any).slug,
+        exampleTitle: example.title,
+        categorySlug: (example as any).category?.slug,
+        categoryName: example.category.name,
+      });
+    }
+  }, [isOpen, example, track]);
 
   if (!isOpen) return null;
 
@@ -155,7 +169,19 @@ export default function ResumePreview({
             {/* Use Template Button */}
             {onUseTemplate && (
               <button
-                onClick={onUseTemplate}
+                onClick={() => {
+                  // track and forward
+                  if ((example as any).slug) {
+                    track({
+                      event: 'example_use_template',
+                      exampleSlug: (example as any).slug,
+                      exampleTitle: example.title,
+                      categorySlug: (example as any).category?.slug,
+                      categoryName: example.category.name,
+                    });
+                  }
+                  onUseTemplate();
+                }}
                 className="hidden md:flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
               >
                 Use This Template
@@ -300,7 +326,18 @@ export default function ResumePreview({
               </button>
               {onUseTemplate && (
                 <button
-                  onClick={onUseTemplate}
+                  onClick={() => {
+                    if ((example as any).slug) {
+                      track({
+                        event: 'example_use_template',
+                        exampleSlug: (example as any).slug,
+                        exampleTitle: example.title,
+                        categorySlug: (example as any).category?.slug,
+                        categoryName: example.category.name,
+                      });
+                    }
+                    onUseTemplate();
+                  }}
                   className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                 >
                   <Download className="w-4 h-4" />

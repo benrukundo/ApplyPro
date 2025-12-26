@@ -9,6 +9,7 @@ import {
   generateBreadcrumbSchema,
 } from '@/lib/seo';
 import PreviewButtonClient from '@/app/components/PreviewButtonClient';
+import AnalyticsTracker from '@/app/components/AnalyticsTracker';
 
 interface Props {
   params: Promise<{ categorySlug: string; exampleSlug: string }>;
@@ -88,6 +89,15 @@ export default async function ExampleDetailPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <AnalyticsTracker
+        event="example_view"
+        exampleId={example.id}
+        exampleSlug={example.slug}
+        exampleTitle={example.title}
+        categoryId={example.categoryId}
+        categorySlug={categorySlug}
+        categoryName={category.name}
+      />
       <JsonLd
         data={generateJobPostingSchema({
           title: example.title,

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import PreviewButtonClient from '@/app/components/PreviewButtonClient';
+import AnalyticsTracker from '@/app/components/AnalyticsTracker';
 
 interface Props {
   params: Promise<{ categorySlug: string }>;
@@ -76,6 +77,12 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <AnalyticsTracker
+        event="category_view"
+        categoryId={category.id}
+        categorySlug={category.slug}
+        categoryName={category.name}
+      />
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
