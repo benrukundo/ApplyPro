@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, HelpCircle, CreditCard, Shield, Zap, ArrowLeft, Send, CheckCircle, Loader2 } from "lucide-react";
+import Navbar from "@/app/components/Navbar";
 
 export default function FAQPage() {
   const [openFaq, setOpenFaq] = useState<string | null>(null);
@@ -196,7 +197,9 @@ export default function FAQPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pt-20 pb-16">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pt-20 pb-16">
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Back Link */}
         <Link
@@ -380,6 +383,7 @@ export default function FAQPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
