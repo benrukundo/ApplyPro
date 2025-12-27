@@ -33,21 +33,38 @@ c:\ApplyPro/
 │   │   │   ├── cancel/           # Cancel subscription
 │   │   │   ├── cancel-renewal/   # Pause/resume auto-renewal
 │   │   │   └── schedule-change/  # Plan upgrades
-│   │   └── user/
-│   │       └── subscription/     # Get user subscription info
-│   ├── dashboard/                # User dashboard
-│   │   └── subscription/         # Complete billing management
-│   ├── (pages)/                  # Page routes
-│   │   ├── page.tsx              # Landing page
+│   │   └── user/                 # User management
+│   │       ├── subscription/     # Get subscription info
+│   │       ├── profile/          # Update profile (GET, PUT)
+│   │       ├── password/         # Change password (PUT)
+│   │       └── account/          # Delete account (DELETE)
+│   ├── (app)/                    # Authenticated app layout
+│   │   ├── layout.tsx            # App layout with sidebar + top header
+│   │   ├── dashboard/            # User dashboard
+│   │   │   └── subscription/     # Complete billing management
+│   │   ├── settings/             # Account settings page
 │   │   ├── generate/             # Main resume generation (upload existing)
 │   │   ├── build-resume/         # Build from scratch wizard
 │   │   ├── tracker/              # Job application tracker
+│   │   ├── ats-checker/          # ATS resume checker
+│   │   ├── interview-prep/       # Interview preparation
+│   │   └── linkedin-optimizer/   # LinkedIn profile optimizer
+│   ├── (public)/                 # Public pages layout
+│   │   ├── page.tsx              # Landing page
 │   │   ├── pricing/              # Pricing page with Dodo checkout
+│   │   ├── faq/                  # FAQ page with contact form
 │   │   ├── login/                # Login page
 │   │   ├── register/             # Registration page
+│   │   ├── signup/               # Alternative signup route
 │   │   ├── terms/                # Terms of service
 │   │   ├── privacy/              # Privacy policy
-│   │   └── coming-soon/          # Placeholder for future features
+│   │   └── contact/              # Contact page
+│   ├── components/               # Shared components
+│   │   ├── AppNavigation.tsx     # Main app sidebar navigation
+│   │   ├── TopHeader.tsx         # Desktop top header with user menu
+│   │   ├── MobileUserMenu.tsx    # Mobile bottom user menu
+│   │   ├── Navbar.tsx            # Public site navbar
+│   │   └── Footer.tsx            # Site footer
 │   └── global-error.tsx          # Sentry error boundary
 ├── components/                   # React components
 │   ├── CreditDisplay.tsx         # Smart credit management UI
@@ -144,6 +161,41 @@ c:\ApplyPro/
 - Email verification required
 - Session management
 - Protected routes
+
+### 7. **Account Settings**
+- **Profile Management**:
+  - Update first/last name
+  - View email and avatar
+  - OAuth account detection
+- **Password Management**:
+  - Change password with current password verification
+  - Minimum 8 characters validation
+  - Show/hide password toggles
+  - OAuth accounts cannot change password
+- **Account Deletion**:
+  - Secure deletion with confirmation modal
+  - Requires typing "DELETE" to confirm
+  - Permanent data removal
+- **Subscription Overview**:
+  - View current plan and status
+  - Quick access to billing management
+  - Upgrade/manage subscription links
+
+### 8. **Modern Navigation System**
+- **Desktop Navigation**:
+  - Fixed left sidebar with navigation groups
+  - Top header with upgrade button and user profile dropdown
+  - User menu with Settings, FAQ, Admin (conditional), and Logout
+  - Smooth animations and transitions
+- **Mobile Navigation**:
+  - Collapsible drawer navigation
+  - Top header with menu button and logo
+  - Bottom user menu in sidebar
+  - Touch-optimized interactions
+- **Navigation Groups**:
+  - Dashboard & Job Tracker (ungrouped)
+  - Resume tools (Tailor, Builder, Templates, ATS Scanner)
+  - Prepare section (Interview Prep, LinkedIn Optimizer)
 
 ---
 
@@ -574,10 +626,51 @@ http://localhost:3000
 4. Salary negotiation guides
 5. Portfolio builder
 6. Team accounts (recruiters)
+7. Email delivery of generated resumes
+8. Batch resume generation for multiple jobs
+9. Advanced analytics dashboard
+10. AI-powered cover letter customization
 
 ---
 
 ## 📝 Recent Major Updates
+
+### Navigation & UI Overhaul (December 2025):
+1. **New Navigation System**:
+   - Created TopHeader component for desktop with user profile dropdown
+   - Created MobileUserMenu component for mobile sidebar footer
+   - Updated AppNavigation with grouped navigation items
+   - Removed user section from sidebar bottom (desktop)
+   - Added upgrade button to top header for free users
+   - Implemented smooth animations and transitions
+
+2. **Account Settings Page**:
+   - Complete settings page at `/settings`
+   - Profile management with first/last name editing
+   - Password change with validation and security
+   - Account deletion with confirmation modal
+   - Subscription overview with upgrade links
+   - Real-time success/error feedback
+
+3. **API Routes for User Management**:
+   - `/api/user/profile` (GET, PUT) - Profile management
+   - `/api/user/password` (PUT) - Password changes
+   - `/api/user/account` (DELETE) - Account deletion
+   - OAuth account detection and handling
+   - Comprehensive validation and error handling
+
+4. **FAQ Page Enhancements**:
+   - Added Navbar component for consistent navigation
+   - Contact form integration
+   - Accordion-style FAQ sections
+   - Professional layout with gradient backgrounds
+
+5. **UI/UX Consistency**:
+   - Removed duplicate upgrade buttons across pages
+   - Updated FAQ link to open in new tab
+   - Consistent gradient + mesh backgrounds
+   - Professional card designs with proper shadows
+   - Mobile-responsive layouts throughout
 
 ### Major Updates (December 2025):
 1. **Dodo Payments Integration**: Complete migration from Paddle to Dodo Payments
@@ -686,8 +779,8 @@ http://localhost:3000
 
 ---
 
-**Last Updated**: December 20, 2025
-**Version**: 1.0.0
+**Last Updated**: December 27, 2025
+**Version**: 1.5.0
 **Status**: Active Development
 
 ---
