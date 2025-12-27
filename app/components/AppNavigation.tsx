@@ -52,7 +52,7 @@ const navigationGroups: NavGroup[] = [
     items: [
       { name: 'Tailor Resume', href: '/generate', icon: Sparkles },
       { name: 'Resume Builder', href: '/build-resume', icon: PenLine },
-      { name: 'Templates', href: '/templates', icon: LayoutTemplate },
+      { name: 'Templates', href: '/dashboard/templates', icon: LayoutTemplate },
       {
         name: 'ATS Scanner',
         href: '/ats-checker',
