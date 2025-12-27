@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import {
   LayoutDashboard,
   Briefcase,
@@ -13,17 +13,9 @@ import {
   ScanSearch,
   MessageCircle,
   Linkedin,
-  Settings,
-  LogOut,
   Menu,
   X,
-  CreditCard,
-  Shield,
-  ChevronDown,
-  HelpCircle,
   Zap,
-  Crown,
-  ChevronRight,
 } from 'lucide-react';
 
 // =============================================================================
@@ -43,15 +35,6 @@ interface NavGroup {
   items: NavItem[];
 }
 
-interface SubscriptionInfo {
-  plan: string | null;
-  status: string;
-  isActive: boolean;
-  monthlyUsageCount: number;
-  monthlyLimit: number;
-  daysUntilReset?: number;
-}
-
 // =============================================================================
 // NAVIGATION CONFIG
 // =============================================================================
@@ -69,7 +52,7 @@ const navigationGroups: NavGroup[] = [
     items: [
       { name: 'Tailor Resume', href: '/generate', icon: Sparkles },
       { name: 'Resume Builder', href: '/build-resume', icon: PenLine },
-      { name: 'Resume Templates', href: '/templates', icon: LayoutTemplate },
+      { name: 'Templates', href: '/templates', icon: LayoutTemplate },
       {
         name: 'ATS Scanner',
         href: '/ats-checker',
@@ -87,6 +70,12 @@ const navigationGroups: NavGroup[] = [
     ],
   },
 ];
+
+// =============================================================================
+// MOBILE MENU COMPONENT
+// =============================================================================
+
+import MobileUserMenu from './MobileUserMenu';
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -107,56 +96,17 @@ export default function AppNavigation() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-
-  // Load subscription info
-  useEffect(() => {
-    const loadSubscription = async () => {
-      try {
-        const response = await fetch('/api/user/subscription');
-        const data = await response.json();
-        if (response.ok && data.subscription) {
-          setSubscription(data.subscription);
-        }
-      } catch (err) {
-        console.error('Error loading subscription:', err);
-      } finally {
-        setIsLoadingSubscription(false);
-      }
-    };
-    
-    if (session?.user) {
-      loadSubscription();
-    }
-  }, [session?.user]);
 
   // Close sidebar on route change
   useEffect(() => {
     setSidebarOpen(false);
-    setUserMenuOpen(false);
   }, [pathname]);
-
-  // Close user menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Close sidebar on escape key
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setSidebarOpen(false);
-        setUserMenuOpen(false);
       }
     };
 
@@ -168,27 +118,6 @@ export default function AppNavigation() {
     if (href === '/dashboard') return pathname === href;
     return pathname === href || pathname.startsWith(href + '/');
   };
-
-  const isAdmin = (session?.user as any)?.isAdmin;
-
-  // Get plan display info
-  const getPlanInfo = () => {
-    if (!subscription?.isActive) {
-      return { name: 'Free', color: 'bg-gray-100 text-gray-700', icon: null };
-    }
-    switch (subscription.plan) {
-      case 'monthly':
-        return { name: 'Pro Monthly', color: 'bg-blue-100 text-blue-700', icon: Crown };
-      case 'yearly':
-        return { name: 'Pro Yearly', color: 'bg-purple-100 text-purple-700', icon: Crown };
-      case 'pay-per-use':
-        return { name: 'Credits', color: 'bg-amber-100 text-amber-700', icon: Zap };
-      default:
-        return { name: 'Free', color: 'bg-gray-100 text-gray-700', icon: null };
-    }
-  };
-
-  const planInfo = getPlanInfo();
 
   // ===========================================================================
   // NAVIGATION CONTENT
@@ -279,126 +208,8 @@ export default function AppNavigation() {
       </nav>
 
       {/* ===== USER SECTION (Pinned to Bottom) ===== */}
-      <div
-        ref={userMenuRef}
-        className="relative flex-shrink-0 p-3 border-t border-gray-100 bg-gray-50/50"
-      >
-        {/* User Button */}
-        <button
-          onClick={() => setUserMenuOpen(!userMenuOpen)}
-          className={`
-            w-full flex items-center gap-3 p-2.5 rounded-xl transition-all
-            ${userMenuOpen
-              ? 'bg-white shadow-sm'
-              : 'hover:bg-white hover:shadow-sm'
-            }
-          `}
-          aria-expanded={userMenuOpen}
-          aria-haspopup="true"
-        >
-          {/* Avatar */}
-          {session?.user?.image ? (
-            <img
-              src={session.user.image}
-              alt={session.user.name || 'User'}
-              className="w-9 h-9 rounded-full border-2 border-white shadow-sm object-cover"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-              {getInitials(session?.user?.name)}
-            </div>
-          )}
-
-          {/* User Info */}
-          <div className="flex-1 min-w-0 text-left">
-            <p className="text-sm font-semibold text-gray-900 truncate">
-              {session?.user?.name || 'User'}
-            </p>
-            <p className="text-xs text-gray-500 truncate">
-              {session?.user?.email}
-            </p>
-          </div>
-
-          {/* Chevron */}
-          <ChevronDown
-            className={`
-              w-4 h-4 text-gray-400 transition-transform duration-200
-              ${userMenuOpen ? 'rotate-180' : ''}
-            `}
-          />
-        </button>
-
-        {/* User Dropdown Menu */}
-        {userMenuOpen && (
-          <div
-            className="absolute bottom-full left-3 right-3 mb-2 py-1.5 bg-white rounded-xl border border-gray-200 shadow-lg z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
-            role="menu"
-          >
-            {/* Account Section */}
-            <div className="px-2 py-1">
-              <Link
-                href="/settings"
-                onClick={() => setUserMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                role="menuitem"
-              >
-                <Settings className="w-4 h-4 text-gray-400" />
-                Settings
-              </Link>
-
-              <Link
-                href="/dashboard/subscription"
-                onClick={() => setUserMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                role="menuitem"
-              >
-                <CreditCard className="w-4 h-4 text-gray-400" />
-                Billing
-              </Link>
-
-              <Link
-                href="/help"
-                onClick={() => setUserMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                role="menuitem"
-              >
-                <HelpCircle className="w-4 h-4 text-gray-400" />
-                Help & Support
-              </Link>
-            </div>
-
-            {/* Admin Link (Conditional) */}
-            {isAdmin && (
-              <>
-                <div className="my-1.5 mx-3 border-t border-gray-100" />
-                <div className="px-2 py-1">
-                  <Link
-                    href="/admin"
-                    onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-purple-700 rounded-lg hover:bg-purple-50 transition-colors"
-                    role="menuitem"
-                  >
-                    <Shield className="w-4 h-4 text-purple-500" />
-                    Admin Panel
-                  </Link>
-                </div>
-              </>
-            )}
-
-            {/* Sign Out */}
-            <div className="my-1.5 mx-3 border-t border-gray-100" />
-            <div className="px-2 py-1">
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-left"
-                role="menuitem"
-              >
-                <LogOut className="w-4 h-4 text-gray-400" />
-                Sign out
-              </button>
-            </div>
-          </div>
-        )}
+      <div className="lg:hidden">
+        <MobileUserMenu />
       </div>
     </div>
   );
