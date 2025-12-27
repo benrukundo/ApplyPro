@@ -34,6 +34,13 @@ export default function PricingPage() {
   const [changingPlan, setChangingPlan] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
+  // Redirect logged-in users to dashboard pricing
+  useEffect(() => {
+    if (session) {
+      router.push('/dashboard/pricing');
+    }
+  }, [session, router]);
+
   // Fetch user's subscription status
   useEffect(() => {
     async function fetchSubscription() {
@@ -48,6 +55,24 @@ export default function PricingPage() {
           const data = await response.json();
           setSubscription(data.subscription);
         }
+      } catch (error) {
+        console.error('Failed to fetch subscription:', error);
+      } finally {
+        setLoadingSubscription(false);
+      }
+    }
+
+    fetchSubscription();
+  }, [session?.user?.id]);
+
+  // Don't render if logged in (will redirect)
+  if (session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
       } catch (error) {
         console.error('Failed to fetch subscription:', error);
       } finally {

@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
 import {
   CheckCircle2,
   Upload,
@@ -816,12 +814,6 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <main className="flex-grow pt-20">
-        <HomeContent />
-      </main>
-      <Footer />
-    </div>
+    <HomeContent />
   );
 }
