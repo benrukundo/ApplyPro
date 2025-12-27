@@ -400,15 +400,7 @@ function DashboardContent() {
                     </>
                   )}
                 </div>
-              ) : (
-                <Link
-                  href="/pricing"
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/25"
-                >
-                  <Zap className="w-4 h-4" />
-                  Upgrade
-                </Link>
-              )}
+              ) : null}
             </div>
           )}
         </div>

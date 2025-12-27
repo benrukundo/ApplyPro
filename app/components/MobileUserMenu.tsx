@@ -96,15 +96,17 @@ export default function MobileUserMenu() {
               Account Settings
             </Link>
 
-            <Link
-              href="/help"
+            <a
+              href="/faq"
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => setMenuOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
               role="menuitem"
             >
               <HelpCircle className="w-4 h-4 text-gray-400" />
               FAQ & Help
-            </Link>
+            </a>
 
             {isAdmin && (
               <Link
