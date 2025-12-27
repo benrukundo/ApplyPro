@@ -50,7 +50,7 @@ const navigationGroups: NavGroup[] = [
     name: '', // Primary navigation - no header
     items: [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { name: 'Job Tracker', href: '/tracker', icon: Briefcase },
+      //{ name: 'Job Tracker', href: '/tracker', icon: Briefcase },
     ],
   },
   {
