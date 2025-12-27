@@ -22,6 +22,8 @@ import {
   ChevronDown,
   HelpCircle,
   Zap,
+  Crown,
+  ChevronRight,
 } from 'lucide-react';
 
 // =============================================================================
@@ -37,8 +39,17 @@ interface NavItem {
 }
 
 interface NavGroup {
-  name: string; // Empty string = no header (primary items)
+  name: string;
   items: NavItem[];
+}
+
+interface SubscriptionInfo {
+  plan: string | null;
+  status: string;
+  isActive: boolean;
+  monthlyUsageCount: number;
+  monthlyLimit: number;
+  daysUntilReset?: number;
 }
 
 // =============================================================================
@@ -47,10 +58,10 @@ interface NavGroup {
 
 const navigationGroups: NavGroup[] = [
   {
-    name: '', // Primary navigation - no header
+    name: '',
     items: [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      //{ name: 'Job Tracker', href: '/tracker', icon: Briefcase },
+      { name: 'Job Tracker', href: '/tracker', icon: Briefcase },
     ],
   },
   {
@@ -59,12 +70,12 @@ const navigationGroups: NavGroup[] = [
       { name: 'AI Tailor', href: '/generate', icon: Sparkles },
       { name: 'Builder', href: '/build-resume', icon: PenLine },
       { name: 'Templates', href: '/templates', icon: LayoutTemplate },
-      { 
-        name: 'ATS Check', 
-        href: '/ats-checker', 
-        icon: ScanSearch, 
-        badge: 'Free', 
-        badgeColor: 'bg-emerald-100 text-emerald-700' 
+      {
+        name: 'ATS Check',
+        href: '/ats-checker',
+        icon: ScanSearch,
+        badge: 'Free',
+        badgeColor: 'bg-emerald-100 text-emerald-700',
       },
     ],
   },
@@ -97,7 +108,30 @@ export default function AppNavigation() {
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Load subscription info
+  useEffect(() => {
+    const loadSubscription = async () => {
+      try {
+        const response = await fetch('/api/user/subscription');
+        const data = await response.json();
+        if (response.ok && data.subscription) {
+          setSubscription(data.subscription);
+        }
+      } catch (err) {
+        console.error('Error loading subscription:', err);
+      } finally {
+        setIsLoadingSubscription(false);
+      }
+    };
+    
+    if (session?.user) {
+      loadSubscription();
+    }
+  }, [session?.user]);
 
   // Close sidebar on route change
   useEffect(() => {
@@ -135,9 +169,26 @@ export default function AppNavigation() {
     return pathname === href || pathname.startsWith(href + '/');
   };
 
-  // Check if user has active subscription (adjust based on your session structure)
-  const hasActiveSubscription = (session?.user as any)?.subscription?.isActive;
   const isAdmin = (session?.user as any)?.isAdmin;
+
+  // Get plan display info
+  const getPlanInfo = () => {
+    if (!subscription?.isActive) {
+      return { name: 'Free', color: 'bg-gray-100 text-gray-700', icon: null };
+    }
+    switch (subscription.plan) {
+      case 'monthly':
+        return { name: 'Pro Monthly', color: 'bg-blue-100 text-blue-700', icon: Crown };
+      case 'yearly':
+        return { name: 'Pro Yearly', color: 'bg-purple-100 text-purple-700', icon: Crown };
+      case 'pay-per-use':
+        return { name: 'Credits', color: 'bg-amber-100 text-amber-700', icon: Zap };
+      default:
+        return { name: 'Free', color: 'bg-gray-100 text-gray-700', icon: null };
+    }
+  };
+
+  const planInfo = getPlanInfo();
 
   // ===========================================================================
   // NAVIGATION CONTENT
@@ -145,13 +196,9 @@ export default function AppNavigation() {
 
   const NavContent = () => (
     <div className="flex flex-col h-full bg-white">
-      
       {/* ===== LOGO SECTION ===== */}
-      <div className="flex items-center h-16 px-5 border-b border-gray-100 flex-shrink-0">
-        <Link 
-          href="/dashboard" 
-          className="flex items-center gap-2.5 group"
-        >
+      <div className="flex items-center justify-between h-16 px-5 border-b border-gray-100 flex-shrink-0">
+        <Link href="/dashboard" className="flex items-center gap-2.5 group">
           <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20 group-hover:shadow-blue-600/30 transition-shadow">
             <Zap className="w-5 h-5" />
           </div>
@@ -159,37 +206,77 @@ export default function AppNavigation() {
             ApplyPro
           </span>
         </Link>
+        
+        {/* Close button for mobile */}
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="lg:hidden p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
-      {/* ===== UPGRADE PROMPT (Conditional - Free Users Only) ===== */}
-      {!hasActiveSubscription && (
-        <div className="px-4 pt-4 flex-shrink-0">
+      {/* ===== SUBSCRIPTION STATUS / UPGRADE CTA ===== */}
+      <div className="px-4 py-4 border-b border-gray-100 flex-shrink-0">
+        {isLoadingSubscription ? (
+          <div className="p-3 bg-gray-50 rounded-xl animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+            <div className="h-2 bg-gray-200 rounded w-full"></div>
+          </div>
+        ) : subscription?.isActive ? (
+          <div className="p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {planInfo.icon && <planInfo.icon className="w-4 h-4 text-blue-600" />}
+                <span className="text-sm font-semibold text-gray-900">{planInfo.name}</span>
+              </div>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${planInfo.color}`}>
+                Active
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">Usage</span>
+                <span className="font-medium text-gray-700">
+                  {subscription.monthlyUsageCount}/{subscription.monthlyLimit}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all"
+                  style={{
+                    width: `${Math.min((subscription.monthlyUsageCount / subscription.monthlyLimit) * 100, 100)}%`,
+                  }}
+                />
+              </div>
+              {subscription.daysUntilReset && (
+                <p className="text-xs text-gray-400">Resets in {subscription.daysUntilReset} days</p>
+              )}
+            </div>
+          </div>
+        ) : (
           <Link
             href="/pricing"
-            className="block p-3.5 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 hover:border-blue-200 hover:shadow-md transition-all group"
+            className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 rounded-xl hover:from-blue-100 hover:to-purple-100 transition-colors group"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900">
-                  Upgrade to Pro
-                </p>
-                <p className="text-xs text-gray-600 truncate">
-                  Unlimited tailored resumes
-                </p>
+                <p className="text-sm font-semibold text-gray-900">Upgrade to Pro</p>
+                <p className="text-xs text-gray-600">Unlimited tailored resumes</p>
               </div>
             </div>
+            <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
           </Link>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ===== MAIN NAVIGATION ===== */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
         {navigationGroups.map((group, groupIndex) => (
           <div key={group.name || `group-${groupIndex}`}>
-            
             {/* Group Header (only if name exists) */}
             {group.name && (
               <div className="px-3 mb-2 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
@@ -202,11 +289,12 @@ export default function AppNavigation() {
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
-                
+
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={() => setSidebarOpen(false)}
                     className={`
                       flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium 
                       transition-all duration-200 group
@@ -217,19 +305,19 @@ export default function AppNavigation() {
                     `}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon 
+                      <Icon
                         className={`w-[18px] h-[18px] transition-colors ${
-                          active 
-                            ? 'text-blue-600' 
+                          active
+                            ? 'text-blue-600'
                             : 'text-gray-400 group-hover:text-gray-600'
-                        }`} 
+                        }`}
                       />
                       <span>{item.name}</span>
                     </div>
-                    
+
                     {/* Badge */}
                     {item.badge && (
-                      <span 
+                      <span
                         className={`
                           px-2 py-0.5 text-[10px] font-bold rounded-full
                           ${item.badgeColor || 'bg-gray-100 text-gray-600'}
@@ -247,7 +335,7 @@ export default function AppNavigation() {
       </nav>
 
       {/* ===== USER SECTION (Pinned to Bottom) ===== */}
-      <div 
+      <div
         ref={userMenuRef}
         className="relative flex-shrink-0 p-3 border-t border-gray-100 bg-gray-50/50"
       >
@@ -256,8 +344,8 @@ export default function AppNavigation() {
           onClick={() => setUserMenuOpen(!userMenuOpen)}
           className={`
             w-full flex items-center gap-3 p-2.5 rounded-xl transition-all
-            ${userMenuOpen 
-              ? 'bg-white shadow-sm' 
+            ${userMenuOpen
+              ? 'bg-white shadow-sm'
               : 'hover:bg-white hover:shadow-sm'
             }
           `}
@@ -266,9 +354,9 @@ export default function AppNavigation() {
         >
           {/* Avatar */}
           {session?.user?.image ? (
-            <img 
-              src={session.user.image} 
-              alt={session.user.name || 'User'} 
+            <img
+              src={session.user.image}
+              alt={session.user.name || 'User'}
               className="w-9 h-9 rounded-full border-2 border-white shadow-sm object-cover"
             />
           ) : (
@@ -276,7 +364,7 @@ export default function AppNavigation() {
               {getInitials(session?.user?.name)}
             </div>
           )}
-          
+
           {/* User Info */}
           <div className="flex-1 min-w-0 text-left">
             <p className="text-sm font-semibold text-gray-900 truncate">
@@ -286,19 +374,19 @@ export default function AppNavigation() {
               {session?.user?.email}
             </p>
           </div>
-          
+
           {/* Chevron */}
-          <ChevronDown 
+          <ChevronDown
             className={`
               w-4 h-4 text-gray-400 transition-transform duration-200
               ${userMenuOpen ? 'rotate-180' : ''}
-            `} 
+            `}
           />
         </button>
 
         {/* User Dropdown Menu */}
         {userMenuOpen && (
-          <div 
+          <div
             className="absolute bottom-full left-3 right-3 mb-2 py-1.5 bg-white rounded-xl border border-gray-200 shadow-lg z-50 animate-in fade-in slide-in-from-bottom-2 duration-200"
             role="menu"
           >
@@ -306,24 +394,27 @@ export default function AppNavigation() {
             <div className="px-2 py-1">
               <Link
                 href="/settings"
+                onClick={() => setUserMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 role="menuitem"
               >
                 <Settings className="w-4 h-4 text-gray-400" />
                 Settings
               </Link>
-              
+
               <Link
-                href="/billing"
+                href="/dashboard/subscription"
+                onClick={() => setUserMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 role="menuitem"
               >
                 <CreditCard className="w-4 h-4 text-gray-400" />
                 Billing
               </Link>
-              
+
               <Link
                 href="/help"
+                onClick={() => setUserMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 role="menuitem"
               >
@@ -339,6 +430,7 @@ export default function AppNavigation() {
                 <div className="px-2 py-1">
                   <Link
                     href="/admin"
+                    onClick={() => setUserMenuOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 text-sm text-purple-700 rounded-lg hover:bg-purple-50 transition-colors"
                     role="menuitem"
                   >
@@ -375,26 +467,28 @@ export default function AppNavigation() {
     <>
       {/* ===== MOBILE HEADER ===== */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 h-14 flex items-center justify-between">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 -ml-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white">
             <Zap className="w-4 h-4" />
           </div>
           <span className="font-bold text-gray-900">ApplyPro</span>
         </Link>
-        
-        <button 
-          onClick={() => setSidebarOpen(!sidebarOpen)} 
-          className="p-2 -mr-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={sidebarOpen}
-        >
-          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+
+        {/* Placeholder for right side balance */}
+        <div className="w-9" />
       </header>
 
       {/* ===== MOBILE OVERLAY ===== */}
       {sidebarOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
@@ -402,7 +496,7 @@ export default function AppNavigation() {
       )}
 
       {/* ===== SIDEBAR ===== */}
-      <aside 
+      <aside
         className={`
           fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 
           transform transition-transform duration-300 ease-out
@@ -413,9 +507,6 @@ export default function AppNavigation() {
       >
         <NavContent />
       </aside>
-
-      {/* ===== MOBILE SPACER ===== */}
-      <div className="lg:hidden h-14" />
     </>
   );
 }

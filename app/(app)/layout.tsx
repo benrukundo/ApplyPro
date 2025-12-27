@@ -15,16 +15,16 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gray-50">
       <AppNavigation />
       
       {/* Main Content */}
       <div className="lg:pl-64">
         {/* Mobile header spacer */}
-        <div className="lg:hidden h-16" />
+        <div className="lg:hidden h-14" />
         
         {/* Page Content */}
-        <main className="p-6">
+        <main>
           {children}
         </main>
       </div>

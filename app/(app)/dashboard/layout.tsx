@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/authOptions';
-import DashboardNavigation from './components/DashboardNavigation';
 
 export default async function DashboardLayout({
   children,
@@ -14,14 +13,6 @@ export default async function DashboardLayout({
     redirect('/login?callbackUrl=/dashboard');
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <DashboardNavigation user={session.user} />
-      <div className="lg:pl-72">
-        <main className="min-h-screen">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+  // Just render children - parent layout (app/(app)/layout.tsx) handles navigation
+  return <>{children}</>;
 }
