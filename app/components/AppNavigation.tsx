@@ -67,11 +67,11 @@ const navigationGroups: NavGroup[] = [
   {
     name: 'Resume',
     items: [
-      { name: 'AI Tailor', href: '/generate', icon: Sparkles },
-      { name: 'Builder', href: '/build-resume', icon: PenLine },
-      { name: 'Templates', href: '/templates', icon: LayoutTemplate },
+      { name: 'Tailor Resume', href: '/generate', icon: Sparkles },
+      { name: 'Resume Builder', href: '/build-resume', icon: PenLine },
+      { name: 'Resume Templates', href: '/templates', icon: LayoutTemplate },
       {
-        name: 'ATS Check',
+        name: 'ATS Scanner',
         href: '/ats-checker',
         icon: ScanSearch,
         badge: 'Free',
@@ -82,8 +82,8 @@ const navigationGroups: NavGroup[] = [
   {
     name: 'Prepare',
     items: [
-      { name: 'Interviews', href: '/interview-prep', icon: MessageCircle },
-      { name: 'LinkedIn', href: '/linkedin-optimizer', icon: Linkedin },
+      { name: 'Interview Prep', href: '/interview-prep', icon: MessageCircle },
+      { name: 'LinkedIn Optimizer', href: '/linkedin-optimizer', icon: Linkedin },
     ],
   },
 ];
