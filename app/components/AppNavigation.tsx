@@ -215,63 +215,7 @@ export default function AppNavigation() {
           <X className="w-5 h-5" />
         </button>
       </div>
-
-      {/* ===== SUBSCRIPTION STATUS / UPGRADE CTA ===== */}
-      <div className="px-4 py-4 border-b border-gray-100 flex-shrink-0">
-        {isLoadingSubscription ? (
-          <div className="p-3 bg-gray-50 rounded-xl animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-            <div className="h-2 bg-gray-200 rounded w-full"></div>
-          </div>
-        ) : subscription?.isActive ? (
-          <div className="p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                {planInfo.icon && <planInfo.icon className="w-4 h-4 text-blue-600" />}
-                <span className="text-sm font-semibold text-gray-900">{planInfo.name}</span>
-              </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${planInfo.color}`}>
-                Active
-              </span>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">Usage</span>
-                <span className="font-medium text-gray-700">
-                  {subscription.monthlyUsageCount}/{subscription.monthlyLimit}
-                </span>
-              </div>
-              <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all"
-                  style={{
-                    width: `${Math.min((subscription.monthlyUsageCount / subscription.monthlyLimit) * 100, 100)}%`,
-                  }}
-                />
-              </div>
-              {subscription.daysUntilReset && (
-                <p className="text-xs text-gray-400">Resets in {subscription.daysUntilReset} days</p>
-              )}
-            </div>
-          </div>
-        ) : (
-          <Link
-            href="/pricing"
-            className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 rounded-xl hover:from-blue-100 hover:to-purple-100 transition-colors group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900">Upgrade to Pro</p>
-                <p className="text-xs text-gray-600">Unlimited tailored resumes</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-        )}
-      </div>
+         
 
       {/* ===== MAIN NAVIGATION ===== */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
