@@ -73,15 +73,6 @@ export default function PricingPage() {
       </div>
     );
   }
-      } catch (error) {
-        console.error('Failed to fetch subscription:', error);
-      } finally {
-        setLoadingSubscription(false);
-      }
-    }
-
-    fetchSubscription();
-  }, [session?.user?.id]);
 
   const handleSuccess = () => {
     router.push('/dashboard');
